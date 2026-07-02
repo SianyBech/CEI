@@ -1,0 +1,122 @@
+window.CerneApp.mockData = [
+  {
+    id: "ev-1",
+    nome: "Ata_Workshop_Planejamento_Estrategico_2026.pdf",
+    tipo: "pdf",
+    data: "10/01/2026",
+    evento: "Workshop de Planejamento Estratégico 2026",
+    categoria: "Planejamento",
+    responsavel: "Gabriela Mendes",
+    tags: ["Planejamento", "Workshop", "Ata", "Metas"],
+    resumo: "Ata da reunião de planejamento estratégico anual da incubadora, contendo as metas de graduação de empresas para 2026 e a distribuição de orçamento para assessorias tecnológicas.",
+    textoExtraido: "ATA DE REUNIÃO - PLANEJAMENTO ESTRATÉGICO CERNE 2026\nData: 10 de Janeiro de 2026. Local: Sala de Reuniões CEI.\nPresentes: Gabriela Mendes (Gerente), Carlos Silva (Assessor), Ana Paula (Coordenadora).\nPauta: Planejamento estratégico anual e definição das metas CERNE 2. As metas para o ano de 2026 incluem: incubação de 8 novas startups, graduação de 4 empresas e realização de 12 workshops. O orçamento para assessoria tecnológica foi aprovado por unanimidade, totalizando R$ 45.000,00 para o primeiro semestre."
+  },
+  {
+    id: "ev-2",
+    nome: "Foto_Workshop_Inteligencia_Artificial.png",
+    tipo: "imagem",
+    data: "14/03/2026",
+    evento: "Workshop de Inteligência Artificial",
+    categoria: "Capacitação",
+    responsavel: "Carlos Silva",
+    tags: ["IA", "Workshop", "Empreendedorismo", "Foto"],
+    resumo: "Foto de registro do Workshop de Inteligência Artificial voltado para startups incubadas, promovido pelo CEI com a presença de 15 empreendedores.",
+    textoExtraido: "[ANÁLISE VISUAL DE IMAGEM POR IA]\nImagem capturada: Foto em grupo de participantes na sala de eventos da incubadora.\nTexto detectado na tela de projeção: 'Workshop de Inteligência Artificial Aplicada a Negócios - CEI / CERNE'.\nPessoas identificadas no ambiente: Carlos Silva (palestrante à esquerda) e representantes das startups X-Tech, BioVitals e AgriSmart. Banner ao fundo com a logo da incubadora e os dizeres: 'Inovação e Desenvolvimento'."
+  },
+  {
+    id: "ev-3",
+    nome: "Certificado_Capacitacao_Modelagem_Negocios.pdf",
+    tipo: "pdf",
+    data: "05/02/2026",
+    evento: "Curso de Modelagem de Negócios e Canvas",
+    categoria: "Capacitação",
+    responsavel: "Ana Paula de Souza",
+    tags: ["Certificado", "Canvas", "Modelagem", "Capacitação"],
+    resumo: "Certificado emitido para a empresa incubada AgriSmart pela conclusão bem-sucedida do Curso de Modelagem de Negócios.",
+    textoExtraido: "CERTIFICADO DE CONCLUSÃO\nO Centro de Empreendedorismo e Incubação (CEI) certifica que a empresa AGRISMART SOLUÇÕES AGRÍCOLAS LTDA participou do 'Curso de Modelagem de Negócios e Canvas', com carga horária de 16 horas, realizado nos dias 03 e 04 de Fevereiro de 2026. Assinado: Ana Paula de Souza - Coordenadora de Capacitação."
+  },
+  {
+    id: "ev-4",
+    nome: "Contrato_Assessoria_Juridica_Model.docx",
+    tipo: "documento",
+    data: "22/01/2026",
+    evento: "Programa de Assessoria em Propriedade Intelectual",
+    categoria: "Assessoria",
+    responsavel: "Marcos Venícius",
+    tags: ["Contrato", "Assessoria", "Jurídico", "Patente"],
+    resumo: "Contrato de prestação de assessoria jurídica especializada na elaboração de patentes e proteção de propriedade intelectual das empresas incubadas.",
+    textoExtraido: "CONTRATO DE PRESTAÇÃO DE SERVIÇOS JURÍDICOS\nContratante: Centro de Empreendedorismo e Incubação - CEI.\nContratado: Advocacia Associada Venícius & Advogados.\nObjeto: Assessoria jurídica em propriedade intelectual e redação de patentes para as startups incubadas no âmbito do Processo de Assessoria CERNE. Prazo: 12 meses. Valor: R$ 3.500,00 mensais. Assinatura das partes em 22 de Janeiro de 2026."
+  },
+  {
+    id: "ev-5",
+    nome: "Relatorio_Financeiro_Incubadora_Q1.pdf",
+    tipo: "pdf",
+    data: "31/03/2026",
+    evento: "Prestação de Contas Trimestral Q1",
+    categoria: "Gestão",
+    responsavel: "Gabriela Mendes",
+    tags: ["Relatório", "Financeiro", "Gestão", "Auditoria"],
+    resumo: "Relatório de prestação de contas financeiras do primeiro trimestre de 2026, com foco na captação de recursos e gastos operacionais da incubadora.",
+    textoExtraido: "RELATÓRIO FINANCEIRO DA INCUBADORA - Q1 2026\nPeríodo: 01/01/2026 a 31/03/2026.\nResumo de Receitas: Captação via Edital FINEP: R$ 150.000,00. Taxas de Incubação: R$ 12.000,00.\nResumo de Despesas: Despesas com Pessoal: R$ 85.000,00. Manutenção do Espaço Físico: R$ 22.000,00. Assessorias Especializadas: R$ 18.000,00. Saldo Final do Período: R$ 37.000,00 positivos."
+  },
+  {
+    id: "ev-6",
+    nome: "Apresentacao_Demoday_Startups_2026.pptx",
+    tipo: "documento",
+    data: "18/05/2026",
+    evento: "Demo Day Incubadora 2026",
+    categoria: "Qualificação",
+    responsavel: "Ana Paula de Souza",
+    tags: ["Apresentação", "DemoDay", "Investimento", "Pitch"],
+    resumo: "Slides da apresentação institucional utilizada no Demo Day 2026, contendo o pitch das 6 startups qualificadas para captação de venture capital.",
+    textoExtraido: "DEMO DAY CEI 2026 - ACELERAÇÃO E CRESCIMENTO\nSlide 1: Bem-vindos ao Demo Day 2026. Apresentação das startups qualificadas do programa de incubação.\nSlide 2: Startups Apresentando: BioVitals (HealthTech), AgriSmart (AgTech), SolarGrid (Energy), CloudOps (SaaS), PayEasy (FinTech) e EduPlay (EdTech).\nSlide 3: Painel de Investidores convidados: Bossa Nova, Domo Invest e Redpoint event. Critérios de avaliação: tração, escalabilidade e maturidade tecnológica."
+  },
+  {
+    id: "ev-7",
+    nome: "Noticia_Premio_Melhor_Incubadora.jpg",
+    tipo: "imagem",
+    data: "05/06/2026",
+    evento: "Premiação Nacional de Empreendedorismo",
+    categoria: "Sustentabilidade",
+    responsavel: "Marcos Venícius",
+    tags: ["Notícia", "Prêmio", "Reconhecimento", "Divulgação"],
+    resumo: "Recorte da matéria de jornal local destacando o prêmio recebido pela incubadora como uma das mais sustentáveis e eficientes do país.",
+    textoExtraido: "[MATÉRIA DE IMPRENSA - PORTAL INOVAÇÃO]\nTítulo: Incubadora CEI é eleita uma das 5 melhores do país no Prêmio Nacional de Empreendedorismo.\nSubtítulo: Com metodologia CERNE homologada, a instituição destaca-se pelo alto índice de sobrevivência das startups graduadas.\nTexto: O prêmio foi entregue em Brasília ao coordenador Marcos Venícius. 'Esse reconhecimento reflete nossa busca contínua por sustentabilidade financeira e excelência nos processos de qualificação das empresas', disse Venícius."
+  },
+  {
+    id: "ev-8",
+    nome: "Termo_Parceria_Universidade_Federal.pdf",
+    tipo: "pdf",
+    data: "12/02/2026",
+    evento: "Parceria Científica e Tecnológica",
+    categoria: "Sustentabilidade",
+    responsavel: "Gabriela Mendes",
+    tags: ["Parceria", "Convênio", "Universidade", "Pesquisa"],
+    resumo: "Acordo de cooperação científica assinado entre a incubadora e a Universidade Federal para facilitar o acesso de startups incubadas aos laboratórios de P&D.",
+    textoExtraido: "TERMO DE COOPERAÇÃO TÉCNICO-CIENTÍFICA Nº 04/2026\nConvenentes: Centro de Empreendedorismo e Incubação (CEI) e a Universidade Federal.\nCláusula Primeira: O presente termo tem por objeto a cooperação mútua para utilização de laboratórios de prototipagem rápida e microscopia pelas startups incubadas no CEI.\nCláusula Segunda: Isenção de taxas laboratoriais para as empresas qualificadas no nível CERNE 1."
+  },
+  {
+    id: "ev-9",
+    nome: "Relatorio_Praticas_Sustentabilidade.docx",
+    tipo: "documento",
+    data: "20/04/2026",
+    evento: "Implantação do Programa GreenIncubator",
+    categoria: "Sustentabilidade",
+    responsavel: "Carlos Silva",
+    tags: ["Sustentabilidade", "Ecológico", "Relatório", "ESG"],
+    resumo: "Documento contendo o plano de implantação de práticas sustentáveis e ecológicas dentro da incubadora, incluindo metas de redução de plástico e descarte de lixo eletrônico.",
+    textoExtraido: "PLANO DE GESTÃO AMBIENTAL - INCUBADORA VERDE\nElaborado por: Carlos Silva - Comitê de Sustentabilidade.\nAções Propostas: 1. Substituição de copos descartáveis por canecas permanentes até Maio/2026. 2. Instalação de ponto de coleta seletiva de lixo eletrônico em parceria com a startup EcoRecycle. 3. Monitoramento mensal do consumo de energia elétrica com meta de redução de 10% por meio de lâmpadas LED."
+  },
+  {
+    id: "ev-10",
+    nome: "Ata_Auditoria_Certificacao_CERNE.pdf",
+    tipo: "pdf",
+    data: "28/05/2026",
+    evento: "Processo de Recertificação CERNE",
+    categoria: "Qualificação",
+    responsavel: "Gabriela Mendes",
+    tags: ["Auditoria", "CERNE", "Certificação", "Qualidade"],
+    resumo: "Ata oficial da auditoria externa para manutenção da certificação CERNE 2 da incubadora, atestando conformidade com as melhores práticas nacionais.",
+    textoExtraido: "RELATÓRIO DE AUDITORIA EXTERNA - ASSOCIAÇÃO NACIONAL DE INCUBADORAS\nAuditores: Dr. Roberto Alencar e Dra. Clara Albuquerque.\nUnidade Auditada: Centro de Empreendedorismo e Incubação (CEI).\nResultado: A incubadora atende a 100% dos processos-chave da metodologia CERNE 2. Destaca-se a excelência no processo de assessoria em gestão e a transparência financeira. Recomendada a manutenção da certificação com nota máxima."
+  }
+];

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema Inteligente de Gestão de Evidências CERNE</title>
+  <!-- Google Fonts: Inter and Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Vanilla CSS Style Sheet -->
+  <link rel="stylesheet" href="src/index.css">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <!-- Main App Container -->
+  <div id="app"></div>
+
+  <!-- Application Scripts Namespace Initialization -->
+  <script>
+    window.CerneApp = {};
+  </script>
+
+  <!-- Data Mock -->
+  <script src="src/data/mockData.js"></script>
+
+  <!-- Components -->
+  <script src="src/components/Header.js"></script>
+  <script src="src/components/SearchBar.js"></script>
+  <script src="src/components/EvidenceTable.js"></script>
+  <script src="src/components/EvidenceCard.js"></script>
+  <script src="src/components/UploadModal.js"></script>
+  <script src="src/components/EvidenceDetails.js"></script>
+
+  <!-- Entry Point App Driver -->
+  <script src="src/app.js"></script>
+</body>
+</html>
