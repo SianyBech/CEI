@@ -336,6 +336,11 @@ window.CerneApp.UploadModal = {
           <div style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); background-color: var(--bg-secondary); padding: 1.25rem;">
             <div class="edit-form-grid">
               
+                  <div class="form-group edit-form-fullwidth">
+                <label class="form-label" for="edit-titulo">Título da Evidência</label>
+                <input type="text" class="form-input" id="edit-titulo" value="${evidence.titulo || evidence.nome}" placeholder="Título da evidência">
+              </div>
+
               <div class="form-group edit-form-fullwidth">
                 <label class="form-label" for="edit-nome">Arquivo Original</label>
                 <input type="text" class="form-input" id="edit-nome" value="${evidence.nome}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;">
@@ -388,14 +393,9 @@ window.CerneApp.UploadModal = {
         node: modalBody
       });
 
-      footer.querySelector('#modal-success-done-btn').addEventListener('click', () => {
-        // Collect edited values
-        const editedEvidence = {
-          id: evidence.id,
-          nome: evidence.nome,
-          tipo: evidence.tipo,
-          textoExtraido: evidence.textoExtraido,
-          
+      footer.querySelector('#modal-success-done-btn').addEventListener('click', async () => {
+        const updatedMetadata = {
+          titulo: modalBody.querySelector('#edit-titulo').value.trim() || evidence.nome,
           evento: modalBody.querySelector('#edit-evento').value.trim() || 'Sem Evento',
           categoria: modalBody.querySelector('#edit-categoria').value,
           responsavel: modalBody.querySelector('#edit-responsavel').value.trim() || 'Não especificado',
@@ -407,8 +407,13 @@ window.CerneApp.UploadModal = {
             .filter(t => t.length > 0)
         };
 
-        onAddEvidence(editedEvidence);
-        doClose();
+        try {
+          const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
+          onAddEvidence(savedEvidence);
+          doClose();
+        } catch (error) {
+          alert(`Não foi possível salvar a evidência: ${error.message}`);
+        }
       });
     }
 

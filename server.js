@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const sqlite3 = require('sqlite3').verbose();
+const mysql = require('mysql2/promise');
 const pdfParse = require('pdf-parse');
 const Tesseract = require('tesseract.js');
 const mammoth = require('mammoth');
@@ -14,39 +15,133 @@ dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
+const host = process.env.HOST || '0.0.0.0';
 const rootPath = path.resolve(__dirname);
-const originalsDir = path.join(rootPath, 'storage', 'originals');
-const tempDir = path.join(rootPath, 'tmp');
-const dbDir = path.join(rootPath, 'db');
-const dbPath = path.join(dbDir, 'evidences.db');
+const storageRoot = process.env.STORAGE_PATH ? path.resolve(process.env.STORAGE_PATH) : path.join(rootPath, 'storage');
+const originalsDir = path.join(storageRoot, 'originals');
+const tempDir = path.join(storageRoot, 'tmp');
+const dbDir = process.env.DB_PATH ? path.dirname(path.resolve(process.env.DB_PATH)) : path.join(storageRoot, 'db');
+const dbPath = process.env.DB_PATH ? path.resolve(process.env.DB_PATH) : path.join(dbDir, 'evidences.db');
 
 fs.mkdirSync(originalsDir, { recursive: true });
 fs.mkdirSync(tempDir, { recursive: true });
 fs.mkdirSync(dbDir, { recursive: true });
 
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Erro ao abrir banco de dados SQLite:', err.message);
-    process.exit(1);
-  }
-});
+// Database client abstraction (supports SQLite by default, or MySQL when configured)
+let dbClient = null;
 
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS evidences (
-    id TEXT PRIMARY KEY,
+async function initMySQLPool() {
+  const pool = mysql.createPool({
+    host: process.env.MYSQL_HOST,
+    user: process.env.MYSQL_USER,
+    password: process.env.MYSQL_PASSWORD,
+    database: process.env.MYSQL_DATABASE,
+    port: process.env.MYSQL_PORT ? Number(process.env.MYSQL_PORT) : 3306,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+  });
+
+  dbClient = {
+    all: async (sql, params, cb) => {
+      try {
+        const [rows] = await pool.execute(sql, params || []);
+        cb(null, rows);
+      } catch (err) { cb(err); }
+    },
+    get: async (sql, params, cb) => {
+      try {
+        const [rows] = await pool.execute(sql, params || []);
+        cb(null, rows && rows.length ? rows[0] : null);
+      } catch (err) { cb(err); }
+    },
+    run: async (sql, params, cb) => {
+      try {
+        const [result] = await pool.execute(sql, params || []);
+        const info = { changes: result && result.affectedRows ? result.affectedRows : 0, insertId: result && result.insertId };
+        cb(null, info);
+      } catch (err) { cb(err); }
+    }
+  };
+
+  // Ensure table exists in MySQL
+  const createTableSQL = `CREATE TABLE IF NOT EXISTS evidences (
+    id VARCHAR(64) PRIMARY KEY,
+    titulo TEXT NOT NULL,
     nome TEXT NOT NULL,
-    tipo TEXT NOT NULL,
-    data TEXT NOT NULL,
+    tipo VARCHAR(32) NOT NULL,
+    data VARCHAR(64) NOT NULL,
     evento TEXT NOT NULL,
     categoria TEXT NOT NULL,
     responsavel TEXT NOT NULL,
     tags TEXT NOT NULL,
     resumo TEXT NOT NULL,
-    textoExtraido TEXT NOT NULL,
+    textoExtraido LONGTEXT NOT NULL,
     caminhoArquivo TEXT NOT NULL,
-    criadoEm TEXT NOT NULL
-  )`);
-});
+    criadoEm VARCHAR(64) NOT NULL
+  )`;
+
+  try {
+    await pool.execute(createTableSQL);
+  } catch (err) {
+    console.error('Erro ao inicializar tabela MySQL:', err.message || err);
+    process.exit(1);
+  }
+}
+
+function initSQLite() {
+  const sqliteDb = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      console.error('Erro ao abrir banco de dados SQLite:', err.message);
+      process.exit(1);
+    }
+  });
+
+  dbClient = {
+    all: (sql, params, cb) => sqliteDb.all(sql, params, cb),
+    get: (sql, params, cb) => sqliteDb.get(sql, params, cb),
+    run: (sql, params, cb) => sqliteDb.run(sql, params, function (err) { cb(err, this); })
+  };
+
+  sqliteDb.serialize(() => {
+    sqliteDb.run(`CREATE TABLE IF NOT EXISTS evidences (
+      id TEXT PRIMARY KEY,
+      titulo TEXT NOT NULL,
+      nome TEXT NOT NULL,
+      tipo TEXT NOT NULL,
+      data TEXT NOT NULL,
+      evento TEXT NOT NULL,
+      categoria TEXT NOT NULL,
+      responsavel TEXT NOT NULL,
+      tags TEXT NOT NULL,
+      resumo TEXT NOT NULL,
+      textoExtraido TEXT NOT NULL,
+      caminhoArquivo TEXT NOT NULL,
+      criadoEm TEXT NOT NULL
+    )`);
+
+    sqliteDb.all('PRAGMA table_info(evidences)', (err, columns) => {
+      if (err) {
+        console.error('Erro ao verificar colunas da tabela evidences:', err.message);
+        return;
+      }
+      const hasTitulo = columns.some((column) => column.name === 'titulo');
+      if (!hasTitulo) {
+        sqliteDb.run('ALTER TABLE evidences ADD COLUMN titulo TEXT');
+      }
+    });
+  });
+}
+
+// Initialize DB client based on environment
+if (process.env.DB_TYPE === 'mysql' || process.env.MYSQL_HOST) {
+  initMySQLPool().catch(err => {
+    console.error('Erro ao iniciar MySQL:', err.message || err);
+    process.exit(1);
+  });
+} else {
+  initSQLite();
+}
 
 const upload = multer({
   dest: tempDir,
@@ -73,6 +168,7 @@ function serializeRow(row, req) {
   if (!row) return null;
   return {
     id: row.id,
+    titulo: row.titulo || row.nome,
     nome: row.nome,
     tipo: row.tipo,
     data: row.data,
@@ -89,16 +185,16 @@ function serializeRow(row, req) {
 }
 
 app.get('/api/evidences', (req, res) => {
-  db.all('SELECT * FROM evidences ORDER BY criadoEm DESC', (err, rows) => {
+  dbClient.all('SELECT * FROM evidences ORDER BY criadoEm DESC', [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: 'Erro ao buscar evidências no banco de dados.' });
     }
-    res.json(rows.map(row => serializeRow(row, req)));
+    res.json((rows || []).map(row => serializeRow(row, req)));
   });
 });
 
 app.get('/api/evidences/:id', (req, res) => {
-  db.get('SELECT * FROM evidences WHERE id = ?', [req.params.id], (err, row) => {
+  dbClient.get('SELECT * FROM evidences WHERE id = ?', [req.params.id], (err, row) => {
     if (err) {
       return res.status(500).json({ error: 'Erro ao buscar evidência no banco de dados.' });
     }
@@ -110,7 +206,7 @@ app.get('/api/evidences/:id', (req, res) => {
 });
 
 app.get('/api/file/:id', (req, res) => {
-  db.get('SELECT caminhoArquivo, nome FROM evidences WHERE id = ?', [req.params.id], (err, row) => {
+  dbClient.get('SELECT caminhoArquivo, nome FROM evidences WHERE id = ?', [req.params.id], (err, row) => {
     if (err) {
       return res.status(500).send('Erro ao buscar arquivo.');
     }
@@ -276,7 +372,7 @@ async function callOpenAIForMetadata(filename, extension, extractedText) {
 }
 
 app.get('/api/preview/:id', (req, res) => {
-  db.get('SELECT caminhoArquivo, nome FROM evidences WHERE id = ?', [req.params.id], (err, row) => {
+  dbClient.get('SELECT caminhoArquivo, nome FROM evidences WHERE id = ?', [req.params.id], (err, row) => {
     if (err) {
       return res.status(500).send('Erro ao buscar arquivo.');
     }
@@ -300,22 +396,23 @@ app.get('/api/preview/:id', (req, res) => {
 });
 
 app.patch('/api/evidences/:id', (req, res) => {
-  const { evento, categoria, responsavel, tags, resumo, data } = req.body;
-  if (!evento || !categoria || !responsavel || !Array.isArray(tags) || !resumo || !data) {
+  const { titulo, evento, categoria, responsavel, tags, resumo, data } = req.body;
+  if (!titulo || !evento || !categoria || !responsavel || !Array.isArray(tags) || !resumo || !data) {
     return res.status(400).json({ error: 'Dados incompletos para atualização de metadados.' });
   }
 
   const tagsJson = JSON.stringify(tags);
-  const query = `UPDATE evidences SET evento = ?, categoria = ?, responsavel = ?, tags = ?, resumo = ?, data = ? WHERE id = ?`;
-  db.run(query, [evento, categoria, responsavel, tagsJson, resumo, data, req.params.id], function (err) {
+  const query = `UPDATE evidences SET titulo = ?, evento = ?, categoria = ?, responsavel = ?, tags = ?, resumo = ?, data = ? WHERE id = ?`;
+  dbClient.run(query, [titulo, evento, categoria, responsavel, tagsJson, resumo, data, req.params.id], (err, info) => {
     if (err) {
       return res.status(500).json({ error: 'Erro ao atualizar metadados.' });
     }
-    if (this.changes === 0) {
+    const changes = (info && typeof info.changes === 'number') ? info.changes : 0;
+    if (changes === 0) {
       return res.status(404).json({ error: 'Evidência não encontrada.' });
     }
 
-    db.get('SELECT * FROM evidences WHERE id = ?', [req.params.id], (err2, row) => {
+    dbClient.get('SELECT * FROM evidences WHERE id = ?', [req.params.id], (err2, row) => {
       if (err2) {
         return res.status(500).json({ error: 'Erro ao recuperar evidência atualizada.' });
       }
@@ -358,11 +455,12 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     const id = `ev-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const createdAt = new Date().toISOString();
     const tagsJson = JSON.stringify(metadata.tags || []);
-    const insertQuery = `INSERT INTO evidences (id, nome, tipo, data, evento, categoria, responsavel, tags, resumo, textoExtraido, caminhoArquivo, criadoEm)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const insertQuery = `INSERT INTO evidences (id, titulo, nome, tipo, data, evento, categoria, responsavel, tags, resumo, textoExtraido, caminhoArquivo, criadoEm)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    db.run(insertQuery, [
+    dbClient.run(insertQuery, [
       id,
+      originalName,
       originalName,
       extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento',
       new Date().toLocaleDateString('pt-BR'),
@@ -381,6 +479,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
       res.json({
         id,
+        titulo: originalName,
         nome: originalName,
         tipo: extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento',
         data: new Date().toLocaleDateString('pt-BR'),
@@ -398,6 +497,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Servidor CERNE iniciado em http://localhost:${port}`);
+app.listen(port, host, () => {
+  console.log(`Servidor CERNE iniciado em http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
+  console.log(`Se o servidor estiver em rede, acesse via browser: http://<IP-do-servidor>:${port}`);
 });

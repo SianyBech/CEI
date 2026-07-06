@@ -40,7 +40,7 @@ window.CerneApp.EvidenceTable = {
           <td>
             <div class="file-name-cell">
               <i data-lucide="${iconName}" class="file-icon ${iconClass}"></i>
-              <span>${evidence.nome}</span>
+              <span>${evidence.titulo || evidence.nome}</span>
             </div>
           </td>
           <td>
@@ -66,12 +66,6 @@ window.CerneApp.EvidenceTable = {
               ${tagsHTML}
             </div>
           </td>
-          <td>
-            <button class="btn btn-secondary btn-view-details" data-id="${evidence.id}">
-              <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
-              Visualizar
-            </button>
-          </td>
         </tr>
       `;
     });
@@ -80,14 +74,13 @@ window.CerneApp.EvidenceTable = {
       <table class="evidence-table">
         <thead>
           <tr>
-            <th>Nome do Arquivo</th>
+            <th>Título</th>
             <th>Tipo</th>
             <th>Data</th>
             <th>Evento</th>
             <th>Categoria CERNE</th>
             <th>Responsável</th>
             <th>Tags</th>
-            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -96,16 +89,6 @@ window.CerneApp.EvidenceTable = {
       </table>
     `;
 
-    // Attach click listeners to the "Visualizar" buttons
-    container.querySelectorAll('.btn-view-details').forEach(button => {
-      button.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const id = button.getAttribute('data-id');
-        onViewDetailsClick(id);
-      });
-    });
-
-    // Also make rows clickable for convenience
     container.querySelectorAll('tbody tr').forEach(row => {
       row.addEventListener('click', () => {
         const id = row.getAttribute('data-id');

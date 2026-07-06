@@ -42,7 +42,7 @@ window.CerneApp.EvidenceCard = {
           <div class="card-header">
             <div style="display: flex; align-items: flex-start; gap: 0.65rem;">
               <i data-lucide="${iconName}" class="file-icon ${iconClass}" style="margin-top: 2px;"></i>
-              <span class="card-title" title="${evidence.nome}">${evidence.nome}</span>
+              <span class="card-title" title="${evidence.titulo || evidence.nome}">${evidence.titulo || evidence.nome}</span>
             </div>
             <span class="file-type-badge">${evidence.tipo}</span>
           </div>

@@ -258,6 +258,11 @@
       evidence,
       () => {
         // Closed callback
+      },
+      (updatedEvidence) => {
+        state.evidences = state.evidences.map(item => item.id === updatedEvidence.id ? updatedEvidence : item);
+        populateFilterOptions();
+        renderList();
       }
     );
     document.body.appendChild(detailsNode);

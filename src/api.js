@@ -17,6 +17,23 @@ window.CerneApp.Api = {
     return response.json();
   },
 
+  async updateEvidence(id, metadata) {
+    const response = await fetch(`/api/evidences/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(metadata)
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => null);
+      throw new Error(errorBody?.error || 'Falha ao atualizar a evidência.');
+    }
+
+    return response.json();
+  },
+
   uploadEvidence(file, onProgress) {
     return new Promise((resolve, reject) => {
       const formData = new FormData();

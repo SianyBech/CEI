@@ -761,7 +761,7 @@ button, input, select, textarea {
 
 @media (min-width: 768px) {
   .details-grid {
-    grid-template-columns: 1.2fr 1.8fr;
+    grid-template-columns: 1fr 1fr;
   }
 }
 
