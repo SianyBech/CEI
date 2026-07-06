@@ -4,6 +4,7 @@ const fs = require('fs');
 const multer = require('multer');
 const sqlite3 = require('sqlite3').verbose();
 const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 const pdfParse = require('pdf-parse');
 const Tesseract = require('tesseract.js');
 const mammoth = require('mammoth');
@@ -89,6 +90,79 @@ async function initMySQLPool() {
   }
 }
 
+function normalizePostgresSql(sql) {
+  let index = 0;
+  return sql.replace(/\?/g, () => `$${++index}`);
+}
+
+async function initPostgresPool() {
+  const ssl = process.env.PGSSLMODE === 'disable' ? false : { rejectUnauthorized: false };
+  const config = process.env.DATABASE_URL
+    ? { connectionString: process.env.DATABASE_URL, ssl }
+    : {
+        host: process.env.PGHOST,
+        user: process.env.PGUSER,
+        password: process.env.PGPASSWORD,
+        database: process.env.PGDATABASE,
+        port: process.env.PGPORT ? Number(process.env.PGPORT) : 5432,
+        ssl
+      };
+
+  const pool = new Pool(config);
+  await pool.query('SELECT 1');
+
+  dbClient = {
+    all: async (sql, params, cb) => {
+      try {
+        const result = await pool.query(normalizePostgresSql(sql), params || []);
+        cb(null, result.rows);
+      } catch (err) {
+        cb(err);
+      }
+    },
+    get: async (sql, params, cb) => {
+      try {
+        const result = await pool.query(normalizePostgresSql(sql), params || []);
+        cb(null, result.rows && result.rows.length ? result.rows[0] : null);
+      } catch (err) {
+        cb(err);
+      }
+    },
+    run: async (sql, params, cb) => {
+      try {
+        const result = await pool.query(normalizePostgresSql(sql), params || []);
+        const info = { changes: result.rowCount, insertId: result.rows && result.rows[0] ? result.rows[0].id : null };
+        cb(null, info);
+      } catch (err) {
+        cb(err);
+      }
+    }
+  };
+
+  const createTableSQL = `CREATE TABLE IF NOT EXISTS evidences (
+    id VARCHAR(64) PRIMARY KEY,
+    titulo TEXT NOT NULL,
+    nome TEXT NOT NULL,
+    tipo VARCHAR(32) NOT NULL,
+    data VARCHAR(64) NOT NULL,
+    evento TEXT NOT NULL,
+    categoria TEXT NOT NULL,
+    responsavel TEXT NOT NULL,
+    tags JSONB NOT NULL,
+    resumo TEXT NOT NULL,
+    textoExtraido TEXT NOT NULL,
+    caminhoArquivo TEXT NOT NULL,
+    criadoEm VARCHAR(64) NOT NULL
+  )`;
+
+  try {
+    await pool.query(createTableSQL);
+  } catch (err) {
+    console.error('Erro ao inicializar tabela Postgres:', err.message || err);
+    process.exit(1);
+  }
+}
+
 function initSQLite() {
   const sqliteDb = new sqlite3.Database(dbPath, (err) => {
     if (err) {
@@ -139,6 +213,11 @@ if (process.env.DB_TYPE === 'mysql' || process.env.MYSQL_HOST) {
     console.error('Erro ao iniciar MySQL:', err.message || err);
     process.exit(1);
   });
+} else if (process.env.DB_TYPE === 'postgres' || process.env.PGHOST || process.env.DATABASE_URL) {
+  initPostgresPool().catch(err => {
+    console.error('Erro ao iniciar Postgres:', err.message || err);
+    process.exit(1);
+  });
 } else {
   initSQLite();
 }
@@ -175,7 +254,7 @@ function serializeRow(row, req) {
     evento: row.evento,
     categoria: row.categoria,
     responsavel: row.responsavel,
-    tags: JSON.parse(row.tags || '[]'),
+    tags: Array.isArray(row.tags) ? row.tags : JSON.parse(row.tags || '[]'),
     resumo: row.resumo,
     textoExtraido: row.textoExtraido,
     caminhoArquivo: row.caminhoArquivo,
