@@ -5,7 +5,7 @@
 (function () {
   // 1. Initial State with filters support
   const state = {
-    evidences: [...window.CerneApp.mockData], // Initialize with our mock database
+    evidences: [],
     searchQuery: '',
     viewMode: 'table', // default view mode: 'table' or 'grid'
     filters: {
@@ -23,7 +23,7 @@
   let searchBarElement = null;
 
   // 2. Initialization Function
-  function init() {
+  async function init() {
     appContainer = document.getElementById('app');
     
     // Render Header
@@ -52,14 +52,25 @@
 
     appContainer.appendChild(mainContent);
 
-    // Populate filter dropdown selects from mock database
-    populateFilterOptions();
-
-    // Initial render of the evidences list
-    renderList();
+    // Load evidences from backend and render list
+    await loadEvidences();
 
     // Trigger initial icon replacement
     lucide.createIcons();
+  }
+
+  async function loadEvidences() {
+    try {
+      const evidences = await window.CerneApp.Api.fetchEvidences();
+      state.evidences = evidences;
+      populateFilterOptions();
+      renderList();
+    } catch (error) {
+      console.error('Erro ao carregar evidências:', error);
+      state.evidences = [];
+      populateFilterOptions();
+      renderList();
+    }
   }
 
   // Populate dynamic dropdown options from current evidence database
@@ -230,9 +241,7 @@
       },
       // onAddEvidence callback
       (newEvidence) => {
-        // Add new evidence at the start of the list
         state.evidences.unshift(newEvidence);
-        // Refresh dynamic filters in dropdowns
         populateFilterOptions();
         renderList();
       }

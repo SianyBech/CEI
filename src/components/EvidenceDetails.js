@@ -148,11 +148,11 @@ window.CerneApp.EvidenceDetails = {
     // Mock downloads and previews
     overlay.querySelector('#btn-download-original').addEventListener('click', (e) => {
       e.preventDefault();
-      alert(`[Simulação de Download]\nBaixando o arquivo original: ${evidence.nome}`);
+      window.open(evidence.downloadUrl, '_blank');
     });
 
     overlay.querySelector('#btn-preview-original').addEventListener('click', () => {
-      alert(`[Simulação de Visualização]\nAbrindo visualizador para o arquivo: ${evidence.nome}`);
+      window.open(`/api/preview/${encodeURIComponent(evidence.id)}`, '_blank');
     });
 
     return overlay;

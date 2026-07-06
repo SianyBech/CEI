@@ -215,12 +215,11 @@ window.CerneApp.UploadModal = {
     // Submit / Processing logic
     submitBtn.addEventListener('click', () => {
       if (!selectedFile) return;
-      
-      // Transition to Processing State
+
       submitBtn.style.display = 'none';
       cancelBtn.style.display = 'none';
-      closeBtn.style.display = 'none'; // Hide close buttons during critical processing
-      
+      closeBtn.style.display = 'none';
+
       const modalBody = overlay.querySelector('#modal-body-container');
       modalBody.innerHTML = `
         <div class="ai-processing-container">
@@ -229,8 +228,8 @@ window.CerneApp.UploadModal = {
               <i data-lucide="sparkles" style="width: 20px; height: 20px;"></i>
             </div>
             <div>
-              <span class="ai-processing-title">Análise de Evidência por Inteligência Artificial</span>
-              <p style="font-size: 0.75rem; color: var(--text-secondary);">Processando metadados CERNE...</p>
+              <span class="ai-processing-title">Upload e análise de evidência</span>
+              <p style="font-size: 0.75rem; color: var(--text-secondary);">Enviando arquivo e extraindo metadados com OCR + IA...</p>
             </div>
           </div>
 
@@ -238,9 +237,7 @@ window.CerneApp.UploadModal = {
             <div class="progress-bar-fill" id="upload-progress-fill"></div>
           </div>
 
-          <div class="processing-steps-log" id="steps-log-console">
-            <!-- Steps will render here dynamically -->
-          </div>
+          <div class="processing-steps-log" id="steps-log-console"></div>
         </div>
       `;
 
@@ -252,67 +249,63 @@ window.CerneApp.UploadModal = {
       const progressFill = modalBody.querySelector('#upload-progress-fill');
       const logConsole = modalBody.querySelector('#steps-log-console');
 
-      const steps = [
-        "Arquivo recebido",
-        "Identificando tipo do documento",
-        "Extraindo texto",
-        "Detectando datas",
-        "Identificando pessoas citadas",
-        "Gerando resumo",
-        "Classificando prática CERNE",
-        "Criando palavras-chave",
-        "Salvando evidência",
-        "Concluído"
-      ];
-
-      let currentStepIndex = 0;
-
-      // Generate the mock data object early
-      const resultEvidence = this.generateMockAIResult(selectedFile.name);
-
-      function runNextStep() {
-        if (currentStepIndex >= steps.length) {
-          // Finished! Show Success Screen
-          showSuccessScreen(resultEvidence);
-          return;
-        }
-
-        const stepText = steps[currentStepIndex];
-        const progressPercentage = ((currentStepIndex + 1) / steps.length) * 100;
-        
-        // Update Progress Bar
-        progressFill.style.width = `${progressPercentage}%`;
-
-        // Mark previously active item as completed
-        const prevActive = logConsole.querySelector('.step-log-item.active');
-        if (prevActive) {
-          prevActive.classList.remove('active');
-          prevActive.classList.add('completed');
-          const statusIcon = prevActive.querySelector('.step-status-indicator');
-          statusIcon.innerHTML = '<span class="step-log-checkmark">✓</span>';
-        }
-
-        // Add next step as active
+      function addLog(message, completed = false) {
         const logItem = document.createElement('div');
-        logItem.className = 'step-log-item active';
+        logItem.className = `step-log-item ${completed ? 'completed' : 'active'}`;
         logItem.innerHTML = `
-          <span class="step-status-indicator">⚙</span>
-          <span>${stepText}...</span>
+          <span class="step-status-indicator">${completed ? '<span class="step-log-checkmark">✓</span>' : '⚙'}</span>
+          <span>${message}</span>
         `;
         logConsole.appendChild(logItem);
-        
-        // Auto-scroll terminal
         logConsole.scrollTop = logConsole.scrollHeight;
-
-        currentStepIndex++;
-
-        // Speed up a bit for a crisp cinematic feel, e.g. 500ms - 800ms per step
-        const delay = currentStepIndex === steps.length ? 900 : Math.random() * 300 + 450; 
-        setTimeout(runNextStep, delay);
+        return logItem;
       }
 
-      // Start the cinematic loop
-      setTimeout(runNextStep, 400);
+      const pendingLog = addLog('Preparando upload...');
+      setTimeout(() => {
+        pendingLog.classList.remove('active');
+        pendingLog.classList.add('completed');
+        pendingLog.querySelector('.step-status-indicator').innerHTML = '<span class="step-log-checkmark">✓</span>';
+
+        const uploadingLog = addLog('Enviando arquivo para o servidor...');
+
+        window.CerneApp.Api.uploadEvidence(selectedFile, (percentage) => {
+          progressFill.style.width = `${percentage}%`;
+        })
+          .then((uploadedEvidence) => {
+            uploadingLog.classList.remove('active');
+            uploadingLog.classList.add('completed');
+            uploadingLog.querySelector('.step-status-indicator').innerHTML = '<span class="step-log-checkmark">✓</span>';
+            addLog('Arquivo processado com sucesso.', true);
+            progressFill.style.width = '100%';
+            closeBtn.style.display = 'flex';
+            showSuccessScreen(uploadedEvidence);
+          })
+          .catch((error) => {
+            uploadingLog.classList.remove('active');
+            uploadingLog.classList.add('completed');
+            uploadingLog.querySelector('.step-status-indicator').innerHTML = '<span class="step-log-checkmark">✕</span>';
+            progressFill.style.backgroundColor = 'var(--danger)';
+            modalBody.innerHTML = `
+              <div class="ai-processing-container">
+                <div class="ai-processing-header">
+                  <div class="ai-icon-pulse" style="background-color: var(--danger-bg);">
+                    <i data-lucide="alert-triangle" style="width: 20px; height: 20px; color: var(--danger);"></i>
+                  </div>
+                  <div>
+                    <span class="ai-processing-title">Falha no upload</span>
+                    <p style="font-size: 0.75rem; color: var(--text-secondary);">${error.message}</p>
+                  </div>
+                </div>
+              </div>
+            `;
+            lucide.createIcons({
+              nameAttr: 'data-lucide',
+              node: modalBody
+            });
+            closeBtn.style.display = 'flex';
+          });
+      }, 300);
     });
 
     function showSuccessScreen(evidence) {
