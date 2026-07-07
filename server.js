@@ -86,7 +86,7 @@ async function initPostgresPool() {
 
   const createTableSQL = `
     CREATE TABLE IF NOT EXISTS public.evidences (
-      "id" text PRIMARY KEY,
+      "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       "titulo" text,
       "nome" text NOT NULL,
       "tipo" text,
@@ -484,18 +484,17 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     const metadata = await generateMetadata(originalName, extension, extractedText);
     console.log(`[UPLOAD] Metadados gerados para ${originalName}`);
 
-    const id = `ev-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const createdAt = new Date().toISOString();
     const tipo = extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento';
 
     const insertQuery = `
       INSERT INTO public.evidences (
-        "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "criadoEm"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "criadoEm"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING "id"
     `;
 
-    await dbClient.run(insertQuery, [
-      id,
+    const insertResult = await dbClient.query(insertQuery, [
       originalName,
       originalName,
       tipo,
@@ -510,6 +509,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       createdAt
     ]);
 
+    const id = insertResult.rows[0]?.id;
     console.log(`[UPLOAD] Registro salvo no banco para ${id}`);
 
     res.json({
