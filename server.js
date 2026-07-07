@@ -728,17 +728,19 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Erro interno do servidor.' });
 });
 
-async function startServer() {
-  try {
-    await initPostgresPool();
-    app.listen(port, host, () => {
-      console.log(`Servidor CERNE iniciado em http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
-      console.log(`Se o servidor estiver em rede, acesse via browser: http://<IP-do-servidor>:${port}`);
+function startServer() {
+  app.listen(port, host, () => {
+    console.log(`Servidor CERNE iniciado em http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
+    console.log(`Se o servidor estiver em rede, acesse via browser: http://<IP-do-servidor>:${port}`);
+  });
+
+  initPostgresPool()
+    .then(() => {
+      console.log('[SERVER] Inicialização do PostgreSQL concluída.');
+    })
+    .catch((error) => {
+      console.error('[SERVER] Falha na inicialização do PostgreSQL:', error);
     });
-  } catch (error) {
-    console.error('[SERVER] Falha ao iniciar o servidor:', error);
-    process.exit(1);
-  }
 }
 
 if (require.main === module) {
