@@ -240,12 +240,31 @@ function isForbiddenFile(fileName = '', mimeType = '') {
   return forbiddenExtensions.has(extension) || dangerousMimeTypes.includes(normalizedMime);
 }
 
+function sanitizeStoragePathSegment(value = '') {
+  return String(value || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[-.]+|[-.]+$/g, '')
+    .slice(0, 80) || 'arquivo';
+}
+
 function buildStoragePath(fileName = '') {
-  const extension = path.extname(fileName || '').toLowerCase();
+  const safeBaseName = sanitizeStoragePathSegment(path.basename(fileName || 'arquivo'));
+  const extension = path.posix.extname(safeBaseName).toLowerCase();
+  const safeExtension = extension && extension.length <= 8 ? extension : '';
   const now = new Date();
-  const year = now.getUTCFullYear();
+  const year = String(now.getUTCFullYear());
   const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-  return `${year}/${month}/${randomUUID()}${extension}`;
+  const day = String(now.getUTCDate()).padStart(2, '0');
+  const objectName = `${Date.now()}-${randomUUID().replace(/-/g, '')}${safeExtension}`;
+  const normalizedPath = `evidencias/${year}/${month}/${day}/${objectName}`
+    .replace(/\\/g, '/')
+    .replace(/\/+/g, '/')
+    .replace(/^\/+|\/+$/g, '');
+
+  return normalizedPath;
 }
 
 function getSupabaseClient() {
@@ -728,19 +747,18 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Erro interno do servidor.' });
 });
 
-async function startServer() {
-  try {
-    await initPostgresPool();
+function startServer() {
+  app.listen(port, host, () => {
+    console.log(`Servidor iniciado na porta ${port}`);
+  });
 
-    console.log('[SERVER] PostgreSQL inicializado.');
-
-    app.listen(port, host, () => {
-      console.log(`Servidor iniciado na porta ${port}`);
+  initPostgresPool()
+    .then(() => {
+      console.log('[SERVER] PostgreSQL inicializado.');
+    })
+    .catch((err) => {
+      console.error('Erro ao inicializar o banco:', err);
     });
-  } catch (err) {
-    console.error('Erro ao inicializar o banco:', err);
-    process.exit(1);
-  }
 }
 
 startServer();
