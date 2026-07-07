@@ -2,8 +2,6 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-const sqlite3 = require('sqlite3').verbose();
-const mysql = require('mysql2/promise');
 const { Pool } = require('pg');
 const pdfParse = require('pdf-parse');
 const Tesseract = require('tesseract.js');
@@ -21,205 +19,98 @@ const rootPath = path.resolve(__dirname);
 const storageRoot = process.env.STORAGE_PATH ? path.resolve(process.env.STORAGE_PATH) : path.join(rootPath, 'storage');
 const originalsDir = path.join(storageRoot, 'originals');
 const tempDir = path.join(storageRoot, 'tmp');
-const dbDir = process.env.DB_PATH ? path.dirname(path.resolve(process.env.DB_PATH)) : path.join(storageRoot, 'db');
-const dbPath = process.env.DB_PATH ? path.resolve(process.env.DB_PATH) : path.join(dbDir, 'evidences.db');
 
 fs.mkdirSync(originalsDir, { recursive: true });
 fs.mkdirSync(tempDir, { recursive: true });
-fs.mkdirSync(dbDir, { recursive: true });
 
-// Database client abstraction (supports SQLite by default, or MySQL when configured)
-let dbClient = null;
+let pool = null;
+let dbReady = false;
 
-async function initMySQLPool() {
-  const pool = mysql.createPool({
-    host: process.env.MYSQL_HOST,
-    user: process.env.MYSQL_USER,
-    password: process.env.MYSQL_PASSWORD,
-    database: process.env.MYSQL_DATABASE,
-    port: process.env.MYSQL_PORT ? Number(process.env.MYSQL_PORT) : 3306,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-  });
-
-  dbClient = {
-    all: async (sql, params, cb) => {
-      try {
-        const [rows] = await pool.execute(sql, params || []);
-        cb(null, rows);
-      } catch (err) { cb(err); }
-    },
-    get: async (sql, params, cb) => {
-      try {
-        const [rows] = await pool.execute(sql, params || []);
-        cb(null, rows && rows.length ? rows[0] : null);
-      } catch (err) { cb(err); }
-    },
-    run: async (sql, params, cb) => {
-      try {
-        const [result] = await pool.execute(sql, params || []);
-        const info = { changes: result && result.affectedRows ? result.affectedRows : 0, insertId: result && result.insertId };
-        cb(null, info);
-      } catch (err) { cb(err); }
+const dbClient = {
+  async query(text, params = []) {
+    if (!dbReady || !pool) {
+      throw new Error('Banco PostgreSQL não inicializado.');
     }
-  };
 
-  // Ensure table exists in MySQL
-  const createTableSQL = `CREATE TABLE IF NOT EXISTS evidences (
-    id VARCHAR(64) PRIMARY KEY,
-    titulo TEXT NOT NULL,
-    nome TEXT NOT NULL,
-    tipo VARCHAR(32) NOT NULL,
-    data VARCHAR(64) NOT NULL,
-    evento TEXT NOT NULL,
-    categoria TEXT NOT NULL,
-    responsavel TEXT NOT NULL,
-    tags TEXT NOT NULL,
-    resumo TEXT NOT NULL,
-    textoExtraido LONGTEXT NOT NULL,
-    caminhoArquivo TEXT NOT NULL,
-    criadoEm VARCHAR(64) NOT NULL
-  )`;
+    return pool.query(text, params);
+  },
 
-  try {
-    await pool.execute(createTableSQL);
-  } catch (err) {
-    console.error('Erro ao inicializar tabela MySQL:', err.message || err);
-    process.exit(1);
+  async many(text, params = []) {
+    const result = await this.query(text, params);
+    return result.rows;
+  },
+
+  async one(text, params = []) {
+    const result = await this.query(text, params);
+    return result.rows[0] || null;
+  },
+
+  async run(text, params = []) {
+    const result = await this.query(text, params);
+    return { rowCount: result.rowCount, rows: result.rows };
   }
-}
+};
 
-function normalizePostgresSql(sql) {
-  let index = 0;
-  return sql.replace(/\?/g, () => `$${++index}`);
+function buildPostgresConfig() {
+  const ssl = process.env.PGSSLMODE === 'disable' ? false : { rejectUnauthorized: false };
+
+  if (process.env.DATABASE_URL) {
+    return { connectionString: process.env.DATABASE_URL, ssl };
+  }
+
+  return {
+    host: process.env.PGHOST,
+    user: process.env.PGUSER,
+    password: process.env.PGPASSWORD,
+    database: process.env.PGDATABASE,
+    port: process.env.PGPORT ? Number(process.env.PGPORT) : 5432,
+    ssl
+  };
 }
 
 async function initPostgresPool() {
-  const ssl = process.env.PGSSLMODE === 'disable' ? false : { rejectUnauthorized: false };
-  const config = process.env.DATABASE_URL
-    ? { connectionString: process.env.DATABASE_URL, ssl }
-    : {
-        host: process.env.PGHOST,
-        user: process.env.PGUSER,
-        password: process.env.PGPASSWORD,
-        database: process.env.PGDATABASE,
-        port: process.env.PGPORT ? Number(process.env.PGPORT) : 5432,
-        ssl
-      };
+  const config = buildPostgresConfig();
+  pool = new Pool(config);
 
-  const pool = new Pool(config);
-  await pool.query('SELECT 1');
+  pool.on('error', (err) => {
+    console.error('[DB] Erro inesperado no pool do PostgreSQL:', err);
+  });
 
-  dbClient = {
-    all: async (sql, params, cb) => {
-      try {
-        const result = await pool.query(normalizePostgresSql(sql), params || []);
-        cb(null, result.rows);
-      } catch (err) {
-        cb(err);
-      }
-    },
-    get: async (sql, params, cb) => {
-      try {
-        const result = await pool.query(normalizePostgresSql(sql), params || []);
-        cb(null, result.rows && result.rows.length ? result.rows[0] : null);
-      } catch (err) {
-        cb(err);
-      }
-    },
-    run: async (sql, params, cb) => {
-      try {
-        const result = await pool.query(normalizePostgresSql(sql), params || []);
-        const info = { changes: result.rowCount, insertId: result.rows && result.rows[0] ? result.rows[0].id : null };
-        cb(null, info);
-      } catch (err) {
-        cb(err);
-      }
-    }
-  };
+  try {
+    await pool.query('SELECT 1');
+    console.log('[DB] Conectado ao PostgreSQL.');
+  } catch (error) {
+    console.error('[DB] Falha ao conectar ao PostgreSQL:', error);
+    throw error;
+  }
 
-  const createTableSQL = `CREATE TABLE IF NOT EXISTS evidences (
-    id VARCHAR(64) PRIMARY KEY,
-    titulo TEXT NOT NULL,
-    nome TEXT NOT NULL,
-    tipo VARCHAR(32) NOT NULL,
-    data VARCHAR(64) NOT NULL,
-    evento TEXT NOT NULL,
-    categoria TEXT NOT NULL,
-    responsavel TEXT NOT NULL,
-    tags JSONB NOT NULL,
-    resumo TEXT NOT NULL,
-    textoExtraido TEXT NOT NULL,
-    caminhoArquivo TEXT NOT NULL,
-    criadoEm VARCHAR(64) NOT NULL
-  )`;
+  const createTableSQL = `
+    CREATE TABLE IF NOT EXISTS public.evidences (
+      "id" text PRIMARY KEY,
+      "titulo" text,
+      "nome" text NOT NULL,
+      "tipo" text,
+      "data" text,
+      "evento" text,
+      "categoria" text,
+      "responsavel" text,
+      "tags" jsonb NOT NULL DEFAULT '[]'::jsonb,
+      "resumo" text,
+      "textoExtraido" text,
+      "caminhoArquivo" text,
+      "criadoEm" text NOT NULL
+    )
+  `;
 
   try {
     await pool.query(createTableSQL);
-  } catch (err) {
-    console.error('Erro ao inicializar tabela Postgres:', err.message || err);
-    process.exit(1);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_evidences_tags ON public.evidences USING gin ("tags")');
+    dbReady = true;
+    console.log('[DB] Tabela public.evidences pronta.');
+  } catch (error) {
+    console.error('[DB] Erro ao criar a tabela evidences:', error);
+    throw error;
   }
-}
-
-function initSQLite() {
-  const sqliteDb = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-      console.error('Erro ao abrir banco de dados SQLite:', err.message);
-      process.exit(1);
-    }
-  });
-
-  dbClient = {
-    all: (sql, params, cb) => sqliteDb.all(sql, params, cb),
-    get: (sql, params, cb) => sqliteDb.get(sql, params, cb),
-    run: (sql, params, cb) => sqliteDb.run(sql, params, function (err) { cb(err, this); })
-  };
-
-  sqliteDb.serialize(() => {
-    sqliteDb.run(`CREATE TABLE IF NOT EXISTS evidences (
-      id TEXT PRIMARY KEY,
-      titulo TEXT NOT NULL,
-      nome TEXT NOT NULL,
-      tipo TEXT NOT NULL,
-      data TEXT NOT NULL,
-      evento TEXT NOT NULL,
-      categoria TEXT NOT NULL,
-      responsavel TEXT NOT NULL,
-      tags TEXT NOT NULL,
-      resumo TEXT NOT NULL,
-      textoExtraido TEXT NOT NULL,
-      caminhoArquivo TEXT NOT NULL,
-      criadoEm TEXT NOT NULL
-    )`);
-
-    sqliteDb.all('PRAGMA table_info(evidences)', (err, columns) => {
-      if (err) {
-        console.error('Erro ao verificar colunas da tabela evidences:', err.message);
-        return;
-      }
-      const hasTitulo = columns.some((column) => column.name === 'titulo');
-      if (!hasTitulo) {
-        sqliteDb.run('ALTER TABLE evidences ADD COLUMN titulo TEXT');
-      }
-    });
-  });
-}
-
-// Initialize DB client based on environment
-if (process.env.DB_TYPE === 'mysql' || process.env.MYSQL_HOST) {
-  initMySQLPool().catch(err => {
-    console.error('Erro ao iniciar MySQL:', err.message || err);
-    process.exit(1);
-  });
-} else if (process.env.DB_TYPE === 'postgres' || process.env.PGHOST || process.env.DATABASE_URL) {
-  initPostgresPool().catch(err => {
-    console.error('Erro ao iniciar Postgres:', err.message || err);
-    process.exit(1);
-  });
-} else {
-  initSQLite();
 }
 
 const upload = multer({
@@ -243,8 +134,35 @@ function buildDownloadUrl(req, evidenceId) {
   return `/api/file/${encodeURIComponent(evidenceId)}`;
 }
 
+function sanitizeFileName(fileName) {
+  const baseName = path.basename(fileName || 'arquivo');
+  return baseName.replace(/[^a-zA-Z0-9._-]/g, '_') || 'arquivo';
+}
+
+function normalizeTags(value) {
+  if (Array.isArray(value)) {
+    return value.filter((item) => typeof item === 'string' && item.trim()).map((item) => item.trim());
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? normalizeTags(parsed) : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  if (value && typeof value === 'object') {
+    return normalizeTags(Array.isArray(value) ? value : Object.values(value));
+  }
+
+  return [];
+}
+
 function serializeRow(row, req) {
   if (!row) return null;
+
   return {
     id: row.id,
     titulo: row.titulo || row.nome,
@@ -254,7 +172,7 @@ function serializeRow(row, req) {
     evento: row.evento,
     categoria: row.categoria,
     responsavel: row.responsavel,
-    tags: Array.isArray(row.tags) ? row.tags : JSON.parse(row.tags || '[]'),
+    tags: normalizeTags(row.tags),
     resumo: row.resumo,
     textoExtraido: row.textoExtraido,
     caminhoArquivo: row.caminhoArquivo,
@@ -263,44 +181,26 @@ function serializeRow(row, req) {
   };
 }
 
-app.get('/api/evidences', (req, res) => {
-  dbClient.all('SELECT * FROM evidences ORDER BY criadoEm DESC', [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: 'Erro ao buscar evidências no banco de dados.' });
+async function moveFile(sourcePath, destinationPath) {
+  try {
+    await fs.promises.rename(sourcePath, destinationPath);
+  } catch (error) {
+    if (error.code === 'EXDEV') {
+      await fs.promises.copyFile(sourcePath, destinationPath);
+      await fs.promises.unlink(sourcePath);
+      return;
     }
-    res.json((rows || []).map(row => serializeRow(row, req)));
-  });
-});
 
-app.get('/api/evidences/:id', (req, res) => {
-  dbClient.get('SELECT * FROM evidences WHERE id = ?', [req.params.id], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: 'Erro ao buscar evidência no banco de dados.' });
-    }
-    if (!row) {
-      return res.status(404).json({ error: 'Evidência não encontrada.' });
-    }
-    res.json(serializeRow(row, req));
-  });
-});
-
-app.get('/api/file/:id', (req, res) => {
-  dbClient.get('SELECT caminhoArquivo, nome FROM evidences WHERE id = ?', [req.params.id], (err, row) => {
-    if (err) {
-      return res.status(500).send('Erro ao buscar arquivo.');
-    }
-    if (!row) {
-      return res.status(404).send('Arquivo não encontrado.');
-    }
-    res.download(row.caminhoArquivo, row.nome);
-  });
-});
+    throw error;
+  }
+}
 
 async function extractTextFromDocx(filePath) {
   try {
     const result = await mammoth.extractRawText({ path: filePath });
     return result.value || '';
   } catch (error) {
+    console.error('[OCR] Erro ao extrair texto de DOCX:', error);
     return '';
   }
 }
@@ -316,17 +216,20 @@ function extractTextFromPptx(filePath) {
       .replace(/\s+/g, ' ')
       .trim();
   } catch (error) {
+    console.error('[OCR] Erro ao extrair texto de PPTX:', error);
     return '';
   }
 }
 
 async function extractText(filePath, extension) {
   const buffer = await fs.promises.readFile(filePath);
+
   if (extension === 'pdf') {
     try {
       const data = await pdfParse(buffer);
       return (data.text || '').trim();
     } catch (error) {
+      console.error('[OCR] Erro ao processar PDF:', error);
       return '';
     }
   }
@@ -339,6 +242,7 @@ async function extractText(filePath, extension) {
       }
       return '';
     } catch (error) {
+      console.error('[OCR] Erro ao processar imagem:', error);
       return '';
     }
   }
@@ -414,7 +318,7 @@ async function callOpenAIForMetadata(filename, extension, extractedText) {
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -443,62 +347,14 @@ async function callOpenAIForMetadata(filename, extension, extractedText) {
         output = firstOutput.content;
       }
     }
+
     const jsonText = output.trim();
     return JSON.parse(jsonText);
   } catch (error) {
+    console.error('[AI] Erro ao gerar metadados com OpenAI:', error);
     return null;
   }
 }
-
-app.get('/api/preview/:id', (req, res) => {
-  dbClient.get('SELECT caminhoArquivo, nome FROM evidences WHERE id = ?', [req.params.id], (err, row) => {
-    if (err) {
-      return res.status(500).send('Erro ao buscar arquivo.');
-    }
-    if (!row) {
-      return res.status(404).send('Arquivo não encontrado.');
-    }
-
-    const extension = path.extname(row.caminhoArquivo).toLowerCase();
-    const mimeType = extension === '.pdf'
-      ? 'application/pdf'
-      : extension === '.png'
-      ? 'image/png'
-      : extension === '.jpg' || extension === '.jpeg'
-      ? 'image/jpeg'
-      : 'application/octet-stream';
-
-    res.setHeader('Content-Disposition', `inline; filename="${row.nome}"`);
-    res.type(mimeType);
-    res.sendFile(row.caminhoArquivo);
-  });
-});
-
-app.patch('/api/evidences/:id', (req, res) => {
-  const { titulo, evento, categoria, responsavel, tags, resumo, data } = req.body;
-  if (!titulo || !evento || !categoria || !responsavel || !Array.isArray(tags) || !resumo || !data) {
-    return res.status(400).json({ error: 'Dados incompletos para atualização de metadados.' });
-  }
-
-  const tagsJson = JSON.stringify(tags);
-  const query = `UPDATE evidences SET titulo = ?, evento = ?, categoria = ?, responsavel = ?, tags = ?, resumo = ?, data = ? WHERE id = ?`;
-  dbClient.run(query, [titulo, evento, categoria, responsavel, tagsJson, resumo, data, req.params.id], (err, info) => {
-    if (err) {
-      return res.status(500).json({ error: 'Erro ao atualizar metadados.' });
-    }
-    const changes = (info && typeof info.changes === 'number') ? info.changes : 0;
-    if (changes === 0) {
-      return res.status(404).json({ error: 'Evidência não encontrada.' });
-    }
-
-    dbClient.get('SELECT * FROM evidences WHERE id = ?', [req.params.id], (err2, row) => {
-      if (err2) {
-        return res.status(500).json({ error: 'Erro ao recuperar evidência atualizada.' });
-      }
-      res.json(serializeRow(row, req));
-    });
-  });
-});
 
 async function generateMetadata(filename, extension, extractedText) {
   const aiResult = await callOpenAIForMetadata(filename, extension, extractedText).catch(() => null);
@@ -507,7 +363,7 @@ async function generateMetadata(filename, extension, extractedText) {
       evento: String(aiResult.evento || 'Registro Interno').trim(),
       categoria: String(aiResult.categoria || 'Gestão').trim(),
       responsavel: String(aiResult.responsavel || 'Equipe CEI').trim(),
-      tags: Array.isArray(aiResult.tags) ? aiResult.tags.map(tag => String(tag).trim()).filter(Boolean) : [],
+      tags: Array.isArray(aiResult.tags) ? aiResult.tags.map((tag) => String(tag).trim()).filter(Boolean) : [],
       resumo: String(aiResult.resumo || '').trim(),
       textoExtraido: extractedText || ''
     };
@@ -516,67 +372,186 @@ async function generateMetadata(filename, extension, extractedText) {
   return buildFallbackMetadata(filename, extension, extractedText);
 }
 
+app.get('/api/evidences', async (req, res, next) => {
+  try {
+    console.log('[EVIDENCES] Buscando evidências...');
+    const rows = await dbClient.many(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "criadoEm" FROM public.evidences ORDER BY "criadoEm" DESC`);
+    res.json((rows || []).map((row) => serializeRow(row, req)));
+  } catch (error) {
+    console.error('[EVIDENCES] Erro ao buscar evidências:', error);
+    res.status(500).json({ error: error.message || 'Erro ao buscar evidências.' });
+  }
+});
+
+app.get('/api/evidences/:id', async (req, res, next) => {
+  try {
+    const row = await dbClient.one(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "criadoEm" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
+    if (!row) {
+      return res.status(404).json({ error: 'Evidência não encontrada.' });
+    }
+
+    res.json(serializeRow(row, req));
+  } catch (error) {
+    console.error('[EVIDENCES] Erro ao buscar evidência:', error);
+    res.status(500).json({ error: error.message || 'Erro ao buscar evidência.' });
+  }
+});
+
+app.get('/api/file/:id', async (req, res, next) => {
+  try {
+    const row = await dbClient.one(`SELECT "caminhoArquivo", "nome" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
+    if (!row) {
+      return res.status(404).send('Arquivo não encontrado.');
+    }
+
+    res.download(row.caminhoArquivo, row.nome);
+  } catch (error) {
+    console.error('[FILE] Erro ao buscar arquivo:', error);
+    res.status(500).send('Erro ao buscar arquivo.');
+  }
+});
+
+app.get('/api/preview/:id', async (req, res, next) => {
+  try {
+    const row = await dbClient.one(`SELECT "caminhoArquivo", "nome" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
+    if (!row) {
+      return res.status(404).send('Arquivo não encontrado.');
+    }
+
+    const extension = path.extname(row.caminhoArquivo).toLowerCase();
+    const mimeType = extension === '.pdf'
+      ? 'application/pdf'
+      : extension === '.png'
+        ? 'image/png'
+        : extension === '.jpg' || extension === '.jpeg'
+          ? 'image/jpeg'
+          : 'application/octet-stream';
+
+    res.setHeader('Content-Disposition', `inline; filename="${row.nome}"`);
+    res.type(mimeType);
+    res.sendFile(row.caminhoArquivo);
+  } catch (error) {
+    console.error('[PREVIEW] Erro ao abrir preview:', error);
+    res.status(500).send('Erro ao abrir preview do arquivo.');
+  }
+});
+
+app.patch('/api/evidences/:id', async (req, res, next) => {
+  try {
+    const { titulo, evento, categoria, responsavel, tags, resumo, data } = req.body;
+    if (!titulo || !evento || !categoria || !responsavel || !Array.isArray(tags) || !resumo || !data) {
+      return res.status(400).json({ error: 'Dados incompletos para atualização de metadados.' });
+    }
+
+    const result = await dbClient.run(`UPDATE public.evidences SET "titulo" = $1, "evento" = $2, "categoria" = $3, "responsavel" = $4, "tags" = $5, "resumo" = $6, "data" = $7 WHERE "id" = $8`, [titulo, evento, categoria, responsavel, JSON.stringify(tags), resumo, data, req.params.id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Evidência não encontrada.' });
+    }
+
+    const updatedRow = await dbClient.one(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "criadoEm" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
+    res.json(serializeRow(updatedRow, req));
+  } catch (error) {
+    console.error('[EVIDENCES] Erro ao atualizar evidência:', error);
+    res.status(500).json({ error: error.message || 'Erro ao atualizar metadados.' });
+  }
+});
+
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Nenhum arquivo enviado. Use multer com nome de campo "file".' });
   }
 
+  const tempPath = req.file.path;
+  const originalName = sanitizeFileName(req.file.originalname);
+  const extension = path.extname(originalName).slice(1).toLowerCase();
+  const allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx'];
+
+  if (!allowedExtensions.includes(extension)) {
+    return res.status(400).json({ error: 'Tipo de arquivo não suportado.' });
+  }
+
   try {
-    const originalName = req.file.originalname;
-    const extension = path.extname(originalName).slice(1).toLowerCase();
+    console.log(`[UPLOAD] Iniciando upload de ${originalName}`);
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${path.extname(originalName)}`;
     const destinationPath = path.join(originalsDir, filename);
 
-    await fs.promises.rename(req.file.path, destinationPath);
+    await moveFile(tempPath, destinationPath);
+    console.log(`[UPLOAD] Arquivo salvo em ${destinationPath}`);
+
     const extractedText = await extractText(destinationPath, extension);
+    console.log(`[UPLOAD] Texto extraído (${extractedText.length} caracteres)`);
+
     const metadata = await generateMetadata(originalName, extension, extractedText);
+    console.log(`[UPLOAD] Metadados gerados para ${originalName}`);
 
     const id = `ev-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const createdAt = new Date().toISOString();
-    const tagsJson = JSON.stringify(metadata.tags || []);
-    const insertQuery = `INSERT INTO evidences (id, titulo, nome, tipo, data, evento, categoria, responsavel, tags, resumo, textoExtraido, caminhoArquivo, criadoEm)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const tipo = extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento';
 
-    dbClient.run(insertQuery, [
+    const insertQuery = `
+      INSERT INTO public.evidences (
+        "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "criadoEm"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    `;
+
+    await dbClient.run(insertQuery, [
       id,
       originalName,
       originalName,
-      extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento',
+      tipo,
       new Date().toLocaleDateString('pt-BR'),
       metadata.evento,
       metadata.categoria,
       metadata.responsavel,
-      tagsJson,
+      JSON.stringify(metadata.tags || []),
       metadata.resumo,
       metadata.textoExtraido,
       destinationPath,
       createdAt
-    ], function (err) {
-      if (err) {
-        return res.status(500).json({ error: 'Erro ao salvar os metadados no banco de dados.' });
-      }
+    ]);
 
-      res.json({
-        id,
-        titulo: originalName,
-        nome: originalName,
-        tipo: extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento',
-        data: new Date().toLocaleDateString('pt-BR'),
-        evento: metadata.evento,
-        categoria: metadata.categoria,
-        responsavel: metadata.responsavel,
-        tags: metadata.tags,
-        resumo: metadata.resumo,
-        textoExtraido: metadata.textoExtraido,
-        downloadUrl: buildDownloadUrl(req, id)
-      });
+    console.log(`[UPLOAD] Registro salvo no banco para ${id}`);
+
+    res.json({
+      id,
+      titulo: originalName,
+      nome: originalName,
+      tipo,
+      data: new Date().toLocaleDateString('pt-BR'),
+      evento: metadata.evento,
+      categoria: metadata.categoria,
+      responsavel: metadata.responsavel,
+      tags: metadata.tags,
+      resumo: metadata.resumo,
+      textoExtraido: metadata.textoExtraido,
+      downloadUrl: buildDownloadUrl(req, id)
     });
   } catch (error) {
-    return res.status(500).json({ error: 'Falha no processamento do arquivo: ' + (error.message || 'erro desconhecido') });
+    console.error('[UPLOAD] Falha no processamento do arquivo:', error);
+    if (tempPath && fs.existsSync(tempPath)) {
+      fs.rmSync(tempPath, { force: true });
+    }
+
+    res.status(500).json({ error: error.message || 'Falha no processamento do arquivo.' });
   }
 });
 
-app.listen(port, host, () => {
-  console.log(`Servidor CERNE iniciado em http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
-  console.log(`Se o servidor estiver em rede, acesse via browser: http://<IP-do-servidor>:${port}`);
+app.use((err, req, res, next) => {
+  console.error('[SERVER] Erro interno não tratado:', err);
+  res.status(500).json({ error: err.message || 'Erro interno do servidor.' });
 });
+
+async function startServer() {
+  try {
+    await initPostgresPool();
+    app.listen(port, host, () => {
+      console.log(`Servidor CERNE iniciado em http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
+      console.log(`Se o servidor estiver em rede, acesse via browser: http://<IP-do-servidor>:${port}`);
+    });
+  } catch (error) {
+    console.error('[SERVER] Falha ao iniciar o servidor:', error);
+    process.exit(1);
+  }
+}
+
+startServer();

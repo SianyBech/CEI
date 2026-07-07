@@ -1,3 +1,122 @@
-DUMMY PDF CONTENT FOR TESTING EVIDENCE UPLOAD MODAL.
-ATA DE REUNIÃO DE ALINHAMENTO GESTÃO CERNE
-CEI - Centro de Empreendedorismo e Incubação.
+DB_TYPE=mysql
+MYSQL_HOST=localhost                # ou host do DB fornecido pela Hostinger
+MYSQL_PORT=3306
+MYSQL_USER=cei
+MYSQL_PASSWORD=Cei@2017..
+MYSQL_DATABASE=evidencias
+HOST=0.0.0.0
+
+
+SUPABASE
+Password: 6yqky57Ua7Kdi+j
+Project Name: Evidencias
+Organization: Incubadora CEI
+
+databasename: cei
+database password: Cei@2017..
+
+
+
+
+____________________________________
+
+
+
+Open package.json file in your app, find the dependencies section and add this line. The @supabase/supabase-js package will be installed automatically during the build.
+
+"@supabase/supabase-js": "^2.0.0"
+
+
+Hide
+
+Copy
+{
+  "name": "your-app",
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.0.0",
+    "@supabase/supabase-js": "^2.0.0"
+  }
+}
+
+2
+Create db.js in the same folder as package.json, paste this code into it, replace 'your_table' with any table name from your Supabase project, and save.
+
+const { createClient } = require(...)...
+
+
+Hide
+
+Copy
+const { createClient } = require('@supabase/supabase-js');
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_API_KEY
+);
+
+// Test the connection
+supabase
+  .from('your_table')
+  .select('*')
+  .limit(1)
+  .then(({ data, error }) => {
+    if (error) console.error('Connection error:', error);
+    else console.log('Connected:', data);
+  });
+
+module.exports = supabase;
+
+3
+Push changes to GitHub. Hostinger will redeploy automatically and connect your database.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+_______________________________________
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Database
+
+cei
+
+Region
+
+South America (São Paulo)
+
+SUPABASE_URL
+
+https://aizghgayyazsljddjbwy.supabase.co
+
+SUPABASE_API_KEY
+
+sb_secret_lPdJaOFjlASZ9co6zY9WHA_D1ieXNK0

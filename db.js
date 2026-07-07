@@ -1,18 +1,14 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_API_KEY
-);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_API_KEY;
 
-// Test the connection
-supabase
-  .from('id')
-  .select('*')
-  .limit(1)
-  .then(({ data, error }) => {
-    if (error) console.error('Connection error:', error);
-    else console.log('Connected:', data);
-  });
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('[DB] Variáveis SUPABASE_URL/SUPABASE_API_KEY não configuradas.');
+}
+
+const supabase = supabaseUrl && supabaseKey
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 module.exports = supabase;
