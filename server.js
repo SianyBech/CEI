@@ -3,12 +3,14 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const { Pool } = require('pg');
+const { randomUUID } = require('crypto');
 const pdfParse = require('pdf-parse');
 const Tesseract = require('tesseract.js');
 const mammoth = require('mammoth');
 const AdmZip = require('adm-zip');
 const fetch = require('node-fetch');
 const dotenv = require('dotenv');
+const { createClient } = require('@supabase/supabase-js');
 
 dotenv.config();
 
@@ -17,14 +19,17 @@ const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || '0.0.0.0';
 const rootPath = path.resolve(__dirname);
 const storageRoot = process.env.STORAGE_PATH ? path.resolve(process.env.STORAGE_PATH) : path.join(rootPath, 'storage');
-const originalsDir = path.join(storageRoot, 'originals');
 const tempDir = path.join(storageRoot, 'tmp');
 
-fs.mkdirSync(originalsDir, { recursive: true });
 fs.mkdirSync(tempDir, { recursive: true });
 
 let pool = null;
 let dbReady = false;
+let supabaseClient = null;
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_API_KEY;
+const supabaseBucket = process.env.SUPABASE_BUCKET || 'evidencias';
 
 const dbClient = {
   async query(text, params = []) {
@@ -105,6 +110,15 @@ async function initPostgresPool() {
   try {
     await pool.query(createTableSQL);
     await pool.query('CREATE INDEX IF NOT EXISTS idx_evidences_tags ON public.evidences USING gin ("tags")');
+    await pool.query('ALTER TABLE public.evidences ADD COLUMN IF NOT EXISTS "storage_path" text');
+    await pool.query('ALTER TABLE public.evidences ADD COLUMN IF NOT EXISTS "storage_filename" text');
+    await pool.query('ALTER TABLE public.evidences ADD COLUMN IF NOT EXISTS "original_filename" text');
+    await pool.query('ALTER TABLE public.evidences ADD COLUMN IF NOT EXISTS "mime_type" text');
+    await pool.query('ALTER TABLE public.evidences ADD COLUMN IF NOT EXISTS "file_size" bigint');
+    await pool.query('UPDATE public.evidences SET "original_filename" = COALESCE("original_filename", "nome") WHERE "original_filename" IS NULL');
+    await pool.query('UPDATE public.evidences SET "storage_filename" = COALESCE("storage_filename", "nome") WHERE "storage_filename" IS NULL');
+    await pool.query('UPDATE public.evidences SET "mime_type" = COALESCE("mime_type", CASE WHEN "tipo" = \'pdf\' THEN \'application/pdf\' ELSE \'application/octet-stream\' END) WHERE "mime_type" IS NULL');
+    await pool.query('UPDATE public.evidences SET "file_size" = COALESCE("file_size", 0) WHERE "file_size" IS NULL');
     dbReady = true;
     console.log('[DB] Tabela public.evidences pronta.');
   } catch (error) {
@@ -116,12 +130,17 @@ async function initPostgresPool() {
 const upload = multer({
   dest: tempDir,
   limits: {
-    fileSize: 50 * 1024 * 1024
+    fileSize: 30 * 1024 * 1024
   },
   fileFilter: (req, file, cb) => {
-    const allowed = ['.pdf', '.png', '.jpg', '.jpeg', '.docx', '.pptx'];
-    const extension = path.extname(file.originalname).toLowerCase();
-    cb(null, allowed.includes(extension));
+    const extension = path.extname(file.originalname || '').toLowerCase();
+    const mimeType = (file.mimetype || '').toLowerCase();
+
+    if (isForbiddenFile(file.originalname, mimeType)) {
+      return cb(new Error('Tipo de arquivo não permitido por segurança.'));
+    }
+
+    cb(null, true);
   }
 });
 
@@ -176,9 +195,130 @@ function serializeRow(row, req) {
     resumo: row.resumo,
     textoExtraido: row.textoExtraido,
     caminhoArquivo: row.caminhoArquivo,
+    storagePath: row.storage_path || null,
+    storageFilename: row.storage_filename || null,
+    originalFilename: row.original_filename || row.nome || null,
+    mimeType: row.mime_type || null,
+    fileSize: row.file_size || null,
     criadoEm: row.criadoEm,
     downloadUrl: buildDownloadUrl(req, row.id)
   };
+}
+
+function getFileExtension(fileName = '') {
+  return path.extname(fileName || '').slice(1).toLowerCase();
+}
+
+function getMimeType(fileName = '', fallback = 'application/octet-stream') {
+  const extension = getFileExtension(fileName);
+  const map = {
+    pdf: 'application/pdf',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    txt: 'text/plain'
+  };
+
+  return map[extension] || fallback;
+}
+
+const forbiddenExtensions = new Set(['exe', 'dll', 'bat', 'cmd', 'com', 'msi', 'apk', 'sh', 'ps1', 'scr']);
+
+function isForbiddenFile(fileName = '', mimeType = '') {
+  const extension = getFileExtension(fileName);
+  const normalizedMime = String(mimeType || '').toLowerCase();
+  const dangerousMimeTypes = [
+    'application/x-msdownload',
+    'application/x-msdos-program',
+    'application/x-msi',
+    'application/x-ms-shortcut',
+    'application/x-dosexec'
+  ];
+
+  return forbiddenExtensions.has(extension) || dangerousMimeTypes.includes(normalizedMime);
+}
+
+function buildStoragePath(fileName = '') {
+  const extension = path.extname(fileName || '').toLowerCase();
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `evidencias/${year}/${month}/${randomUUID()}${extension}`;
+}
+
+function getSupabaseClient() {
+  if (!supabaseClient && supabaseUrl && supabaseServiceRoleKey) {
+    supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      }
+    });
+  }
+
+  return supabaseClient;
+}
+
+async function uploadFileToSupabase(filePath, storagePath, originalName, mimeType) {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Configuração do Supabase Storage indisponível.');
+  }
+
+  const fileBuffer = await fs.promises.readFile(filePath);
+  const { data, error } = await client.storage.from(supabaseBucket).upload(storagePath, fileBuffer, {
+    contentType: mimeType || getMimeType(originalName),
+    upsert: false,
+    cacheControl: '3600'
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+async function createSignedUrl(storagePath) {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Configuração do Supabase Storage indisponível.');
+  }
+
+  const { data, error } = await client.storage.from(supabaseBucket).createSignedUrl(storagePath, 60 * 60);
+  if (error) {
+    throw error;
+  }
+
+  return data?.signedUrl || null;
+}
+
+async function deleteFileFromSupabase(storagePath) {
+  const client = getSupabaseClient();
+  if (!client || !storagePath) {
+    return;
+  }
+
+  const { error } = await client.storage.from(supabaseBucket).remove([storagePath]);
+  if (error) {
+    console.error('[UPLOAD] Falha ao remover arquivo do Supabase Storage:', error);
+  }
+}
+
+async function removeTemporaryFile(filePath) {
+  if (!filePath) {
+    return;
+  }
+
+  try {
+    if (fs.existsSync(filePath)) {
+      await fs.promises.rm(filePath, { force: true });
+    }
+  } catch (error) {
+    console.error('[UPLOAD] Falha ao remover arquivo temporário:', error);
+  }
 }
 
 async function moveFile(sourcePath, destinationPath) {
@@ -375,7 +515,7 @@ async function generateMetadata(filename, extension, extractedText) {
 app.get('/api/evidences', async (req, res, next) => {
   try {
     console.log('[EVIDENCES] Buscando evidências...');
-    const rows = await dbClient.many(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "criadoEm" FROM public.evidences ORDER BY "criadoEm" DESC`);
+    const rows = await dbClient.many(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm" FROM public.evidences ORDER BY "criadoEm" DESC`);
     res.json((rows || []).map((row) => serializeRow(row, req)));
   } catch (error) {
     console.error('[EVIDENCES] Erro ao buscar evidências:', error);
@@ -385,7 +525,7 @@ app.get('/api/evidences', async (req, res, next) => {
 
 app.get('/api/evidences/:id', async (req, res, next) => {
   try {
-    const row = await dbClient.one(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "criadoEm" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
+    const row = await dbClient.one(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
     if (!row) {
       return res.status(404).json({ error: 'Evidência não encontrada.' });
     }
@@ -399,12 +539,17 @@ app.get('/api/evidences/:id', async (req, res, next) => {
 
 app.get('/api/file/:id', async (req, res, next) => {
   try {
-    const row = await dbClient.one(`SELECT "caminhoArquivo", "nome" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
-    if (!row) {
+    const row = await dbClient.one(`SELECT "storage_path", "storage_filename", "original_filename" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
+    if (!row || !row.storage_path) {
       return res.status(404).send('Arquivo não encontrado.');
     }
 
-    res.download(row.caminhoArquivo, row.nome);
+    const signedUrl = await createSignedUrl(row.storage_path);
+    if (!signedUrl) {
+      return res.status(500).send('Erro ao gerar link temporário.');
+    }
+
+    return res.redirect(signedUrl);
   } catch (error) {
     console.error('[FILE] Erro ao buscar arquivo:', error);
     res.status(500).send('Erro ao buscar arquivo.');
@@ -413,23 +558,17 @@ app.get('/api/file/:id', async (req, res, next) => {
 
 app.get('/api/preview/:id', async (req, res, next) => {
   try {
-    const row = await dbClient.one(`SELECT "caminhoArquivo", "nome" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
-    if (!row) {
+    const row = await dbClient.one(`SELECT "storage_path", "original_filename" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
+    if (!row || !row.storage_path) {
       return res.status(404).send('Arquivo não encontrado.');
     }
 
-    const extension = path.extname(row.caminhoArquivo).toLowerCase();
-    const mimeType = extension === '.pdf'
-      ? 'application/pdf'
-      : extension === '.png'
-        ? 'image/png'
-        : extension === '.jpg' || extension === '.jpeg'
-          ? 'image/jpeg'
-          : 'application/octet-stream';
+    const signedUrl = await createSignedUrl(row.storage_path);
+    if (!signedUrl) {
+      return res.status(500).send('Erro ao gerar link temporário.');
+    }
 
-    res.setHeader('Content-Disposition', `inline; filename="${row.nome}"`);
-    res.type(mimeType);
-    res.sendFile(row.caminhoArquivo);
+    return res.redirect(signedUrl);
   } catch (error) {
     console.error('[PREVIEW] Erro ao abrir preview:', error);
     res.status(500).send('Erro ao abrir preview do arquivo.');
@@ -448,7 +587,7 @@ app.patch('/api/evidences/:id', async (req, res, next) => {
       return res.status(404).json({ error: 'Evidência não encontrada.' });
     }
 
-    const updatedRow = await dbClient.one(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "criadoEm" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
+    const updatedRow = await dbClient.one(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
     res.json(serializeRow(updatedRow, req));
   } catch (error) {
     console.error('[EVIDENCES] Erro ao atualizar evidência:', error);
@@ -456,84 +595,132 @@ app.patch('/api/evidences/:id', async (req, res, next) => {
   }
 });
 
-app.post('/api/upload', upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'Nenhum arquivo enviado. Use multer com nome de campo "file".' });
-  }
+app.post('/api/upload', (req, res, next) => {
+  upload.single('file')(req, res, async (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: 'O tamanho máximo permitido é de 30 MB.' });
+      }
 
-  const tempPath = req.file.path;
-  const originalName = sanitizeFileName(req.file.originalname);
-  const extension = path.extname(originalName).slice(1).toLowerCase();
-  const allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx'];
+      if (err.message === 'Tipo de arquivo não permitido por segurança.') {
+        return res.status(400).json({ error: 'Tipo de arquivo não permitido por segurança.' });
+      }
 
-  if (!allowedExtensions.includes(extension)) {
-    return res.status(400).json({ error: 'Tipo de arquivo não suportado.' });
-  }
-
-  try {
-    console.log(`[UPLOAD] Iniciando upload de ${originalName}`);
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${path.extname(originalName)}`;
-    const destinationPath = path.join(originalsDir, filename);
-
-    await moveFile(tempPath, destinationPath);
-    console.log(`[UPLOAD] Arquivo salvo em ${destinationPath}`);
-
-    const extractedText = await extractText(destinationPath, extension);
-    console.log(`[UPLOAD] Texto extraído (${extractedText.length} caracteres)`);
-
-    const metadata = await generateMetadata(originalName, extension, extractedText);
-    console.log(`[UPLOAD] Metadados gerados para ${originalName}`);
-
-    const createdAt = new Date().toISOString();
-    const tipo = extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento';
-
-    const insertQuery = `
-      INSERT INTO public.evidences (
-        "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "criadoEm"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      RETURNING "id"
-    `;
-
-    const insertResult = await dbClient.query(insertQuery, [
-      originalName,
-      originalName,
-      tipo,
-      new Date().toLocaleDateString('pt-BR'),
-      metadata.evento,
-      metadata.categoria,
-      metadata.responsavel,
-      JSON.stringify(metadata.tags || []),
-      metadata.resumo,
-      metadata.textoExtraido,
-      destinationPath,
-      createdAt
-    ]);
-
-    const id = insertResult.rows[0]?.id;
-    console.log(`[UPLOAD] Registro salvo no banco para ${id}`);
-
-    res.json({
-      id,
-      titulo: originalName,
-      nome: originalName,
-      tipo,
-      data: new Date().toLocaleDateString('pt-BR'),
-      evento: metadata.evento,
-      categoria: metadata.categoria,
-      responsavel: metadata.responsavel,
-      tags: metadata.tags,
-      resumo: metadata.resumo,
-      textoExtraido: metadata.textoExtraido,
-      downloadUrl: buildDownloadUrl(req, id)
-    });
-  } catch (error) {
-    console.error('[UPLOAD] Falha no processamento do arquivo:', error);
-    if (tempPath && fs.existsSync(tempPath)) {
-      fs.rmSync(tempPath, { force: true });
+      console.error('[UPLOAD] Erro ao processar multipart:', err);
+      return res.status(400).json({ error: 'Erro ao receber o arquivo enviado.' });
     }
 
-    res.status(500).json({ error: error.message || 'Falha no processamento do arquivo.' });
-  }
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado. Use multer com nome de campo "file".' });
+    }
+
+    const tempPath = req.file.path;
+    const originalName = sanitizeFileName(req.file.originalname || 'arquivo');
+    const extension = getFileExtension(originalName);
+    const mimeType = (req.file.mimetype || getMimeType(originalName)).toLowerCase();
+    const fileSize = Number(req.file.size || 0);
+
+    if (fileSize > 30 * 1024 * 1024) {
+      await removeTemporaryFile(tempPath);
+      return res.status(413).json({ error: 'O tamanho máximo permitido é de 30 MB.' });
+    }
+
+    if (isForbiddenFile(originalName, mimeType)) {
+      await removeTemporaryFile(tempPath);
+      return res.status(400).json({ error: 'Tipo de arquivo não permitido por segurança.' });
+    }
+
+    try {
+      console.log(`[UPLOAD] Iniciando upload de ${originalName}`);
+      console.log(`[UPLOAD] Arquivo recebido: ${originalName} (${fileSize} bytes, ${mimeType})`);
+
+      const extractedText = ['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx'].includes(extension)
+        ? await extractText(tempPath, extension)
+        : '';
+      console.log(`[UPLOAD] Texto extraído (${extractedText.length} caracteres)`);
+
+      const metadata = await generateMetadata(originalName, extension, extractedText);
+      const processingNote = ['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx'].includes(extension)
+        ? ''
+        : 'Formato não suportado para processamento automático.';
+
+      if (processingNote) {
+        metadata.resumo = [metadata.resumo, processingNote].filter(Boolean).join(' ').slice(0, 280);
+      }
+
+      console.log(`[UPLOAD] Metadados gerados para ${originalName}`);
+
+      const storagePath = buildStoragePath(originalName);
+      await uploadFileToSupabase(tempPath, storagePath, originalName, mimeType);
+      console.log(`[UPLOAD] Upload realizado para o Supabase Storage: ${storagePath}`);
+
+      await removeTemporaryFile(tempPath);
+      console.log(`[UPLOAD] Arquivo temporário removido`);
+
+      const createdAt = new Date().toISOString();
+      const tipo = extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento';
+
+      const insertQuery = `
+        INSERT INTO public.evidences (
+          "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        RETURNING "id"
+      `;
+
+      let insertResult;
+
+      try {
+        insertResult = await dbClient.query(insertQuery, [
+          originalName,
+          originalName,
+          tipo,
+          new Date().toLocaleDateString('pt-BR'),
+          metadata.evento,
+          metadata.categoria,
+          metadata.responsavel,
+          JSON.stringify(metadata.tags || []),
+          metadata.resumo,
+          metadata.textoExtraido,
+          storagePath,
+          path.basename(storagePath),
+          originalName,
+          mimeType,
+          fileSize,
+          createdAt
+        ]);
+      } catch (dbError) {
+        await deleteFileFromSupabase(storagePath);
+        throw dbError;
+      }
+
+      const id = insertResult.rows[0]?.id;
+      console.log(`[UPLOAD] Registro salvo no banco para ${id}`);
+
+      res.json({
+        id,
+        titulo: originalName,
+        nome: originalName,
+        tipo,
+        data: new Date().toLocaleDateString('pt-BR'),
+        evento: metadata.evento,
+        categoria: metadata.categoria,
+        responsavel: metadata.responsavel,
+        tags: metadata.tags,
+        resumo: metadata.resumo,
+        textoExtraido: metadata.textoExtraido,
+        storagePath,
+        storageFilename: path.basename(storagePath),
+        originalFilename: originalName,
+        mimeType,
+        fileSize,
+        downloadUrl: buildDownloadUrl(req, id)
+      });
+    } catch (error) {
+      console.error('[UPLOAD] Falha no processamento do arquivo:', error);
+      await removeTemporaryFile(tempPath);
+      res.status(500).json({ error: error.message || 'Falha no processamento do arquivo.' });
+    }
+  });
 });
 
 app.use((err, req, res, next) => {
@@ -554,4 +741,13 @@ async function startServer() {
   }
 }
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = {
+  buildStoragePath,
+  getFileExtension,
+  isForbiddenFile,
+  serializeRow
+};

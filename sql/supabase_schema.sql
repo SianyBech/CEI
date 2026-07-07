@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- Create evidences table
 CREATE TABLE IF NOT EXISTS public.evidences (
-  id text PRIMARY KEY,
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "titulo" text,
   "nome" text NOT NULL,
   "tipo" text,
@@ -21,6 +21,11 @@ CREATE TABLE IF NOT EXISTS public.evidences (
   "resumo" text,
   "textoExtraido" text,
   "caminhoArquivo" text,
+  "storage_path" text,
+  "storage_filename" text,
+  "original_filename" text,
+  "mime_type" text,
+  "file_size" bigint,
   "criadoEm" timestamptz DEFAULT now()
 );
 
