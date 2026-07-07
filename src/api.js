@@ -56,7 +56,18 @@ window.CerneApp.Api = {
             reject(new Error('Resposta inválida do servidor.'));
           }
         } else {
-          reject(new Error(`Upload falhou: ${xhr.statusText} (${xhr.status})`));
+          let errorMessage = `Upload falhou: ${xhr.statusText} (${xhr.status})`;
+
+          try {
+            const errorBody = JSON.parse(xhr.responseText);
+            if (errorBody?.error) {
+              errorMessage = errorBody.error;
+            }
+          } catch (error) {
+            // Mantém a mensagem padrão se a resposta não for JSON.
+          }
+
+          reject(new Error(errorMessage));
         }
       };
 
