@@ -259,7 +259,7 @@ function buildStoragePath(fileName = '') {
   const month = String(now.getUTCMonth() + 1).padStart(2, '0');
   const day = String(now.getUTCDate()).padStart(2, '0');
   const objectName = `${Date.now()}-${randomUUID().replace(/-/g, '')}${safeExtension}`;
-  const normalizedPath = `evidencias/${objectName}`
+  const normalizedPath = `${objectName}`
     .replace(/\\/g, '/')
     .replace(/\/+/g, '/')
     .replace(/^\/+|\/+$/g, '');
