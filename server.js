@@ -259,7 +259,7 @@ function buildStoragePath(fileName = '') {
   const month = String(now.getUTCMonth() + 1).padStart(2, '0');
   const day = String(now.getUTCDate()).padStart(2, '0');
   const objectName = `${Date.now()}-${randomUUID().replace(/-/g, '')}${safeExtension}`;
-  const normalizedPath = `evidencias/${year}/${month}/${day}/${objectName}`
+  const normalizedPath = `${year}/${month}/${day}/${objectName}`
     .replace(/\\/g, '/')
     .replace(/\/+/g, '/')
     .replace(/^\/+|\/+$/g, '');
@@ -285,6 +285,10 @@ async function uploadFileToSupabase(filePath, storagePath, originalName, mimeTyp
   if (!client) {
     throw new Error('Configuração do Supabase Storage indisponível.');
   }
+
+console.log('[SUPABASE] Bucket:', supabaseBucket);
+console.log('[SUPABASE] Storage path:', storagePath);
+console.log('[SUPABASE] File path:', filePath);
 
   const fileBuffer = await fs.promises.readFile(filePath);
   const { data, error } = await client.storage.from(supabaseBucket).upload(storagePath, fileBuffer, {
@@ -747,18 +751,20 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Erro interno do servidor.' });
 });
 
-function startServer() {
-  app.listen(port, host, () => {
-    console.log(`Servidor iniciado na porta ${port}`);
-  });
+async function startServer() {
+  try {
+    await initPostgresPool();
 
-  initPostgresPool()
-    .then(() => {
-      console.log('[SERVER] PostgreSQL inicializado.');
-    })
-    .catch((err) => {
-      console.error('Erro ao inicializar o banco:', err);
+    console.log('[SERVER] PostgreSQL inicializado.');
+
+    app.listen(port, host, () => {
+      console.log(`Servidor iniciado na porta ${port}`);
     });
+
+  } catch (err) {
+    console.error('Erro ao inicializar o banco:', err);
+    process.exit(1);
+  }
 }
 
 startServer();
