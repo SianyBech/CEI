@@ -973,6 +973,15 @@ button, input, select, textarea {
   border-color: var(--text-secondary);
 }
 
+/* Date Filter Row - Second line in filters-row */
+.date-filters-row {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-end;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
 /* Date Filter Groups - Integrated in filters-row */
 .date-filter-group {
   display: flex;

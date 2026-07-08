@@ -78,65 +78,66 @@ window.CerneApp.SearchBar = {
         </select>
       </div>
 
-      <!-- Date filters group -->
-      <br>
-      <div class="date-filter-group">
-        <span class="date-filter-label">De</span>
-        <div class="date-selector-group">
-          <select class="date-select" id="filter-day-from" data-type="day">
-            <option value="">Dia</option>
-          </select>
-          <select class="date-select" id="filter-month-from" data-type="month">
-            <option value="">Mês</option>
-            <option value="1">Janeiro</option>
-            <option value="2">Fevereiro</option>
-            <option value="3">Março</option>
-            <option value="4">Abril</option>
-            <option value="5">Maio</option>
-            <option value="6">Junho</option>
-            <option value="7">Julho</option>
-            <option value="8">Agosto</option>
-            <option value="9">Setembro</option>
-            <option value="10">Outubro</option>
-            <option value="11">Novembro</option>
-            <option value="12">Dezembro</option>
-          </select>
-          <select class="date-select" id="filter-year-from" data-type="year">
-            <option value="">Ano</option>
-          </select>
+      <!-- Date filters row (second line) -->
+      <div class="date-filters-row">
+        <div class="date-filter-group">
+          <span class="date-filter-label">De</span>
+          <div class="date-selector-group">
+            <select class="date-select" id="filter-day-from" data-type="day">
+              <option value="">Dia</option>
+            </select>
+            <select class="date-select" id="filter-month-from" data-type="month">
+              <option value="">Mês</option>
+              <option value="1">Janeiro</option>
+              <option value="2">Fevereiro</option>
+              <option value="3">Março</option>
+              <option value="4">Abril</option>
+              <option value="5">Maio</option>
+              <option value="6">Junho</option>
+              <option value="7">Julho</option>
+              <option value="8">Agosto</option>
+              <option value="9">Setembro</option>
+              <option value="10">Outubro</option>
+              <option value="11">Novembro</option>
+              <option value="12">Dezembro</option>
+            </select>
+            <select class="date-select" id="filter-year-from" data-type="year">
+              <option value="">Ano</option>
+            </select>
+          </div>
         </div>
-      </div>
 
-      <div class="date-filter-group">
-        <span class="date-filter-label">Até</span>
-        <div class="date-selector-group">
-          <select class="date-select" id="filter-day-to" data-type="day">
-            <option value="">Dia</option>
-          </select>
-          <select class="date-select" id="filter-month-to" data-type="month">
-            <option value="">Mês</option>
-            <option value="1">Janeiro</option>
-            <option value="2">Fevereiro</option>
-            <option value="3">Março</option>
-            <option value="4">Abril</option>
-            <option value="5">Maio</option>
-            <option value="6">Junho</option>
-            <option value="7">Julho</option>
-            <option value="8">Agosto</option>
-            <option value="9">Setembro</option>
-            <option value="10">Outubro</option>
-            <option value="11">Novembro</option>
-            <option value="12">Dezembro</option>
-          </select>
-          <select class="date-select" id="filter-year-to" data-type="year">
-            <option value="">Ano</option>
-          </select>
+        <div class="date-filter-group">
+          <span class="date-filter-label">Até</span>
+          <div class="date-selector-group">
+            <select class="date-select" id="filter-day-to" data-type="day">
+              <option value="">Dia</option>
+            </select>
+            <select class="date-select" id="filter-month-to" data-type="month">
+              <option value="">Mês</option>
+              <option value="1">Janeiro</option>
+              <option value="2">Fevereiro</option>
+              <option value="3">Março</option>
+              <option value="4">Abril</option>
+              <option value="5">Maio</option>
+              <option value="6">Junho</option>
+              <option value="7">Julho</option>
+              <option value="8">Agosto</option>
+              <option value="9">Setembro</option>
+              <option value="10">Outubro</option>
+              <option value="11">Novembro</option>
+              <option value="12">Dezembro</option>
+            </select>
+            <select class="date-select" id="filter-year-to" data-type="year">
+              <option value="">Ano</option>
+            </select>
+          </div>
         </div>
-      </div>
 
-      <button id="clear-date-filters" class="clear-date-btn" title="Limpar filtros de data">
-        <i data-lucide="x" style="width: 18px; height: 18px;"></i>
-      </button>
+        <button id="clear-date-filters" class="clear-date-btn" title="Limpar filtros de data">
+          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+        </button>
+      </div>
     `;
 
     container.appendChild(searchRow);
