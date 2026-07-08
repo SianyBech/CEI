@@ -292,8 +292,11 @@
     const settingsNode = window.CerneApp.SettingsPage.render(
       state.appSettings,
       async (updatedSettings) => {
-        await window.CerneApp.Api.updateSettings(updatedSettings);
-        state.appSettings = updatedSettings;
+        const savedSettings = await window.CerneApp.Api.updateSettings(updatedSettings);
+        state.appSettings = {
+          categories: Array.isArray(savedSettings.categories) ? savedSettings.categories : [],
+          tags: Array.isArray(savedSettings.tags) ? savedSettings.tags : []
+        };
 
         const newSearchBar = window.CerneApp.SearchBar.render(
           state.searchQuery,
@@ -309,6 +312,8 @@
         searchBarElement = newSearchBar;
         populateFilterOptions();
         renderList();
+
+        return savedSettings;
       }
     );
 

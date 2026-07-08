@@ -57,9 +57,17 @@ window.CerneApp.SettingsPage = {
     const closeBtn = overlay.querySelector('#settings-close-btn');
     const addCategoryBtn = overlay.querySelector('#add-category-btn');
     const addTagBtn = overlay.querySelector('#add-tag-btn');
+    const footer = overlay.querySelector('.modal-footer');
+
+    const feedbackEl = document.createElement('div');
+    feedbackEl.className = 'settings-feedback';
+    feedbackEl.setAttribute('role', 'status');
+    feedbackEl.setAttribute('aria-live', 'polite');
+    footer.prepend(feedbackEl);
 
     let currentCategories = Array.isArray(settings.categories) ? [...settings.categories] : [];
     let currentTags = Array.isArray(settings.tags) ? [...settings.tags] : [];
+    let isSaving = false;
 
     function escapeHtml(value) {
       return String(value || '')
@@ -114,16 +122,57 @@ window.CerneApp.SettingsPage = {
     }
 
     addCategoryBtn.addEventListener('click', () => {
+      if (isSaving) return;
       currentCategories.push('');
       refreshLists();
     });
 
     addTagBtn.addEventListener('click', () => {
+      if (isSaving) return;
       currentTags.push('');
       refreshLists();
     });
 
-    saveBtn.addEventListener('click', () => {
+    function setSavingState(saving) {
+      isSaving = saving;
+      saveBtn.disabled = saving;
+      saveBtn.classList.toggle('is-loading', saving);
+      saveBtn.innerHTML = saving
+        ? '<span class="btn-loading-spinner" aria-hidden="true"></span> Salvando...'
+        : 'Salvar configurações';
+      cancelBtn.disabled = saving;
+      closeBtn.disabled = saving;
+    }
+
+    function clearFeedback() {
+      feedbackEl.textContent = '';
+      feedbackEl.className = 'settings-feedback';
+    }
+
+    function showFeedback(type, message) {
+      feedbackEl.textContent = message;
+      feedbackEl.className = `settings-feedback visible ${type}`;
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `app-toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.add('show');
+      });
+
+      window.setTimeout(() => {
+        toast.classList.remove('show');
+        window.setTimeout(() => toast.remove(), 220);
+      }, 2600);
+    }
+
+    saveBtn.addEventListener('click', async () => {
+      if (isSaving) return;
+
       const normalizedCategories = currentCategories
         .map((value) => String(value || '').trim())
         .filter((value) => value.length > 0);
@@ -132,10 +181,23 @@ window.CerneApp.SettingsPage = {
         .map((value) => String(value || '').trim())
         .filter((value) => value.length > 0);
 
-      onSave({ categories: normalizedCategories, tags: normalizedTags });
+      setSavingState(true);
+      clearFeedback();
+
+      try {
+        await onSave({ categories: normalizedCategories, tags: normalizedTags });
+        setSavingState(false);
+        showToast('Configurações salvas com sucesso.', 'success');
+        doClose(true);
+      } catch (error) {
+        const message = error?.message || 'Não foi possível salvar as configurações.';
+        showFeedback('error', message);
+        setSavingState(false);
+      }
     });
 
-    function doClose() {
+    function doClose(force = false) {
+      if (isSaving && !force) return;
       overlay.remove();
       if (typeof onClose === 'function') {
         onClose();
