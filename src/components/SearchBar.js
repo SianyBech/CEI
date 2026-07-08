@@ -79,6 +79,7 @@ window.CerneApp.SearchBar = {
       </div>
 
       <!-- Date filters group -->
+      <br>
       <div class="date-filter-group">
         <span class="date-filter-label">De</span>
         <div class="date-selector-group">
