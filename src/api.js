@@ -34,6 +34,22 @@ window.CerneApp.Api = {
     return response.json();
   },
 
+  async deleteEvidence(id) {
+    const response = await fetch(`/api/evidences/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => null);
+      throw new Error(errorBody?.error || 'Falha ao excluir a evidência.');
+    }
+
+    return response.json();
+  },
+
   uploadEvidence(file, onProgress) {
     return new Promise((resolve, reject) => {
       const formData = new FormData();

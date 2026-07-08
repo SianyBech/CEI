@@ -618,6 +618,33 @@ app.patch('/api/evidences/:id', async (req, res, next) => {
   }
 });
 
+app.delete('/api/evidences/:id', async (req, res, next) => {
+  try {
+    const evidenceRow = await dbClient.one(`SELECT "storage_path" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
+    if (!evidenceRow) {
+      return res.status(404).json({ error: 'Evidência não encontrada.' });
+    }
+
+    // Delete file from Supabase Storage if it exists
+    if (evidenceRow.storage_path) {
+      await deleteFileFromSupabase(evidenceRow.storage_path);
+      console.log(`[DELETE] Arquivo removido do Supabase: ${evidenceRow.storage_path}`);
+    }
+
+    // Delete record from database
+    const result = await dbClient.run(`DELETE FROM public.evidences WHERE "id" = $1`, [req.params.id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Evidência não encontrada.' });
+    }
+
+    console.log(`[DELETE] Evidência excluída: ${req.params.id}`);
+    res.json({ success: true, message: 'Evidência excluída com sucesso.' });
+  } catch (error) {
+    console.error('[EVIDENCES] Erro ao excluir evidência:', error);
+    res.status(500).json({ error: error.message || 'Erro ao excluir evidência.' });
+  }
+});
+
 app.post('/api/upload', (req, res, next) => {
   upload.single('file')(req, res, async (err) => {
     if (err) {

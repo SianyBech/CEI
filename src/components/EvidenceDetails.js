@@ -34,9 +34,14 @@ window.CerneApp.EvidenceDetails = {
               ${titleText}
             </h2>
           </div>
-          <button class="modal-close" id="details-close-btn">
-            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
-          </button>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button class="modal-close" id="details-delete-btn" style="background-color: #ff4757; color: white; border: none; border-radius: var(--radius-sm); padding: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; transition: background-color 0.2s;" title="Excluir evidência">
+              <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
+            </button>
+            <button class="modal-close" id="details-close-btn">
+              <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+            </button>
+          </div>
         </div>
 
         <div class="modal-body" style="padding: 1.5rem;">
@@ -193,6 +198,32 @@ window.CerneApp.EvidenceDetails = {
 
     overlay.querySelector('#btn-preview-original').addEventListener('click', () => {
       window.open(`/api/preview/${encodeURIComponent(evidence.id)}`, '_blank');
+    });
+
+    const deleteBtn = overlay.querySelector('#details-delete-btn');
+    deleteBtn.addEventListener('click', async () => {
+      const confirmDelete = confirm(`Tem certeza que deseja excluir a evidência "${titleText}"?\n\nEsta ação não pode ser desfeita.`);
+      
+      if (!confirmDelete) {
+        return;
+      }
+
+      deleteBtn.disabled = true;
+      const originalContent = deleteBtn.innerHTML;
+      deleteBtn.innerHTML = '<i data-lucide="loader" style="width: 20px; height: 20px; animation: spin 1s linear infinite;\"></i>';
+
+      try {
+        await window.CerneApp.Api.deleteEvidence(evidence.id);
+        alert('Evidência excluída com sucesso.');
+        doClose();
+        if (typeof onClose === 'function') {
+          onClose();
+        }
+      } catch (error) {
+        alert(`Não foi possível excluir a evidência: ${error.message}`);
+        deleteBtn.disabled = false;
+        deleteBtn.innerHTML = originalContent;
+      }
     });
 
     return overlay;
