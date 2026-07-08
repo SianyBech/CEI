@@ -12,8 +12,11 @@
       tipo: 'todos',
       categoria: 'todos',
       responsavel: 'todos',
-      tag: 'todos',
-      data: 'todos'
+      tag: 'todos'
+    },
+    dateFilters: {
+      dateFrom: null,
+      dateTo: null
     },
     appSettings: {
       categories: [],
@@ -49,7 +52,8 @@
       state.appSettings.tags,
       handleSearchChange,
       handleFilterChange,
-      handleViewModeChange
+      handleViewModeChange,
+      handleDateFilterChange
     );
     mainContent.appendChild(searchBarElement);
 
@@ -103,14 +107,6 @@
     const responsibles = [...new Set(state.evidences.map(e => e.responsavel))].sort();
     const categories = Array.isArray(state.appSettings.categories) ? state.appSettings.categories : [];
     const tags = Array.isArray(state.appSettings.tags) ? state.appSettings.tags : [];
-    const dates = [...new Set(state.evidences.map(e => e.data))].sort((a, b) => {
-      // Sort dates DD/MM/AAAA (Newest first)
-      const parseDate = (dStr) => {
-        const parts = dStr.split('/');
-        return new Date(parts[2], parts[1] - 1, parts[0]);
-      };
-      return parseDate(b) - parseDate(a);
-    });
 
     // Populate Categoria
     const categorySelect = searchBarElement.querySelector('#filter-categoria');
@@ -146,18 +142,6 @@
       opt.textContent = tag;
       if (tag === prevTag) opt.selected = true;
       tagSelect.appendChild(opt);
-    });
-
-    // Populate Data
-    const dateSelect = searchBarElement.querySelector('#filter-data');
-    const prevDate = dateSelect.value;
-    dateSelect.innerHTML = '<option value="todos">Todas as datas</option>';
-    dates.forEach(date => {
-      const opt = document.createElement('option');
-      opt.value = date;
-      opt.textContent = date;
-      if (date === prevDate) opt.selected = true;
-      dateSelect.appendChild(opt);
     });
   }
 
@@ -210,12 +194,31 @@
       if (state.filters.tag !== 'todos' && !(item.tags || []).includes(state.filters.tag)) {
         return false;
       }
-      if (state.filters.data !== 'todos' && item.data !== state.filters.data) {
-        return false;
+
+      // 3. Date Filter (intelligent date parsing)
+      if (state.dateFilters.dateFrom || state.dateFilters.dateTo) {
+        const itemDate = parseDate(item.data); // Convert DD/MM/YYYY to Date object
+        
+        if (state.dateFilters.dateFrom && itemDate < new Date(state.dateFilters.dateFrom)) {
+          return false;
+        }
+        if (state.dateFilters.dateTo && itemDate > new Date(state.dateFilters.dateTo)) {
+          return false;
+        }
       }
 
       return true;
     });
+
+    // Helper to parse DD/MM/YYYY date format
+    function parseDate(dateStr) {
+      if (!dateStr) return new Date(0);
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        return new Date(parts[2], parts[1] - 1, parts[0]);
+      }
+      return new Date(0);
+    }
 
     // B. Clear previous list elements
     listContainer.innerHTML = '';
@@ -248,6 +251,12 @@
 
   function handleFilterChange(filterId, value) {
     state.filters[filterId] = value;
+    renderList();
+  }
+
+  function handleDateFilterChange(filterType, dateFrom, dateTo) {
+    state.dateFilters.dateFrom = dateFrom;
+    state.dateFilters.dateTo = dateTo;
     renderList();
   }
 

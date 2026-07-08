@@ -588,7 +588,38 @@ async function generateMetadata(filename, extension, extractedText) {
 app.get('/api/evidences', async (req, res, next) => {
   try {
     console.log('[EVIDENCES] Buscando evidências...');
-    const rows = await dbClient.many(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm" FROM public.evidences ORDER BY "criadoEm" DESC`);
+    const { dateFrom, dateTo } = req.query;
+
+    let query = `SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm" FROM public.evidences`;
+    const params = [];
+    const conditions = [];
+
+    // Add date filtering if provided
+    // Convert DD/MM/YYYY format to ISO (YYYY-MM-DD) for comparison
+    if (dateFrom) {
+      // dateFrom is expected in YYYY-MM-DD format from frontend
+      // We need to convert "DD/MM/YYYY" stored in DB to ISO format for comparison
+      conditions.push(`(CASE WHEN "data" ~ '^\d{2}/\d{2}/\d{4}$' THEN 
+        CONCAT(SUBSTRING("data", 7, 4), '-', SUBSTRING("data", 4, 2), '-', SUBSTRING("data", 1, 2))
+      ELSE "data" END) >= $${params.length + 1}`);
+      params.push(dateFrom);
+    }
+
+    if (dateTo) {
+      // dateTo is expected in YYYY-MM-DD format from frontend
+      conditions.push(`(CASE WHEN "data" ~ '^\d{2}/\d{2}/\d{4}$' THEN 
+        CONCAT(SUBSTRING("data", 7, 4), '-', SUBSTRING("data", 4, 2), '-', SUBSTRING("data", 1, 2))
+      ELSE "data" END) <= $${params.length + 1}`);
+      params.push(dateTo);
+    }
+
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`;
+    }
+
+    query += ` ORDER BY "criadoEm" DESC`;
+
+    const rows = await dbClient.many(query, params);
     res.json((rows || []).map((row) => serializeRow(row, req)));
   } catch (error) {
     console.error('[EVIDENCES] Erro ao buscar evidências:', error);

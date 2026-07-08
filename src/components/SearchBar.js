@@ -1,5 +1,5 @@
 window.CerneApp.SearchBar = {
-  render(currentQuery, currentViewMode, categories, tags, onSearchChange, onFilterChange, onViewModeChange) {
+  render(currentQuery, currentViewMode, categories, tags, onSearchChange, onFilterChange, onViewModeChange, onDateFilterChange) {
     const escapeHtml = (str) => String(str || '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -77,31 +77,89 @@ window.CerneApp.SearchBar = {
           ${tagsOptions}
         </select>
       </div>
-
-      <div class="filter-group">
-        <span class="filter-label">Data</span>
-        <select class="filter-select" id="filter-data">
-          <option value="todos">Todas as datas</option>
-        </select>
-      </div>
     `;
 
     container.appendChild(searchRow);
     container.appendChild(filtersRow);
 
-    // Event listeners
+    // Date filters row
+    const dateFiltersRow = document.createElement('div');
+    dateFiltersRow.className = 'date-filters-row';
+    dateFiltersRow.innerHTML = `
+      <div class="date-filter-group">
+        <div class="date-filter-container">
+          <span class="filter-label">De</span>
+          <input type="text" class="date-picker" id="filter-date-from" placeholder="Selecione a data inicial">
+        </div>
+        <div class="date-filter-container">
+          <span class="filter-label">Até</span>
+          <input type="text" class="date-picker" id="filter-date-to" placeholder="Selecione a data final">
+        </div>
+        <button id="clear-date-filter" class="clear-date-btn" title="Limpar filtro de datas">
+          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+        </button>
+      </div>
+    `;
+
+    container.appendChild(dateFiltersRow);
+
+    // Event listeners for search and view mode
     const input = searchRow.querySelector('#search-input');
     input.addEventListener('input', (e) => onSearchChange(e.target.value));
 
     searchRow.querySelector('#toggle-table').addEventListener('click', () => onViewModeChange('table'));
     searchRow.querySelector('#toggle-grid').addEventListener('click', () => onViewModeChange('grid'));
 
-    // Filter selectors change listeners
+    // Filter selectors change listeners (excluding date filter)
     filtersRow.querySelectorAll('.filter-select').forEach(select => {
       select.addEventListener('change', (e) => {
         const filterId = e.target.id.replace('filter-', '');
         onFilterChange(filterId, e.target.value);
       });
+    });
+
+    // Initialize Flatpickr date pickers
+    const dateFromInput = dateFiltersRow.querySelector('#filter-date-from');
+    const dateToInput = dateFiltersRow.querySelector('#filter-date-to');
+    const clearBtn = dateFiltersRow.querySelector('#clear-date-filter');
+
+    // Initialize from date picker
+    const flatpickrFromInstance = flatpickr(dateFromInput, {
+      mode: 'single',
+      dateFormat: 'd/m/Y',
+      locale: 'pt',
+      allowInput: true,
+      onChange: (selectedDates) => {
+        if (typeof onDateFilterChange === 'function') {
+          const dateFrom = selectedDates.length > 0 ? selectedDates[0].toISOString().split('T')[0] : null;
+          const dateTo = flatpickrToInstance.selectedDates.length > 0 ? flatpickrToInstance.selectedDates[0].toISOString().split('T')[0] : null;
+          onDateFilterChange('dateFrom', dateFrom, dateTo);
+        }
+      }
+    });
+
+    // Initialize to date picker
+    const flatpickrToInstance = flatpickr(dateToInput, {
+      mode: 'single',
+      dateFormat: 'd/m/Y',
+      locale: 'pt',
+      allowInput: true,
+      onChange: (selectedDates) => {
+        if (typeof onDateFilterChange === 'function') {
+          const dateFrom = flatpickrFromInstance.selectedDates.length > 0 ? flatpickrFromInstance.selectedDates[0].toISOString().split('T')[0] : null;
+          const dateTo = selectedDates.length > 0 ? selectedDates[0].toISOString().split('T')[0] : null;
+          onDateFilterChange('dateTo', dateFrom, dateTo);
+        }
+      }
+    });
+
+    // Clear date filter button
+    clearBtn.addEventListener('click', () => {
+      flatpickrFromInstance.clear();
+      flatpickrToInstance.clear();
+      if (typeof onDateFilterChange === 'function') {
+        onDateFilterChange('clear', null, null);
+      }
     });
 
     return container;

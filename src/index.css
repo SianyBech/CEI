@@ -973,6 +973,197 @@ button, input, select, textarea {
   border-color: var(--text-secondary);
 }
 
+/* Date Filters Row */
+.date-filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+  width: 100%;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+  margin-top: 0.5rem;
+}
+
+.date-filter-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.date-filter-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 200px;
+}
+
+.date-picker {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  outline: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.date-picker:focus {
+  border-color: var(--text-secondary);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+.date-picker::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Clear Date Filter Button */
+.clear-date-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  align-self: flex-end;
+  margin-top: 1.15rem;
+}
+
+.clear-date-btn:hover {
+  background-color: var(--danger-bg);
+  border-color: #fca5a5;
+  color: var(--danger);
+}
+
+.clear-date-btn:active {
+  transform: scale(0.95);
+}
+
+/* Flatpickr Customization */
+.flatpickr-calendar {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  font-family: var(--font-sans);
+}
+
+.flatpickr-weekday {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.flatpickr-day {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.flatpickr-day.today {
+  border-color: var(--accent);
+  background-color: transparent;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  font-weight: 500;
+}
+
+.flatpickr-day.inRange {
+  background-color: var(--accent-light);
+  color: var(--accent);
+}
+
+.flatpickr-day:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.flatpickr-months {
+  padding-top: 0.5rem;
+}
+
+.flatpickr-prev-month,
+.flatpickr-next-month {
+  top: 0.85rem;
+}
+
+.flatpickr-current-month {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.numInputWrapper input,
+.flatpickr-input {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+}
+
+.numInputWrapper input:focus,
+.flatpickr-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* Responsiveness for date filters */
+@media (max-width: 767px) {
+  .date-filter-container {
+    min-width: 100%;
+    flex: 1 1 calc(50% - 0.5rem);
+  }
+
+  .date-filter-group {
+    flex-direction: column;
+  }
+
+  .clear-date-btn {
+    align-self: center;
+    width: 100%;
+    margin-top: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .date-filters-row {
+    padding: 0.5rem;
+    gap: 0.75rem;
+  }
+
+  .date-filter-container {
+    min-width: 100%;
+  }
+
+  .clear-date-btn {
+    width: 100%;
+  }
+}
+
 /* Edit Form inside Success Modal */
 .edit-form-grid {
   display: grid;
