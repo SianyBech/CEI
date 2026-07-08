@@ -35,9 +35,7 @@ window.CerneApp.EvidenceDetails = {
             </h2>
           </div>
           <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <button class="modal-close" id="details-delete-btn" style="background-color: #ff4757; color: white; border: none; border-radius: var(--radius-sm); padding: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; transition: background-color 0.2s;" title="Excluir evidência">
-              <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
-            </button>
+            
             <button class="modal-close" id="details-close-btn">
               <i data-lucide="x" style="width: 20px; height: 20px;"></i>
             </button>
@@ -138,6 +136,11 @@ window.CerneApp.EvidenceDetails = {
         </div>
 
         <div class="modal-footer">
+
+        <button class="modal-close" id="details-delete-btn" style="background-color: #ff4757; color: white; border: none; border-radius: var(--radius-sm); padding: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; transition: background-color 0.2s;" title="Excluir evidência">
+              <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
+            </button>
+            
           <button class="btn btn-secondary" id="details-close-bottom-btn" style="padding-left: 1.5rem; padding-right: 1.5rem;">Fechar</button>
         </div>
       </div>
