@@ -1,10 +1,25 @@
 window.CerneApp.SearchBar = {
-  render(currentQuery, currentViewMode, onSearchChange, onFilterChange, onViewModeChange) {
+  render(currentQuery, currentViewMode, categories, tags, onSearchChange, onFilterChange, onViewModeChange) {
+    const escapeHtml = (str) => String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
     const container = document.createElement('div');
     container.style.display = 'flex';
     container.style.flexDirection = 'column';
     container.style.gap = '0.75rem';
     container.style.width = '100%';
+
+    const categoriesOptions = Array.isArray(categories)
+      ? categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('')
+      : '';
+
+    const tagsOptions = Array.isArray(tags)
+      ? tags.map((tag) => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`).join('')
+      : '';
 
     // Search input and layout toggler row
     const searchRow = document.createElement('div');
@@ -44,12 +59,7 @@ window.CerneApp.SearchBar = {
         <span class="filter-label">Categoria CERNE</span>
         <select class="filter-select" id="filter-categoria">
           <option value="todos">Todas as categorias</option>
-          <option value="Capacitação">Capacitação</option>
-          <option value="Planejamento">Planejamento</option>
-          <option value="Gestão">Gestão</option>
-          <option value="Assessoria">Assessoria</option>
-          <option value="Sustentabilidade">Sustentabilidade</option>
-          <option value="Qualificação">Qualificação</option>
+          ${categoriesOptions}
         </select>
       </div>
 
@@ -64,6 +74,7 @@ window.CerneApp.SearchBar = {
         <span class="filter-label">Tag</span>
         <select class="filter-select" id="filter-tag">
           <option value="todos">Todas as tags</option>
+          ${tagsOptions}
         </select>
       </div>
 

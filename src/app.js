@@ -14,30 +14,39 @@
       responsavel: 'todos',
       tag: 'todos',
       data: 'todos'
+    },
+    appSettings: {
+      categories: [],
+      tags: []
     }
   };
 
   // Cache DOM references
   let appContainer = null;
+  let mainContent = null;
   let listContainer = null;
   let searchBarElement = null;
 
   // 2. Initialization Function
   async function init() {
     appContainer = document.getElementById('app');
-    
+
+    await loadSettings();
+
     // Render Header
-    const headerNode = window.CerneApp.Header.render(openUploadModal);
+    const headerNode = window.CerneApp.Header.render(openUploadModal, openSettings);
     appContainer.appendChild(headerNode);
 
     // Create Main Content Wrapper
-    const mainContent = document.createElement('main');
+    mainContent = document.createElement('main');
     mainContent.className = 'main-content';
 
     // Render SearchBar (Rendered once so input focus is never lost)
     searchBarElement = window.CerneApp.SearchBar.render(
       state.searchQuery,
       state.viewMode,
+      state.appSettings.categories,
+      state.appSettings.tags,
       handleSearchChange,
       handleFilterChange,
       handleViewModeChange
@@ -73,10 +82,27 @@
     }
   }
 
+  async function loadSettings() {
+    try {
+      const settings = await window.CerneApp.Api.fetchSettings();
+      state.appSettings = {
+        categories: Array.isArray(settings.categories) ? settings.categories : [],
+        tags: Array.isArray(settings.tags) ? settings.tags : []
+      };
+    } catch (error) {
+      console.error('Erro ao carregar configurações:', error);
+      state.appSettings = {
+        categories: ['Capacitação', 'Planejamento', 'Gestão', 'Assessoria', 'Sustentabilidade', 'Qualificação'],
+        tags: ['CERNE', 'Gestão', 'Capacitação', 'Assessoria', 'Sustentabilidade', 'Qualificação']
+      };
+    }
+  }
+
   // Populate dynamic dropdown options from current evidence database
   function populateFilterOptions() {
     const responsibles = [...new Set(state.evidences.map(e => e.responsavel))].sort();
-    const tags = [...new Set(state.evidences.flatMap(e => e.tags || []))].sort();
+    const categories = Array.isArray(state.appSettings.categories) ? state.appSettings.categories : [];
+    const tags = Array.isArray(state.appSettings.tags) ? state.appSettings.tags : [];
     const dates = [...new Set(state.evidences.map(e => e.data))].sort((a, b) => {
       // Sort dates DD/MM/AAAA (Newest first)
       const parseDate = (dStr) => {
@@ -84,6 +110,18 @@
         return new Date(parts[2], parts[1] - 1, parts[0]);
       };
       return parseDate(b) - parseDate(a);
+    });
+
+    // Populate Categoria
+    const categorySelect = searchBarElement.querySelector('#filter-categoria');
+    const prevCategory = categorySelect.value;
+    categorySelect.innerHTML = '<option value="todos">Todas as categorias</option>';
+    categories.forEach(category => {
+      const opt = document.createElement('option');
+      opt.value = category;
+      opt.textContent = category;
+      if (category === prevCategory) opt.selected = true;
+      categorySelect.appendChild(opt);
     });
 
     // Populate Responsável
@@ -247,6 +285,34 @@
       }
     );
     document.body.appendChild(modalNode);
+    lucide.createIcons();
+  }
+
+  function openSettings() {
+    const settingsNode = window.CerneApp.SettingsPage.render(
+      state.appSettings,
+      async (updatedSettings) => {
+        await window.CerneApp.Api.updateSettings(updatedSettings);
+        state.appSettings = updatedSettings;
+
+        const newSearchBar = window.CerneApp.SearchBar.render(
+          state.searchQuery,
+          state.viewMode,
+          state.appSettings.categories,
+          state.appSettings.tags,
+          handleSearchChange,
+          handleFilterChange,
+          handleViewModeChange
+        );
+
+        mainContent.replaceChild(newSearchBar, searchBarElement);
+        searchBarElement = newSearchBar;
+        populateFilterOptions();
+        renderList();
+      }
+    );
+
+    document.body.appendChild(settingsNode);
     lucide.createIcons();
   }
 

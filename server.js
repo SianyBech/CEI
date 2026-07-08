@@ -119,6 +119,20 @@ async function initPostgresPool() {
     await pool.query('UPDATE public.evidences SET "storage_filename" = COALESCE("storage_filename", "nome") WHERE "storage_filename" IS NULL');
     await pool.query('UPDATE public.evidences SET "mime_type" = COALESCE("mime_type", CASE WHEN "tipo" = \'pdf\' THEN \'application/pdf\' ELSE \'application/octet-stream\' END) WHERE "mime_type" IS NULL');
     await pool.query('UPDATE public.evidences SET "file_size" = COALESCE("file_size", 0) WHERE "file_size" IS NULL');
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS public.app_settings (
+        key text PRIMARY KEY,
+        value jsonb NOT NULL DEFAULT '{}'::jsonb
+      )
+    `);
+
+    const defaultCategories = ['Capacitação', 'Planejamento', 'Gestão', 'Assessoria', 'Sustentabilidade', 'Qualificação'];
+    const defaultTags = ['CERNE', 'Gestão', 'Capacitação', 'Assessoria', 'Sustentabilidade', 'Qualificação', 'Ata', 'Reunião', 'Workshop', 'Contrato', 'Relatório', 'Certificado'];
+
+    await ensureAppSetting(pool, 'categories', defaultCategories);
+    await ensureAppSetting(pool, 'tags', defaultTags);
+
     dbReady = true;
     console.log('[DB] Tabela public.evidences pronta.');
   } catch (error) {
@@ -156,6 +170,42 @@ function buildDownloadUrl(req, evidenceId) {
 function sanitizeFileName(fileName) {
   const baseName = path.basename(fileName || 'arquivo');
   return baseName.replace(/[^a-zA-Z0-9._-]/g, '_') || 'arquivo';
+}
+
+async function ensureAppSetting(poolInstance, key, defaultValue) {
+  const result = await poolInstance.query('SELECT 1 FROM public.app_settings WHERE key = $1 LIMIT 1', [key]);
+  if (result.rowCount === 0) {
+    await poolInstance.query('INSERT INTO public.app_settings (key, value) VALUES ($1, $2)', [key, JSON.stringify(defaultValue)]);
+  }
+}
+
+async function getAppSetting(key, fallback = []) {
+  const result = await pool.query('SELECT value FROM public.app_settings WHERE key = $1 LIMIT 1', [key]);
+  if (!result || result.rowCount === 0) {
+    return fallback;
+  }
+
+  try {
+    const parsed = result.rows[0].value;
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+async function setAppSetting(key, value) {
+  const normalized = Array.isArray(value) ? value.map((item) => String(item).trim()).filter(Boolean) : [];
+  await pool.query(
+    'INSERT INTO public.app_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
+    [key, JSON.stringify(normalized)]
+  );
+}
+
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter((item) => item.length > 0);
 }
 
 function normalizeTags(value) {
@@ -557,6 +607,40 @@ app.get('/api/evidences/:id', async (req, res, next) => {
   } catch (error) {
     console.error('[EVIDENCES] Erro ao buscar evidência:', error);
     res.status(500).json({ error: error.message || 'Erro ao buscar evidência.' });
+  }
+});
+
+app.get('/api/settings', async (req, res, next) => {
+  try {
+    const categories = await getAppSetting('categories', ['Capacitação', 'Planejamento', 'Gestão', 'Assessoria', 'Sustentabilidade', 'Qualificação']);
+    const tags = await getAppSetting('tags', ['CERNE', 'Gestão', 'Capacitação', 'Assessoria', 'Sustentabilidade', 'Qualificação']);
+    res.json({ categories, tags });
+  } catch (error) {
+    console.error('[SETTINGS] Erro ao buscar configurações:', error);
+    res.status(500).json({ error: error.message || 'Erro ao buscar configurações.' });
+  }
+});
+
+app.patch('/api/settings', async (req, res, next) => {
+  try {
+    const { categories, tags } = req.body;
+    if (categories === undefined && tags === undefined) {
+      return res.status(400).json({ error: 'É necessário enviar categories ou tags.' });
+    }
+
+    if (categories !== undefined) {
+      await setAppSetting('categories', normalizeStringArray(categories));
+    }
+    if (tags !== undefined) {
+      await setAppSetting('tags', normalizeStringArray(tags));
+    }
+
+    const updatedCategories = await getAppSetting('categories', []);
+    const updatedTags = await getAppSetting('tags', []);
+    res.json({ categories: updatedCategories, tags: updatedTags });
+  } catch (error) {
+    console.error('[SETTINGS] Erro ao atualizar configurações:', error);
+    res.status(500).json({ error: error.message || 'Erro ao atualizar configurações.' });
   }
 });
 

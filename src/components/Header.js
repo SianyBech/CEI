@@ -1,5 +1,5 @@
 window.CerneApp.Header = {
-  render(onNewEvidenceClick) {
+  render(onNewEvidenceClick, onSettingsClick) {
     const header = document.createElement('header');
     header.className = 'header';
     header.innerHTML = `
@@ -12,14 +12,20 @@ window.CerneApp.Header = {
           <span class="header-subtitle">Incubadora de Empresas CEI — Inteligência Artificial</span>
         </div>
       </div>
-      <button class="btn btn-primary" id="btn-nova-evidencia">
-        <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-        Nova Evidência
-      </button>
+      <div class="header-actions">
+        <button class="btn btn-secondary" id="btn-settings">
+          <i data-lucide="settings" style="width: 16px; height: 16px;"></i>
+          Configurações
+        </button>
+        <button class="btn btn-primary" id="btn-nova-evidencia">
+          <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+          Nova Evidência
+        </button>
+      </div>
     `;
     
-    // Add event listener to the "Nova Evidência" button
     header.querySelector('#btn-nova-evidencia').addEventListener('click', onNewEvidenceClick);
+    header.querySelector('#btn-settings').addEventListener('click', onSettingsClick);
     
     return header;
   }
