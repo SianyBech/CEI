@@ -77,31 +77,131 @@ window.CerneApp.SearchBar = {
           ${tagsOptions}
         </select>
       </div>
+
+      <!-- Date filters group -->
+      <div class="date-filter-group">
+        <span class="date-filter-label">De</span>
+        <div class="date-selector-group">
+          <select class="date-select" id="filter-day-from" data-type="day">
+            <option value="">Dia</option>
+          </select>
+          <select class="date-select" id="filter-month-from" data-type="month">
+            <option value="">Mês</option>
+            <option value="1">Janeiro</option>
+            <option value="2">Fevereiro</option>
+            <option value="3">Março</option>
+            <option value="4">Abril</option>
+            <option value="5">Maio</option>
+            <option value="6">Junho</option>
+            <option value="7">Julho</option>
+            <option value="8">Agosto</option>
+            <option value="9">Setembro</option>
+            <option value="10">Outubro</option>
+            <option value="11">Novembro</option>
+            <option value="12">Dezembro</option>
+          </select>
+          <select class="date-select" id="filter-year-from" data-type="year">
+            <option value="">Ano</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="date-filter-group">
+        <span class="date-filter-label">Até</span>
+        <div class="date-selector-group">
+          <select class="date-select" id="filter-day-to" data-type="day">
+            <option value="">Dia</option>
+          </select>
+          <select class="date-select" id="filter-month-to" data-type="month">
+            <option value="">Mês</option>
+            <option value="1">Janeiro</option>
+            <option value="2">Fevereiro</option>
+            <option value="3">Março</option>
+            <option value="4">Abril</option>
+            <option value="5">Maio</option>
+            <option value="6">Junho</option>
+            <option value="7">Julho</option>
+            <option value="8">Agosto</option>
+            <option value="9">Setembro</option>
+            <option value="10">Outubro</option>
+            <option value="11">Novembro</option>
+            <option value="12">Dezembro</option>
+          </select>
+          <select class="date-select" id="filter-year-to" data-type="year">
+            <option value="">Ano</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="clear-date-filters" class="clear-date-btn" title="Limpar filtros de data">
+        <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+      </button>
     `;
 
     container.appendChild(searchRow);
     container.appendChild(filtersRow);
 
-    // Date filters row
-    const dateFiltersRow = document.createElement('div');
-    dateFiltersRow.className = 'date-filters-row';
-    dateFiltersRow.innerHTML = `
-      <div class="date-filter-group">
-        <div class="date-filter-container">
-          <span class="filter-label">De</span>
-          <input type="text" class="date-picker" id="filter-date-from" placeholder="Selecione a data inicial">
-        </div>
-        <div class="date-filter-container">
-          <span class="filter-label">Até</span>
-          <input type="text" class="date-picker" id="filter-date-to" placeholder="Selecione a data final">
-        </div>
-        <button id="clear-date-filter" class="clear-date-btn" title="Limpar filtro de datas">
-          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
-        </button>
-      </div>
-    `;
+    // Populate year options (1900 to current year)
+    function populateYears() {
+      const currentYear = new Date().getFullYear();
+      const yearSelects = filtersRow.querySelectorAll('select[data-type="year"]');
+      
+      yearSelects.forEach(select => {
+        for (let year = currentYear; year >= 1900; year--) {
+          const option = document.createElement('option');
+          option.value = year;
+          option.textContent = year;
+          select.appendChild(option);
+        }
+      });
+    }
 
-    container.appendChild(dateFiltersRow);
+    // Populate days based on selected month and year
+    function updateDaysInMonth() {
+      const daySelectsFrom = filtersRow.querySelector('#filter-day-from');
+      const daySelectsTo = filtersRow.querySelector('#filter-day-to');
+      const monthFromVal = filtersRow.querySelector('#filter-month-from').value;
+      const yearFromVal = filtersRow.querySelector('#filter-year-from').value;
+      const monthToVal = filtersRow.querySelector('#filter-month-to').value;
+      const yearToVal = filtersRow.querySelector('#filter-year-to').value;
+
+      // Calculate days for "De"
+      let daysInMonthFrom = 31;
+      if (monthFromVal && yearFromVal) {
+        daysInMonthFrom = new Date(parseInt(yearFromVal), parseInt(monthFromVal), 0).getDate();
+      }
+
+      // Calculate days for "Até"
+      let daysInMonthTo = 31;
+      if (monthToVal && yearToVal) {
+        daysInMonthTo = new Date(parseInt(yearToVal), parseInt(monthToVal), 0).getDate();
+      }
+
+      // Update "De" days
+      const currentDayFrom = daySelectsFrom.value;
+      daySelectsFrom.innerHTML = '<option value="">Dia</option>';
+      for (let i = 1; i <= daysInMonthFrom; i++) {
+        const option = document.createElement('option');
+        option.value = String(i).padStart(2, '0');
+        option.textContent = String(i).padStart(2, '0');
+        if (option.value === currentDayFrom) option.selected = true;
+        daySelectsFrom.appendChild(option);
+      }
+
+      // Update "Até" days
+      const currentDayTo = daySelectsTo.value;
+      daySelectsTo.innerHTML = '<option value="">Dia</option>';
+      for (let i = 1; i <= daysInMonthTo; i++) {
+        const option = document.createElement('option');
+        option.value = String(i).padStart(2, '0');
+        option.textContent = String(i).padStart(2, '0');
+        if (option.value === currentDayTo) option.selected = true;
+        daySelectsTo.appendChild(option);
+      }
+    }
+
+    populateYears();
+    updateDaysInMonth();
 
     // Event listeners for search and view mode
     const input = searchRow.querySelector('#search-input');
@@ -110,7 +210,7 @@ window.CerneApp.SearchBar = {
     searchRow.querySelector('#toggle-table').addEventListener('click', () => onViewModeChange('table'));
     searchRow.querySelector('#toggle-grid').addEventListener('click', () => onViewModeChange('grid'));
 
-    // Filter selectors change listeners (excluding date filter)
+    // Filter selectors change listeners
     filtersRow.querySelectorAll('.filter-select').forEach(select => {
       select.addEventListener('change', (e) => {
         const filterId = e.target.id.replace('filter-', '');
@@ -118,47 +218,38 @@ window.CerneApp.SearchBar = {
       });
     });
 
-    // Initialize Flatpickr date pickers
-    const dateFromInput = dateFiltersRow.querySelector('#filter-date-from');
-    const dateToInput = dateFiltersRow.querySelector('#filter-date-to');
-    const clearBtn = dateFiltersRow.querySelector('#clear-date-filter');
-
-    // Initialize from date picker
-    const flatpickrFromInstance = flatpickr(dateFromInput, {
-      mode: 'single',
-      dateFormat: 'd/m/Y',
-      locale: 'pt',
-      allowInput: true,
-      onChange: (selectedDates) => {
+    // Date filter selectors change listeners
+    const allDateSelects = filtersRow.querySelectorAll('.date-select');
+    allDateSelects.forEach(select => {
+      select.addEventListener('change', (e) => {
+        updateDaysInMonth();
+        
         if (typeof onDateFilterChange === 'function') {
-          const dateFrom = selectedDates.length > 0 ? selectedDates[0].toISOString().split('T')[0] : null;
-          const dateTo = flatpickrToInstance.selectedDates.length > 0 ? flatpickrToInstance.selectedDates[0].toISOString().split('T')[0] : null;
-          onDateFilterChange('dateFrom', dateFrom, dateTo);
+          const dayFrom = filtersRow.querySelector('#filter-day-from').value;
+          const monthFrom = filtersRow.querySelector('#filter-month-from').value;
+          const yearFrom = filtersRow.querySelector('#filter-year-from').value;
+          const dayTo = filtersRow.querySelector('#filter-day-to').value;
+          const monthTo = filtersRow.querySelector('#filter-month-to').value;
+          const yearTo = filtersRow.querySelector('#filter-year-to').value;
+
+          onDateFilterChange({
+            dayFrom, monthFrom, yearFrom,
+            dayTo, monthTo, yearTo
+          });
         }
-      }
+      });
     });
 
-    // Initialize to date picker
-    const flatpickrToInstance = flatpickr(dateToInput, {
-      mode: 'single',
-      dateFormat: 'd/m/Y',
-      locale: 'pt',
-      allowInput: true,
-      onChange: (selectedDates) => {
-        if (typeof onDateFilterChange === 'function') {
-          const dateFrom = flatpickrFromInstance.selectedDates.length > 0 ? flatpickrFromInstance.selectedDates[0].toISOString().split('T')[0] : null;
-          const dateTo = selectedDates.length > 0 ? selectedDates[0].toISOString().split('T')[0] : null;
-          onDateFilterChange('dateTo', dateFrom, dateTo);
-        }
-      }
-    });
-
-    // Clear date filter button
-    clearBtn.addEventListener('click', () => {
-      flatpickrFromInstance.clear();
-      flatpickrToInstance.clear();
+    // Clear date filters button
+    filtersRow.querySelector('#clear-date-filters').addEventListener('click', () => {
+      allDateSelects.forEach(select => select.value = '');
+      updateDaysInMonth();
+      
       if (typeof onDateFilterChange === 'function') {
-        onDateFilterChange('clear', null, null);
+        onDateFilterChange({
+          dayFrom: '', monthFrom: '', yearFrom: '',
+          dayTo: '', monthTo: '', yearTo: ''
+        });
       }
     });
 

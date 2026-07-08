@@ -1,11 +1,6 @@
 window.CerneApp.Api = {
-  async fetchEvidences(dateFrom = null, dateTo = null) {
-    const params = new URLSearchParams();
-    if (dateFrom) params.append('dateFrom', dateFrom);
-    if (dateTo) params.append('dateTo', dateTo);
-
-    const url = params.toString() ? `/api/evidences?${params.toString()}` : '/api/evidences';
-    const response = await fetch(url);
+  async fetchEvidences() {
+    const response = await fetch('/api/evidences');
     if (!response.ok) {
       throw new Error('Falha ao carregar as evidências.');
     }

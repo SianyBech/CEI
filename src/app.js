@@ -15,8 +15,12 @@
       tag: 'todos'
     },
     dateFilters: {
-      dateFrom: null,
-      dateTo: null
+      dayFrom: '',
+      monthFrom: '',
+      yearFrom: '',
+      dayTo: '',
+      monthTo: '',
+      yearTo: ''
     },
     appSettings: {
       categories: [],
@@ -196,15 +200,43 @@
       }
 
       // 3. Date Filter (intelligent date parsing)
-      if (state.dateFilters.dateFrom || state.dateFilters.dateTo) {
-        const itemDate = parseDate(item.data); // Convert DD/MM/YYYY to Date object
+      if (state.dateFilters.dayFrom || state.dateFilters.monthFrom || state.dateFilters.yearFrom ||
+          state.dateFilters.dayTo || state.dateFilters.monthTo || state.dateFilters.yearTo) {
         
-        if (state.dateFilters.dateFrom && itemDate < new Date(state.dateFilters.dateFrom)) {
-          return false;
+        const itemDate = parseDate(item.data); // Convert DD/MM/YYYY to Date object
+        let isInRange = true;
+
+        // Calculate "De" (from) date
+        if (state.dateFilters.yearFrom || state.dateFilters.monthFrom || state.dateFilters.dayFrom) {
+          let fromDate;
+          const yearFrom = state.dateFilters.yearFrom || '1900';
+          const monthFrom = state.dateFilters.monthFrom || '1';
+          const dayFrom = state.dateFilters.dayFrom || '1';
+          
+          fromDate = new Date(parseInt(yearFrom), parseInt(monthFrom) - 1, parseInt(dayFrom));
+          if (itemDate < fromDate) isInRange = false;
         }
-        if (state.dateFilters.dateTo && itemDate > new Date(state.dateFilters.dateTo)) {
-          return false;
+
+        // Calculate "Até" (to) date
+        if (state.dateFilters.yearTo || state.dateFilters.monthTo || state.dateFilters.dayTo) {
+          let toDate;
+          const yearTo = state.dateFilters.yearTo || '9999';
+          const monthTo = state.dateFilters.monthTo || '12';
+          
+          // If only month/year specified, get last day of that month
+          let dayTo = state.dateFilters.dayTo;
+          if (!dayTo && monthTo) {
+            const lastDay = new Date(parseInt(yearTo), parseInt(monthTo), 0).getDate();
+            dayTo = String(lastDay);
+          } else if (!dayTo) {
+            dayTo = '31';
+          }
+          
+          toDate = new Date(parseInt(yearTo), parseInt(monthTo) - 1, parseInt(dayTo));
+          if (itemDate > toDate) isInRange = false;
         }
+
+        if (!isInRange) return false;
       }
 
       return true;
@@ -254,9 +286,15 @@
     renderList();
   }
 
-  function handleDateFilterChange(filterType, dateFrom, dateTo) {
-    state.dateFilters.dateFrom = dateFrom;
-    state.dateFilters.dateTo = dateTo;
+  function handleDateFilterChange(filterObj) {
+    state.dateFilters = {
+      dayFrom: filterObj.dayFrom || '',
+      monthFrom: filterObj.monthFrom || '',
+      yearFrom: filterObj.yearFrom || '',
+      dayTo: filterObj.dayTo || '',
+      monthTo: filterObj.monthTo || '',
+      yearTo: filterObj.yearTo || ''
+    };
     renderList();
   }
 
