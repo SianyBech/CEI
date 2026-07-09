@@ -2,7 +2,12 @@ window.CerneApp.Header = {
   render(onNewEvidenceClick, onSettingsClick, onLogout, user = null) {
     const currentUser = user || window.CerneApp.Auth?.getCurrentUser?.() || null;
     const role = String(currentUser?.app_metadata?.role || currentUser?.role || currentUser?.user_metadata?.role || 'user').toLowerCase();
-    const canManageSettings = role === 'admin';
+    
+    // Normalize role to check for settings permission (both admin and user have access to settings)
+    const normalizedRole = ['authenticated', 'user', 'member', 'standard'].includes(role)
+      ? 'user'
+      : (['admin', 'administrator', 'owner'].includes(role) ? 'admin' : role);
+    const canManageSettings = ['admin', 'user'].includes(normalizedRole);
     const header = document.createElement('header');
     header.className = 'header';
     header.innerHTML = `
