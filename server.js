@@ -455,7 +455,10 @@ function requirePermission(permission = 'view') {
     req.userRole = getUserRole(authContext.user);
     req.permissions = [req.userRole];
 
+    console.log(`[AUTH] role=${req.userRole} permission=${permission} email=${authContext.user?.email || 'sem-email'}`);
+
     if (!hasPermission(authContext.user, permission)) {
+      console.warn(`[AUTH] Bloqueado role=${req.userRole} permission=${permission} email=${authContext.user?.email || 'sem-email'}`);
       return res.status(403).json({ error: 'Permissão insuficiente.' });
     }
 

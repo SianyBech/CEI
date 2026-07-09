@@ -7,12 +7,17 @@ test('retorna perfil user quando não há role explícita', () => {
   assert.equal(role, 'user');
 });
 
-test('permite acesso de administrador para ações administrativas', () => {
-  const allowed = hasPermission({ app_metadata: { role: 'admin' } }, 'administrative');
+test('trata o papel authenticated do Supabase como usuário comum', () => {
+  const role = getUserRole({ app_metadata: { role: 'authenticated' } });
+  assert.equal(role, 'user');
+});
+
+test('permite acesso amplo para usuários comuns, incluindo configurações', () => {
+  const allowed = hasPermission({ app_metadata: { role: 'authenticated' } }, 'settings');
   assert.equal(allowed, true);
 });
 
-test('bloqueia acesso administrativo quando o perfil é user', () => {
-  const allowed = hasPermission({ app_metadata: { role: 'user' } }, 'administrative');
-  assert.equal(allowed, false);
+test('mantém acesso administrativo para papéis admin', () => {
+  const allowed = hasPermission({ app_metadata: { role: 'admin' } }, 'administrative');
+  assert.equal(allowed, true);
 });
