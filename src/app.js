@@ -403,7 +403,9 @@
         state.evidences.unshift(newEvidence);
         populateFilterOptions();
         renderList();
-      }
+      },
+      state.appSettings.categories,
+      state.appSettings.tags
     );
     document.body.appendChild(modalNode);
     lucide.createIcons();
@@ -455,7 +457,9 @@
         state.evidences = state.evidences.map(item => item.id === updatedEvidence.id ? updatedEvidence : item);
         populateFilterOptions();
         renderList();
-      }
+      },
+      state.appSettings.categories,
+      state.appSettings.tags
     );
     document.body.appendChild(detailsNode);
     lucide.createIcons();

@@ -72,7 +72,7 @@ window.CerneApp.UploadModal = {
     };
   },
 
-  render(onClose, onAddEvidence) {
+  render(onClose, onAddEvidence, categories = [], tagsList = []) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.id = 'upload-modal-overlay';
@@ -320,6 +320,30 @@ window.CerneApp.UploadModal = {
         <button class="btn btn-primary" id="modal-success-done-btn">Confirmar e Salvar</button>
       `;
 
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function buildCategoryOptions(selectedCategory) {
+        let html = '';
+        let hasSelected = false;
+        const cats = Array.isArray(categories) ? categories : [];
+        cats.forEach(cat => {
+          const isSel = (cat === selectedCategory);
+          if (isSel) hasSelected = true;
+          html += `<option value="${escapeHtml(cat)}" ${isSel ? 'selected' : ''}>${escapeHtml(cat)}</option>`;
+        });
+        if (!hasSelected && selectedCategory) {
+          html = `<option value="${escapeHtml(selectedCategory)}" selected>${escapeHtml(selectedCategory)}</option>` + html;
+        }
+        return html;
+      }
+
       // Update body with a beautiful results summary and editable form
       modalBody.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 1.25rem; animation: fadeIn var(--transition-normal) forwards;">
@@ -332,67 +356,135 @@ window.CerneApp.UploadModal = {
               <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.15rem;">Revise e corrija os metadados gerados pela Inteligência Artificial se necessário:</p>
             </div>
           </div>
-
+ 
           <div style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); background-color: var(--bg-secondary); padding: 1.25rem;">
             <div class="edit-form-grid">
               
-                  <div class="form-group edit-form-fullwidth">
+              <div class="form-group edit-form-fullwidth">
                 <label class="form-label" for="edit-titulo">Título da Evidência</label>
-                <input type="text" class="form-input" id="edit-titulo" value="${evidence.titulo || evidence.nome}" placeholder="Título da evidência">
+                <input type="text" class="form-input" id="edit-titulo" value="${escapeHtml(evidence.titulo || evidence.nome)}" placeholder="Título da evidência">
               </div>
-
+ 
               <div class="form-group edit-form-fullwidth">
                 <label class="form-label" for="edit-nome">Arquivo Original</label>
-                <input type="text" class="form-input" id="edit-nome" value="${evidence.nome}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;">
+                <input type="text" class="form-input" id="edit-nome" value="${escapeHtml(evidence.nome)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;">
               </div>
-
+ 
               <div class="form-group edit-form-fullwidth">
                 <label class="form-label" for="edit-evento">Evento de Origem</label>
-                <input type="text" class="form-input" id="edit-evento" value="${evidence.evento}" placeholder="Ex: Reunião do Conselho, Mentoria, etc.">
+                <input type="text" class="form-input" id="edit-evento" value="${escapeHtml(evidence.evento)}" placeholder="Ex: Reunião do Conselho, Mentoria, etc.">
               </div>
-
+ 
               <div class="form-group">
                 <label class="form-label" for="edit-categoria">Categoria CERNE</label>
                 <select class="form-select" id="edit-categoria">
-                  <option value="Capacitação" ${evidence.categoria === 'Capacitação' ? 'selected' : ''}>Capacitação</option>
-                  <option value="Planejamento" ${evidence.categoria === 'Planejamento' ? 'selected' : ''}>Planejamento</option>
-                  <option value="Gestão" ${evidence.categoria === 'Gestão' ? 'selected' : ''}>Gestão</option>
-                  <option value="Assessoria" ${evidence.categoria === 'Assessoria' ? 'selected' : ''}>Assessoria</option>
-                  <option value="Sustentabilidade" ${evidence.categoria === 'Sustentabilidade' ? 'selected' : ''}>Sustentabilidade</option>
-                  <option value="Qualificação" ${evidence.categoria === 'Qualificação' ? 'selected' : ''}>Qualificação</option>
+                  ${buildCategoryOptions(evidence.categoria)}
                 </select>
               </div>
-
+ 
               <div class="form-group">
                 <label class="form-label" for="edit-responsavel">Responsável pelo Envio</label>
-                <input type="text" class="form-input" id="edit-responsavel" value="${evidence.responsavel}" placeholder="Nome do responsável">
+                <input type="text" class="form-input" id="edit-responsavel" value="${escapeHtml(evidence.responsavel)}" placeholder="Nome do responsável">
               </div>
-
+ 
               <div class="form-group">
                 <label class="form-label" for="edit-data">Data de Registro</label>
-                <input type="text" class="form-input" id="edit-data" value="${evidence.data}" placeholder="DD/MM/AAAA">
+                <input type="text" class="form-input" id="edit-data" value="${escapeHtml(evidence.data)}" placeholder="DD/MM/AAAA">
               </div>
-
+ 
               <div class="form-group">
-                <label class="form-label" for="edit-tags">Tags (separadas por vírgula)</label>
-                <input type="text" class="form-input" id="edit-tags" value="${evidence.tags.join(', ')}" placeholder="Ex: IA, Ata, Canvas">
+                <label class="form-label">Tags da Evidência</label>
+                <div class="tags-selector-wrapper">
+                  <div class="selected-tags-display" id="selected-tags-display">
+                    <!-- selected tags will be dynamically generated as pills -->
+                  </div>
+                  <select class="form-select" id="add-tag-select" style="margin-top: 0.35rem;">
+                    <!-- dynamically populated option list -->
+                  </select>
+                </div>
               </div>
-
+ 
               <div class="form-group edit-form-fullwidth">
                 <label class="form-label" for="edit-resumo">Resumo da IA</label>
-                <textarea class="form-textarea" id="edit-resumo" placeholder="Escreva um breve resumo da evidência...">${evidence.resumo}</textarea>
+                <textarea class="form-textarea" id="edit-resumo" placeholder="Escreva um breve resumo da evidência...">${escapeHtml(evidence.resumo)}</textarea>
               </div>
-
+ 
             </div>
           </div>
         </div>
       `;
-
+ 
       lucide.createIcons({
         nameAttr: 'data-lucide',
         node: modalBody
       });
 
+      let selectedTags = [...(evidence.tags || [])];
+
+      function renderTagsWidget() {
+        const displayContainer = modalBody.querySelector('#selected-tags-display');
+        const selectElement = modalBody.querySelector('#add-tag-select');
+        if (!displayContainer || !selectElement) return;
+        
+        displayContainer.innerHTML = '';
+        if (selectedTags.length === 0) {
+          displayContainer.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-tertiary); font-style: italic;">Nenhuma tag selecionada</span>';
+        } else {
+          selectedTags.forEach(tag => {
+            const badge = document.createElement('span');
+            badge.className = 'tag-badge';
+            badge.innerHTML = `
+              <span>${escapeHtml(tag)}</span>
+              <button type="button" class="tag-badge-remove" title="Remover tag">&times;</button>
+            `;
+            badge.querySelector('.tag-badge-remove').addEventListener('click', (e) => {
+              e.preventDefault();
+              selectedTags = selectedTags.filter(t => t !== tag);
+              renderTagsWidget();
+            });
+            displayContainer.appendChild(badge);
+          });
+        }
+
+        selectElement.innerHTML = '';
+        
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = 'Adicionar tag...';
+        defaultOpt.selected = true;
+        selectElement.appendChild(defaultOpt);
+
+        const tagsListArray = Array.isArray(tagsList) ? tagsList : [];
+        const availableTags = tagsListArray.filter(tag => !selectedTags.includes(tag));
+        
+        availableTags.forEach(tag => {
+          const opt = document.createElement('option');
+          opt.value = tag;
+          opt.textContent = tag;
+          selectElement.appendChild(opt);
+        });
+
+        if (availableTags.length === 0) {
+          defaultOpt.textContent = 'Todas as tags disponíveis já foram adicionadas';
+          selectElement.disabled = true;
+        } else {
+          selectElement.disabled = false;
+        }
+      }
+
+      // Initialize the tags widget
+      renderTagsWidget();
+
+      modalBody.querySelector('#add-tag-select').addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val) {
+          if (!selectedTags.includes(val)) {
+            selectedTags.push(val);
+          }
+          renderTagsWidget();
+        }
+      });
+ 
       footer.querySelector('#modal-success-done-btn').addEventListener('click', async () => {
         const updatedMetadata = {
           titulo: modalBody.querySelector('#edit-titulo').value.trim() || evidence.nome,
@@ -401,12 +493,9 @@ window.CerneApp.UploadModal = {
           responsavel: modalBody.querySelector('#edit-responsavel').value.trim() || 'Não especificado',
           data: modalBody.querySelector('#edit-data').value.trim() || new Date().toLocaleDateString('pt-BR'),
           resumo: modalBody.querySelector('#edit-resumo').value.trim() || 'Sem resumo disponível.',
-          tags: modalBody.querySelector('#edit-tags').value
-            .split(',')
-            .map(t => t.trim())
-            .filter(t => t.length > 0)
+          tags: selectedTags
         };
-
+ 
         try {
           const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
           onAddEvidence(savedEvidence);

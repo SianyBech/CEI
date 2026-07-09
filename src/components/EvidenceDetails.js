@@ -1,5 +1,5 @@
 window.CerneApp.EvidenceDetails = {
-  render(evidence, onClose, onSave) {
+  render(evidence, onClose, onSave, categories = [], tagsList = []) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.id = 'details-modal-overlay';
@@ -18,20 +18,44 @@ window.CerneApp.EvidenceDetails = {
       iconClass = 'file-icon-imagem';
     }
 
-    // Generate tags HTML
+    // Generate tags HTML for preview
     const tagsHTML = (evidence.tags || [])
       .map(tag => `<span class="tag">${tag}</span>`)
       .join(' ');
 
     const titleText = evidence.titulo || evidence.nome;
 
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function buildCategoryOptions(selectedCategory) {
+      let html = '';
+      let hasSelected = false;
+      const cats = Array.isArray(categories) ? categories : [];
+      cats.forEach(cat => {
+        const isSel = (cat === selectedCategory);
+        if (isSel) hasSelected = true;
+        html += `<option value="${escapeHtml(cat)}" ${isSel ? 'selected' : ''}>${escapeHtml(cat)}</option>`;
+      });
+      if (!hasSelected && selectedCategory) {
+        html = `<option value="${escapeHtml(selectedCategory)}" selected>${escapeHtml(selectedCategory)}</option>` + html;
+      }
+      return html;
+    }
+
     overlay.innerHTML = `
       <div class="modal-content detail-modal-width">
         <div class="modal-header">
           <div style="display: flex; align-items: center; gap: 0.65rem;">
             <i data-lucide="${iconName}" class="file-icon ${iconClass}"></i>
-            <h2 class="modal-title" style="font-size: 1.1rem; max-width: 500px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${titleText}">
-              ${titleText}
+            <h2 class="modal-title" style="font-size: 1.1rem; max-width: 500px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(titleText)}">
+              ${escapeHtml(titleText)}
             </h2>
           </div>
           <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -49,49 +73,51 @@ window.CerneApp.EvidenceDetails = {
             <div class="details-sidebar">
               <div class="detail-item">
                 <label class="detail-label" for="detail-title-input">Título da Evidência</label>
-                <input id="detail-title-input" class="form-input" value="${titleText}" />
+                <input id="detail-title-input" class="form-input" value="${escapeHtml(titleText)}" />
               </div>
 
               <div class="detail-item">
                 <label class="detail-label" for="detail-file-name">Arquivo Original</label>
-                <input id="detail-file-name" class="form-input" value="${evidence.nome}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;" />
+                <input id="detail-file-name" class="form-input" value="${escapeHtml(evidence.nome)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;" />
               </div>
 
               <div class="detail-item">
                 <label class="detail-label" for="detail-evento-input">Evento de Origem</label>
-                <input id="detail-evento-input" class="form-input" value="${evidence.evento}" />
+                <input id="detail-evento-input" class="form-input" value="${escapeHtml(evidence.evento)}" />
               </div>
 
               <div class="detail-item">
                 <label class="detail-label" for="detail-categoria-select">Categoria CERNE</label>
                 <select id="detail-categoria-select" class="form-select">
-                  <option value="Capacitação" ${evidence.categoria === 'Capacitação' ? 'selected' : ''}>Capacitação</option>
-                  <option value="Planejamento" ${evidence.categoria === 'Planejamento' ? 'selected' : ''}>Planejamento</option>
-                  <option value="Gestão" ${evidence.categoria === 'Gestão' ? 'selected' : ''}>Gestão</option>
-                  <option value="Assessoria" ${evidence.categoria === 'Assessoria' ? 'selected' : ''}>Assessoria</option>
-                  <option value="Sustentabilidade" ${evidence.categoria === 'Sustentabilidade' ? 'selected' : ''}>Sustentabilidade</option>
-                  <option value="Qualificação" ${evidence.categoria === 'Qualificação' ? 'selected' : ''}>Qualificação</option>
+                  ${buildCategoryOptions(evidence.categoria)}
                 </select>
               </div>
 
               <div class="detail-item">
                 <label class="detail-label" for="detail-responsavel-input">Responsável pelo Envio</label>
-                <input id="detail-responsavel-input" class="form-input" value="${evidence.responsavel}" />
+                <input id="detail-responsavel-input" class="form-input" value="${escapeHtml(evidence.responsavel)}" />
               </div>
 
               <div class="detail-item">
                 <label class="detail-label" for="detail-data-input">Data do Registro</label>
-                <input id="detail-data-input" class="form-input" value="${evidence.data}" />
+                <input id="detail-data-input" class="form-input" value="${escapeHtml(evidence.data)}" />
               </div>
 
               <div class="detail-item">
-                <label class="detail-label" for="detail-tags-input">Tags da Evidência</label>
-                <input id="detail-tags-input" class="form-input" value="${(evidence.tags || []).join(', ')}" />
+                <label class="detail-label">Tags da Evidência</label>
+                <div class="tags-selector-wrapper">
+                  <div class="selected-tags-display" id="detail-selected-tags-display">
+                    <!-- selected tags will be dynamically generated as pills -->
+                  </div>
+                  <select class="form-select" id="detail-add-tag-select" style="margin-top: 0.35rem;">
+                    <!-- dynamically populated option list -->
+                  </select>
+                </div>
               </div>
 
               <div class="detail-item">
                 <label class="detail-label" for="detail-resumo-input">Resumo da IA</label>
-                <textarea id="detail-resumo-input" class="form-textarea" style="min-height: 90px;">${evidence.resumo}</textarea>
+                <textarea id="detail-resumo-input" class="form-textarea" style="min-height: 90px;">${escapeHtml(evidence.resumo)}</textarea>
               </div>
 
               <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.5rem;">
@@ -116,7 +142,7 @@ window.CerneApp.EvidenceDetails = {
                   <strong style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Resumo da Inteligência Artificial</strong>
                 </div>
                 <p style="font-size: 0.9rem; line-height: 1.5; color: var(--text-secondary); font-style: italic;">
-                  "${evidence.resumo}"
+                  "${escapeHtml(evidence.resumo)}"
                 </p>
               </div>
 
@@ -154,8 +180,73 @@ window.CerneApp.EvidenceDetails = {
     const categorySelect = overlay.querySelector('#detail-categoria-select');
     const responsavelInput = overlay.querySelector('#detail-responsavel-input');
     const dataInput = overlay.querySelector('#detail-data-input');
-    const tagsInput = overlay.querySelector('#detail-tags-input');
     const resumoInput = overlay.querySelector('#detail-resumo-input');
+
+    let selectedTags = [...(evidence.tags || [])];
+
+    function renderTagsWidget() {
+      const displayContainer = overlay.querySelector('#detail-selected-tags-display');
+      const selectElement = overlay.querySelector('#detail-add-tag-select');
+      if (!displayContainer || !selectElement) return;
+      
+      displayContainer.innerHTML = '';
+      if (selectedTags.length === 0) {
+        displayContainer.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-tertiary); font-style: italic;">Nenhuma tag selecionada</span>';
+      } else {
+        selectedTags.forEach(tag => {
+          const badge = document.createElement('span');
+          badge.className = 'tag-badge';
+          badge.innerHTML = `
+            <span>${escapeHtml(tag)}</span>
+            <button type="button" class="tag-badge-remove" title="Remover tag">&times;</button>
+          `;
+          badge.querySelector('.tag-badge-remove').addEventListener('click', (e) => {
+            e.preventDefault();
+            selectedTags = selectedTags.filter(t => t !== tag);
+            renderTagsWidget();
+          });
+          displayContainer.appendChild(badge);
+        });
+      }
+
+      selectElement.innerHTML = '';
+      
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = '';
+      defaultOpt.textContent = 'Adicionar tag...';
+      defaultOpt.selected = true;
+      selectElement.appendChild(defaultOpt);
+
+      const tagsListArray = Array.isArray(tagsList) ? tagsList : [];
+      const availableTags = tagsListArray.filter(tag => !selectedTags.includes(tag));
+      
+      availableTags.forEach(tag => {
+        const opt = document.createElement('option');
+        opt.value = tag;
+        opt.textContent = tag;
+        selectElement.appendChild(opt);
+      });
+
+      if (availableTags.length === 0) {
+        defaultOpt.textContent = 'Todas as tags disponíveis já foram adicionadas';
+        selectElement.disabled = true;
+      } else {
+        selectElement.disabled = false;
+      }
+    }
+
+    // Initialize tags widget immediately
+    renderTagsWidget();
+
+    overlay.querySelector('#detail-add-tag-select').addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val) {
+        if (!selectedTags.includes(val)) {
+          selectedTags.push(val);
+        }
+        renderTagsWidget();
+      }
+    });
 
     const doClose = () => {
       overlay.remove();
@@ -178,7 +269,7 @@ window.CerneApp.EvidenceDetails = {
         responsavel: responsavelInput.value.trim() || 'Não especificado',
         data: dataInput.value.trim() || new Date().toLocaleDateString('pt-BR'),
         resumo: resumoInput.value.trim() || 'Sem resumo disponível.',
-        tags: tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+        tags: selectedTags
       };
 
       try {

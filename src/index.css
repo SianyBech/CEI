@@ -1520,3 +1520,49 @@ button, input, select, textarea {
   gap: 0.75rem;
   align-items: center;
 }
+
+/* Interactive Tags Selector Widget */
+.tags-selector-wrapper {
+  margin-top: 0.25rem;
+}
+.selected-tags-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  min-height: 42px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-secondary);
+  align-items: center;
+}
+.tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-color: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid rgba(79, 70, 229, 0.15);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.tag-badge-remove {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 0.1rem;
+  line-height: 0.8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+.tag-badge-remove:hover {
+  color: var(--danger);
+}
