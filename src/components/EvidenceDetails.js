@@ -115,13 +115,7 @@ window.CerneApp.EvidenceDetails = {
                 </div>
               </div>
 
-              <div class="detail-item">
-                <label class="detail-label" for="detail-resumo-input">Resumo da IA</label>
-                <textarea id="detail-resumo-input" class="form-textarea" style="min-height: 90px;">${escapeHtml(evidence.resumo)}</textarea>
-              </div>
-
               <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.5rem;">
-                <button class="btn btn-primary" id="details-save-btn" style="width: 100%;">Salvar alterações</button>
                 <a href="#" class="btn btn-secondary" id="btn-download-original" style="width: 100%; text-decoration: none;">
                   <i data-lucide="download" style="width: 15px; height: 15px;"></i>
                   Baixar Arquivo
@@ -136,14 +130,12 @@ window.CerneApp.EvidenceDetails = {
             <!-- Right Panel: Summary and Extracted OCR Text -->
             <div style="display: flex; flex-direction: column; gap: 1.5rem;">
               
-              <div style="background-color: #fafafa; border-radius: var(--radius-md); padding: 1.25rem; border: 1px solid var(--border-color);">
-                <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--accent); margin-bottom: 0.5rem;">
+              <div style="background-color: #fafafa; border-radius: var(--radius-md); padding: 1.25rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--accent); margin-bottom: 0.25rem;">
                   <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
                   <strong style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Resumo da Inteligência Artificial</strong>
                 </div>
-                <p style="font-size: 0.9rem; line-height: 1.5; color: var(--text-secondary); font-style: italic;">
-                  "${escapeHtml(evidence.resumo)}"
-                </p>
+                <textarea id="detail-resumo-input" class="form-textarea" style="min-height: 100px; line-height: 1.5; font-size: 0.9rem; color: var(--text-secondary); border-color: var(--border-color); resize: vertical; padding: 0.6rem; font-style: italic;">${escapeHtml(evidence.resumo)}</textarea>
               </div>
 
               <div class="extracted-text-container">
@@ -162,12 +154,12 @@ window.CerneApp.EvidenceDetails = {
         </div>
 
         <div class="modal-footer">
-
-        <button class="modal-close" id="details-delete-btn" style="background-color: #ff4757; color: white; border: none; border-radius: var(--radius-sm); padding: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; transition: background-color 0.2s;" title="Excluir evidência">
-              <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
-            </button>
+          <button class="modal-close" id="details-delete-btn" style="background-color: #ff4757; color: white; border: none; border-radius: var(--radius-sm); padding: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; transition: background-color 0.2s; margin-right: auto;" title="Excluir evidência">
+            <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
+          </button>
             
-          <button class="btn btn-secondary" id="details-close-bottom-btn" style="padding-left: 1.5rem; padding-right: 1.5rem;">Fechar</button>
+          <button class="btn btn-secondary" id="details-close-bottom-btn" style="padding-left: 1.5rem; padding-right: 1.5rem;">Cancelar</button>
+          <button class="btn btn-primary" id="details-save-btn" style="padding-left: 1.5rem; padding-right: 1.5rem;">Salvar alterações</button>
         </div>
       </div>
     `;
