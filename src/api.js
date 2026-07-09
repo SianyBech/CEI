@@ -1,79 +1,58 @@
 window.CerneApp.Api = {
-  async fetchEvidences() {
-    const response = await fetch('/api/evidences');
-    if (!response.ok) {
-      throw new Error('Falha ao carregar as evidências.');
+  async request(path, options = {}) {
+    const response = await fetch(path, {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      },
+      ...options
+    });
+
+    if (response.status === 401) {
+      window.CerneApp.Auth?.emitUnauthorized?.();
+      const errorBody = await response.json().catch(() => null);
+      throw new Error(errorBody?.error || 'Sessão expirada ou não autenticada.');
     }
 
-    return response.json();
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => null);
+      throw new Error(errorBody?.error || 'Falha ao processar a requisição.');
+    }
+
+    return response.json().catch(() => null);
+  },
+
+  async fetchEvidences() {
+    return this.request('/api/evidences');
   },
 
   async fetchEvidenceById(id) {
-    const response = await fetch(`/api/evidences/${encodeURIComponent(id)}`);
-    if (!response.ok) {
-      throw new Error('Falha ao carregar os detalhes da evidência.');
-    }
-
-    return response.json();
+    return this.request(`/api/evidences/${encodeURIComponent(id)}`);
   },
 
   async updateEvidence(id, metadata) {
-    const response = await fetch(`/api/evidences/${encodeURIComponent(id)}`, {
+    return this.request(`/api/evidences/${encodeURIComponent(id)}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify(metadata)
     });
-
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => null);
-      throw new Error(errorBody?.error || 'Falha ao atualizar a evidência.');
-    }
-
-    return response.json();
   },
 
   async deleteEvidence(id) {
-    const response = await fetch(`/api/evidences/${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+    return this.request(`/api/evidences/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
     });
-
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => null);
-      throw new Error(errorBody?.error || 'Falha ao excluir a evidência.');
-    }
-
-    return response.json();
   },
 
   async fetchSettings() {
-    const response = await fetch('/api/settings');
-    if (!response.ok) {
-      throw new Error('Falha ao carregar as configurações.');
-    }
-
-    return response.json();
+    return this.request('/api/settings');
   },
 
   async updateSettings(settings) {
-    const response = await fetch('/api/settings', {
+    return this.request('/api/settings', {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify(settings)
     });
-
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => null);
-      throw new Error(errorBody?.error || 'Falha ao atualizar as configurações.');
-    }
-
-    return response.json();
   },
 
   uploadEvidence(file, onProgress) {
@@ -83,6 +62,7 @@ window.CerneApp.Api = {
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload', true);
+      xhr.withCredentials = true;
 
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable && typeof onProgress === 'function') {

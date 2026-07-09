@@ -11,6 +11,7 @@ const AdmZip = require('adm-zip');
 const fetch = require('node-fetch');
 const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
+const { getUserRole, hasPermission } = require('./auth');
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ let supabaseClient = null;
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_API_KEY;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLIC_ANON_KEY || supabaseServiceRoleKey;
 const supabaseBucket = process.env.SUPABASE_BUCKET || 'evidencias';
 
 const dbClient = {
@@ -115,10 +117,16 @@ async function initPostgresPool() {
     await pool.query('ALTER TABLE public.evidences ADD COLUMN IF NOT EXISTS "original_filename" text');
     await pool.query('ALTER TABLE public.evidences ADD COLUMN IF NOT EXISTS "mime_type" text');
     await pool.query('ALTER TABLE public.evidences ADD COLUMN IF NOT EXISTS "file_size" bigint');
+    await pool.query('ALTER TABLE public.evidences ADD COLUMN IF NOT EXISTS "created_by" text');
+    await pool.query('ALTER TABLE public.evidences ADD COLUMN IF NOT EXISTS "updated_by" text');
+    await pool.query('ALTER TABLE public.evidences ADD COLUMN IF NOT EXISTS "created_at" timestamptz');
+    await pool.query('ALTER TABLE public.evidences ADD COLUMN IF NOT EXISTS "updated_at" timestamptz');
     await pool.query('UPDATE public.evidences SET "original_filename" = COALESCE("original_filename", "nome") WHERE "original_filename" IS NULL');
     await pool.query('UPDATE public.evidences SET "storage_filename" = COALESCE("storage_filename", "nome") WHERE "storage_filename" IS NULL');
     await pool.query('UPDATE public.evidences SET "mime_type" = COALESCE("mime_type", CASE WHEN "tipo" = \'pdf\' THEN \'application/pdf\' ELSE \'application/octet-stream\' END) WHERE "mime_type" IS NULL');
     await pool.query('UPDATE public.evidences SET "file_size" = COALESCE("file_size", 0) WHERE "file_size" IS NULL');
+    await pool.query('UPDATE public.evidences SET "created_at" = COALESCE("created_at", NOW()) WHERE "created_at" IS NULL');
+    await pool.query('UPDATE public.evidences SET "updated_at" = COALESCE("updated_at", "created_at") WHERE "updated_at" IS NULL');
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS public.app_settings (
@@ -160,6 +168,10 @@ const upload = multer({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 app.use('/static', express.static(path.join(rootPath, 'src')));
 app.use(express.static(rootPath));
 
@@ -328,6 +340,138 @@ function getSupabaseClient() {
   }
 
   return supabaseClient;
+}
+
+function getSupabaseAuthClient() {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return null;
+  }
+
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    }
+  });
+}
+
+function parseCookies(req) {
+  const cookieHeader = req.headers.cookie || '';
+  return cookieHeader.split(';').reduce((accumulator, rawCookie) => {
+    const [name, ...rest] = rawCookie.trim().split('=');
+    if (!name) return accumulator;
+    accumulator[name] = decodeURIComponent(rest.join('='));
+    return accumulator;
+  }, {});
+}
+
+function setSessionCookies(res, session) {
+  if (!session?.access_token) {
+    return;
+  }
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  const cookieOptions = {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    secure: isProduction
+  };
+
+  res.cookie('sb-access-token', session.access_token, cookieOptions);
+  if (session.refresh_token) {
+    res.cookie('sb-refresh-token', session.refresh_token, cookieOptions);
+  }
+}
+
+function clearSessionCookies(res) {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const cookieOptions = {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    secure: isProduction
+  };
+
+  res.cookie('sb-access-token', '', { ...cookieOptions, maxAge: 0 });
+  res.cookie('sb-refresh-token', '', { ...cookieOptions, maxAge: 0 });
+}
+
+async function authenticateRequest(req, res) {
+  const cookies = parseCookies(req);
+  const accessToken = cookies['sb-access-token'];
+  const refreshToken = cookies['sb-refresh-token'];
+
+  if (!accessToken) {
+    return null;
+  }
+
+  const client = getSupabaseAuthClient();
+  if (!client) {
+    return null;
+  }
+
+  try {
+    const sessionPayload = refreshToken ? { access_token: accessToken, refresh_token: refreshToken } : { access_token: accessToken };
+    const { data: sessionData, error: sessionError } = await client.auth.setSession(sessionPayload);
+
+    if (sessionError && refreshToken) {
+      const { data: refreshedSession, error: refreshError } = await client.auth.refreshSession({ refresh_token: refreshToken });
+      if (refreshError || !refreshedSession?.session?.access_token) {
+        clearSessionCookies(res);
+        return null;
+      }
+
+      setSessionCookies(res, refreshedSession.session);
+      return { user: refreshedSession.user || null, session: refreshedSession.session };
+    }
+
+    if (sessionData?.session?.access_token) {
+      setSessionCookies(res, sessionData.session);
+    }
+
+    const { data: userData, error: userError } = await client.auth.getUser(accessToken);
+    if (userError || !userData?.user) {
+      clearSessionCookies(res);
+      return null;
+    }
+
+    return { user: userData.user, session: sessionData?.session || null };
+  } catch (error) {
+    console.error('[AUTH] Falha ao validar sessão:', error);
+    clearSessionCookies(res);
+    return null;
+  }
+}
+
+function requirePermission(permission = 'view') {
+  return async function authMiddleware(req, res, next) {
+    const authContext = await authenticateRequest(req, res);
+    if (!authContext?.user) {
+      return res.status(401).json({ error: 'Não autenticado.' });
+    }
+
+    req.user = authContext.user;
+    req.userRole = getUserRole(authContext.user);
+    req.permissions = [req.userRole];
+
+    if (!hasPermission(authContext.user, permission)) {
+      return res.status(403).json({ error: 'Permissão insuficiente.' });
+    }
+
+    next();
+  };
+}
+
+async function attachAuthContext(req, res, next) {
+  const authContext = await authenticateRequest(req, res);
+  if (authContext?.user) {
+    req.user = authContext.user;
+    req.userRole = getUserRole(authContext.user);
+    req.permissions = [req.userRole];
+  }
+
+  next();
 }
 
 async function uploadFileToSupabase(filePath, storagePath, originalName, mimeType) {
@@ -585,7 +729,75 @@ async function generateMetadata(filename, extension, extractedText) {
   return buildFallbackMetadata(filename, extension, extractedText);
 }
 
-app.get('/api/evidences', async (req, res, next) => {
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Informe e-mail e senha.' });
+    }
+
+    const client = getSupabaseAuthClient();
+    if (!client) {
+      return res.status(500).json({ error: 'Configuração do Supabase Auth indisponível.' });
+    }
+
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    if (error || !data?.session?.access_token) {
+      return res.status(401).json({ error: error?.message || 'Credenciais inválidas.' });
+    }
+
+    setSessionCookies(res, data.session);
+    return res.json({ user: data.user, session: data.session });
+  } catch (error) {
+    console.error('[AUTH] Erro no login:', error);
+    return res.status(500).json({ error: error.message || 'Falha ao autenticar.' });
+  }
+});
+
+app.post('/api/auth/logout', async (req, res) => {
+  clearSessionCookies(res);
+  return res.json({ success: true });
+});
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) {
+      return res.status(400).json({ error: 'Informe seu e-mail.' });
+    }
+
+    const client = getSupabaseAuthClient();
+    if (!client) {
+      return res.status(500).json({ error: 'Configuração do Supabase Auth indisponível.' });
+    }
+
+    const { error } = await client.auth.resetPasswordForEmail(email, {
+      redirectTo: `${process.env.APP_URL || 'http://localhost:3000'}/`
+    });
+
+    if (error) {
+      return res.status(400).json({ error: error.message || 'Falha ao recuperar a senha.' });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('[AUTH] Erro na recuperação de senha:', error);
+    return res.status(500).json({ error: error.message || 'Falha ao recuperar a senha.' });
+  }
+});
+
+app.get('/api/auth/session', async (req, res) => {
+  const authContext = await authenticateRequest(req, res);
+  if (!authContext?.user) {
+    return res.status(401).json({ error: 'Não autenticado.' });
+  }
+
+  return res.json({ user: authContext.user, session: authContext.session });
+});
+
+app.use(attachAuthContext);
+
+app.get('/api/evidences', requirePermission('view'), async (req, res, next) => {
   try {
     console.log('[EVIDENCES] Buscando evidências...');
     const rows = await dbClient.many(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm" FROM public.evidences ORDER BY "criadoEm" DESC`);
@@ -596,7 +808,7 @@ app.get('/api/evidences', async (req, res, next) => {
   }
 });
 
-app.get('/api/evidences/:id', async (req, res, next) => {
+app.get('/api/evidences/:id', requirePermission('view'), async (req, res, next) => {
   try {
     const row = await dbClient.one(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
     if (!row) {
@@ -610,7 +822,7 @@ app.get('/api/evidences/:id', async (req, res, next) => {
   }
 });
 
-app.get('/api/settings', async (req, res, next) => {
+app.get('/api/settings', requirePermission('settings'), async (req, res, next) => {
   try {
     const categories = await getAppSetting('categories', ['Capacitação', 'Planejamento', 'Gestão', 'Assessoria', 'Sustentabilidade', 'Qualificação']);
     const tags = await getAppSetting('tags', ['CERNE', 'Gestão', 'Capacitação', 'Assessoria', 'Sustentabilidade', 'Qualificação']);
@@ -621,7 +833,7 @@ app.get('/api/settings', async (req, res, next) => {
   }
 });
 
-app.patch('/api/settings', async (req, res, next) => {
+app.patch('/api/settings', requirePermission('settings'), async (req, res, next) => {
   try {
     const { categories, tags } = req.body;
     if (categories === undefined && tags === undefined) {
@@ -644,7 +856,7 @@ app.patch('/api/settings', async (req, res, next) => {
   }
 });
 
-app.get('/api/file/:id', async (req, res, next) => {
+app.get('/api/file/:id', requirePermission('view'), async (req, res, next) => {
   try {
     const row = await dbClient.one(`SELECT "storage_path", "storage_filename", "original_filename" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
     if (!row || !row.storage_path) {
@@ -663,7 +875,7 @@ app.get('/api/file/:id', async (req, res, next) => {
   }
 });
 
-app.get('/api/preview/:id', async (req, res, next) => {
+app.get('/api/preview/:id', requirePermission('view'), async (req, res, next) => {
   try {
     const row = await dbClient.one(`SELECT "storage_path", "original_filename" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
     if (!row || !row.storage_path) {
@@ -682,14 +894,14 @@ app.get('/api/preview/:id', async (req, res, next) => {
   }
 });
 
-app.patch('/api/evidences/:id', async (req, res, next) => {
+app.patch('/api/evidences/:id', requirePermission('edit'), async (req, res, next) => {
   try {
     const { titulo, evento, categoria, responsavel, tags, resumo, data } = req.body;
     if (!titulo || !evento || !categoria || !responsavel || !Array.isArray(tags) || !resumo || !data) {
       return res.status(400).json({ error: 'Dados incompletos para atualização de metadados.' });
     }
 
-    const result = await dbClient.run(`UPDATE public.evidences SET "titulo" = $1, "evento" = $2, "categoria" = $3, "responsavel" = $4, "tags" = $5, "resumo" = $6, "data" = $7 WHERE "id" = $8`, [titulo, evento, categoria, responsavel, JSON.stringify(tags), resumo, data, req.params.id]);
+    const result = await dbClient.run(`UPDATE public.evidences SET "titulo" = $1, "evento" = $2, "categoria" = $3, "responsavel" = $4, "tags" = $5, "resumo" = $6, "data" = $7, "updated_by" = $8, "updated_at" = $9 WHERE "id" = $10`, [titulo, evento, categoria, responsavel, JSON.stringify(tags), resumo, data, req.user?.email || null, new Date().toISOString(), req.params.id]);
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Evidência não encontrada.' });
     }
@@ -702,7 +914,7 @@ app.patch('/api/evidences/:id', async (req, res, next) => {
   }
 });
 
-app.delete('/api/evidences/:id', async (req, res, next) => {
+app.delete('/api/evidences/:id', requirePermission('delete'), async (req, res, next) => {
   try {
     const evidenceRow = await dbClient.one(`SELECT "storage_path" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
     if (!evidenceRow) {
@@ -729,7 +941,7 @@ app.delete('/api/evidences/:id', async (req, res, next) => {
   }
 });
 
-app.post('/api/upload', (req, res, next) => {
+app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
   upload.single('file')(req, res, async (err) => {
     if (err) {
       if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
@@ -796,8 +1008,8 @@ app.post('/api/upload', (req, res, next) => {
 
       const insertQuery = `
         INSERT INTO public.evidences (
-          "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+          "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm", "created_by", "created_at", "updated_by", "updated_at"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
         RETURNING "id"
       `;
 
@@ -820,6 +1032,10 @@ app.post('/api/upload', (req, res, next) => {
           originalName,
           mimeType,
           fileSize,
+          createdAt,
+          req.user?.email || null,
+          createdAt,
+          req.user?.email || null,
           createdAt
         ]);
       } catch (dbError) {
@@ -865,17 +1081,14 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     await initPostgresPool();
-
     console.log('[SERVER] PostgreSQL inicializado.');
-
-    app.listen(port, host, () => {
-      console.log(`Servidor iniciado na porta ${port}`);
-    });
-
   } catch (err) {
-    console.error('Erro ao inicializar o banco:', err);
-    process.exit(1);
+    console.warn('[SERVER] PostgreSQL indisponível; continuando com o servidor para autenticação e rotas públicas:', err.message || err);
   }
+
+  app.listen(port, host, () => {
+    console.log(`Servidor iniciado na porta ${port}`);
+  });
 }
 
 startServer();

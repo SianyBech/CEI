@@ -35,6 +35,24 @@ DB_PATH=\\SERVIDOR\Compartilhamento\cerne-storage\db\evidences.db
 
 Se não quiser usar pasta de rede, o sistema cria `storage/` dentro do projeto.
 
+### Autenticação com Supabase Auth
+
+Para habilitar o login seguro, defina as variáveis abaixo no `.env`:
+
+```text
+SUPABASE_URL=https://<seu-projeto>.supabase.co
+SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+SUPABASE_BUCKET=evidencias
+```
+
+Com isso, a aplicação passa a:
+
+- redirecionar para a tela de login quando não houver sessão;
+- proteger as rotas de upload, edição, exclusão, configurações e download;
+- manter a sessão via cookies seguros;
+- permitir logout e recuperação de senha.
+
 ### 4. Iniciar o servidor
 
 Execute:

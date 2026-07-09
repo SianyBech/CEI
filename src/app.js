@@ -33,15 +33,29 @@
   let mainContent = null;
   let listContainer = null;
   let searchBarElement = null;
+  let authView = null;
+  let isAuthenticatedUser = false;
 
   // 2. Initialization Function
   async function init() {
     appContainer = document.getElementById('app');
+    appContainer.innerHTML = '';
 
+    window.addEventListener('cerne:auth:required', () => {
+      showLoginView();
+    });
+
+    const session = await window.CerneApp.Auth.getSession();
+    if (!session?.user) {
+      showLoginView();
+      return;
+    }
+
+    isAuthenticatedUser = true;
     await loadSettings();
 
     // Render Header
-    const headerNode = window.CerneApp.Header.render(openUploadModal, openSettings);
+    const headerNode = window.CerneApp.Header.render(openUploadModal, openSettings, handleLogout);
     appContainer.appendChild(headerNode);
 
     // Create Main Content Wrapper
@@ -74,6 +88,62 @@
 
     // Trigger initial icon replacement
     lucide.createIcons();
+  }
+
+  function renderAppShell() {
+    appContainer.innerHTML = '';
+    const headerNode = window.CerneApp.Header.render(openUploadModal, openSettings, handleLogout);
+    appContainer.appendChild(headerNode);
+
+    mainContent = document.createElement('main');
+    mainContent.className = 'main-content';
+
+    searchBarElement = window.CerneApp.SearchBar.render(
+      state.searchQuery,
+      state.viewMode,
+      state.appSettings.categories,
+      state.appSettings.tags,
+      handleSearchChange,
+      handleFilterChange,
+      handleViewModeChange,
+      handleDateFilterChange
+    );
+    mainContent.appendChild(searchBarElement);
+
+    listContainer = document.createElement('div');
+    listContainer.id = 'evidence-list-container';
+    listContainer.style.width = '100%';
+    mainContent.appendChild(listContainer);
+
+    appContainer.appendChild(mainContent);
+  }
+
+  function showLoginView() {
+    isAuthenticatedUser = false;
+    appContainer.innerHTML = '';
+    authView = window.CerneApp.LoginPage.render(handleLogin, handleForgotPassword);
+    appContainer.appendChild(authView);
+    lucide.createIcons();
+  }
+
+  async function handleLogin(email, password) {
+    const result = await window.CerneApp.Auth.login(email, password);
+    if (result?.user) {
+      isAuthenticatedUser = true;
+      await loadSettings();
+      renderAppShell();
+      await loadEvidences();
+      lucide.createIcons();
+    }
+  }
+
+  async function handleForgotPassword(email) {
+    await window.CerneApp.Auth.forgotPassword(email);
+  }
+
+  async function handleLogout() {
+    await window.CerneApp.Auth.logout();
+    showLoginView();
   }
 
   async function loadEvidences() {
@@ -319,6 +389,10 @@
   }
 
   function openUploadModal() {
+    if (!isAuthenticatedUser) {
+      showLoginView();
+      return;
+    }
     const modalNode = window.CerneApp.UploadModal.render(
       // onClose callback
       () => {
