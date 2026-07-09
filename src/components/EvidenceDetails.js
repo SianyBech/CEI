@@ -240,7 +240,37 @@ window.CerneApp.EvidenceDetails = {
       }
     });
 
+    let isSaving = false;
+
+    function setSavingState(saving) {
+      isSaving = saving;
+      saveBtn.disabled = saving;
+      saveBtn.classList.toggle('is-loading', saving);
+      saveBtn.innerHTML = saving
+        ? '<span class="btn-loading-spinner" aria-hidden="true"></span> Salvando...'
+        : 'Salvar alterações';
+      closeBottomBtn.disabled = saving;
+      closeBtn.disabled = saving;
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `app-toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.add('show');
+      });
+
+      window.setTimeout(() => {
+        toast.classList.remove('show');
+        window.setTimeout(() => toast.remove(), 220);
+      }, 2600);
+    }
+
     const doClose = () => {
+      if (isSaving) return;
       overlay.remove();
       if (typeof onClose === 'function') {
         onClose();
@@ -254,6 +284,8 @@ window.CerneApp.EvidenceDetails = {
     });
 
     saveBtn.addEventListener('click', async () => {
+      if (isSaving) return;
+
       const updatedMetadata = {
         titulo: titleInput.value.trim() || evidence.nome,
         evento: eventoInput.value.trim() || 'Sem Evento',
@@ -264,13 +296,18 @@ window.CerneApp.EvidenceDetails = {
         tags: selectedTags
       };
 
+      setSavingState(true);
+
       try {
         const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
+        setSavingState(false);
+        showToast('Alterações salvas com sucesso.', 'success');
         if (typeof onSave === 'function') {
           onSave(savedEvidence);
         }
         doClose();
       } catch (error) {
+        setSavingState(false);
         alert(`Não foi possível salvar a evidência: ${error.message}`);
       }
     });
