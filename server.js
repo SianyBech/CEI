@@ -23,15 +23,16 @@ const storageRoot = process.env.STORAGE_PATH ? path.resolve(process.env.STORAGE_
 const tempDir = path.join(storageRoot, 'tmp');
 
 const RESPONSAVEIS = {
-  'sianybech21@gmail.com': 'Siany',
-  'lima.eduardo2001@gmail.com': 'Eduardo',
-  'cchristimann@inf.ufrgs.br': 'Cláudia',
-  'andre.zuliani@inf.ufrgs.br': 'André'
+    'sianybech21@gmail.com': 'Siany',
+    'lima.eduardo2001@gmail.com': 'Eduardo',
+    'cchristimann@inf.ufrgs.br': 'Cláudia',
+    'andre.zuliani@inf.ufrgs.br': 'André'
 };
 
 function getResponsavel(user) {
-  const email = user?.email?.toLowerCase();
-  return RESPONSAVEIS[email] || email || 'Equipe CEI';
+    const email = user?.email?.toLowerCase();
+
+    return RESPONSAVEIS[email] || email || 'Equipe CEI';
 }
 
 fs.mkdirSync(tempDir, { recursive: true });
@@ -635,7 +636,7 @@ function buildFallbackMetadata(originalName, extension, extractedText) {
   const metadata = {
     evento: 'Registro Interno',
     categoria: 'Gestão',
-    const responsavel = getResponsavel(req.user);
+    responsavel: 'Equipe CEI',
     tags: ['CERNE', 'Evidência'],
     resumo: 'Documento analisado localmente com extração de texto e classificação inicial.',
     textoExtraido: extractedText || 'Conteúdo não pôde ser extraído automaticamente.'
@@ -1001,6 +1002,8 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       console.log(`[UPLOAD] Texto extraído (${extractedText.length} caracteres)`);
 
       const metadata = await generateMetadata(originalName, extension, extractedText);
+      metadata.responsavel = getResponsavel(req.user);
+
       const processingNote = ['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx'].includes(extension)
         ? ''
         : 'Formato não suportado para processamento automático.';
