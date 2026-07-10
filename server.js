@@ -22,6 +22,18 @@ const rootPath = path.resolve(__dirname);
 const storageRoot = process.env.STORAGE_PATH ? path.resolve(process.env.STORAGE_PATH) : path.join(rootPath, 'storage');
 const tempDir = path.join(storageRoot, 'tmp');
 
+const RESPONSAVEIS = {
+  'sianybech21@gmail.com': 'Siany',
+  'lima.eduardo2001@gmail.com': 'Eduardo',
+  'cchristimann@inf.ufrgs.br': 'Cláudia',
+  'andre.zuliani@inf.ufrgs.br': 'André'
+};
+
+function getResponsavel(user) {
+  const email = user?.email?.toLowerCase();
+  return RESPONSAVEIS[email] || email || 'Equipe CEI';
+}
+
 fs.mkdirSync(tempDir, { recursive: true });
 
 let pool = null;
@@ -623,7 +635,7 @@ function buildFallbackMetadata(originalName, extension, extractedText) {
   const metadata = {
     evento: 'Registro Interno',
     categoria: 'Gestão',
-    responsavel: 'Equipe CEI',
+    const responsavel = getResponsavel(req.user);
     tags: ['CERNE', 'Evidência'],
     resumo: 'Documento analisado localmente com extração de texto e classificação inicial.',
     textoExtraido: extractedText || 'Conteúdo não pôde ser extraído automaticamente.'
