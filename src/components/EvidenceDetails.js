@@ -323,26 +323,29 @@ window.CerneApp.EvidenceDetails = {
       window.open(`/api/preview/${encodeURIComponent(evidence.id)}`, '_blank');
     });
 
-    const deleteBtn = overlay.querySelector('#details-delete-btn');
- deleteBtn.addEventListener('click', async () => {
+  const deleteBtn = overlay.querySelector('#details-delete-btn');
+  deleteBtn.addEventListener('click', async () => {
     const confirmDelete = confirm(`Tem certeza que deseja excluir a evidência "${titleText}"?\n\nEsta ação não pode ser desfeita.`);
 
     if (!confirmDelete) return;
+
+    // 💡 Salva o conteúdo original do botão antes de alterar para o loader
+    const originalContent = deleteBtn.innerHTML;
 
     deleteBtn.disabled = true;
     deleteBtn.innerHTML = '<i data-lucide="loader" style="width: 20px; height: 20px; animation: spin 1s linear infinite;"></i>';
 
     try {
       await window.CerneApp.Api.deleteEvidence(evidence.id);
-    alert('Evidência excluída com sucesso.');
-    doClose();
-    if (typeof onDelete === 'function') {
-      onDelete(evidence.id);
-    }
+      alert('Evidência excluída com sucesso.');
+      doClose();
+      if (typeof onDelete === 'function') {
+        onDelete(evidence.id);
+      }
     } catch (error) {
       alert(`Não foi possível excluir a evidência: ${error.message}`);
       deleteBtn.disabled = false;
-      deleteBtn.innerHTML = originalContent;
+      deleteBtn.innerHTML = originalContent; // Agora a variável existe!
     }
   });
 

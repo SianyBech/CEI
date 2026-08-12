@@ -714,4 +714,6 @@ function openEvidenceDetails(evidenceId) {
     document.body.appendChild(detailsNode);
     lucide.createIcons();
   }
+  document.addEventListener('DOMContentLoaded', init);
+  
   })();
