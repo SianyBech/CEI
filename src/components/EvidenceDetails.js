@@ -1,5 +1,5 @@
 window.CerneApp.EvidenceDetails = {
-  render(evidence, onClose, onSave, categories = [], tagsList = []) {
+  render(evidence, onClose, onSave, categories = [], tagsList = [], onDelete) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.id = 'details-modal-overlay';
@@ -324,30 +324,27 @@ window.CerneApp.EvidenceDetails = {
     });
 
     const deleteBtn = overlay.querySelector('#details-delete-btn');
-    deleteBtn.addEventListener('click', async () => {
-      const confirmDelete = confirm(`Tem certeza que deseja excluir a evidência "${titleText}"?\n\nEsta ação não pode ser desfeita.`);
-      
-      if (!confirmDelete) {
-        return;
-      }
+ deleteBtn.addEventListener('click', async () => {
+    const confirmDelete = confirm(`Tem certeza que deseja excluir a evidência "${titleText}"?\n\nEsta ação não pode ser desfeita.`);
 
-      deleteBtn.disabled = true;
-      const originalContent = deleteBtn.innerHTML;
-      deleteBtn.innerHTML = '<i data-lucide="loader" style="width: 20px; height: 20px; animation: spin 1s linear infinite;\"></i>';
+    if (!confirmDelete) return;
 
-      try {
-        await window.CerneApp.Api.deleteEvidence(evidence.id);
-        alert('Evidência excluída com sucesso.');
-        doClose();
-        if (typeof onClose === 'function') {
-          onClose();
-        }
-      } catch (error) {
-        alert(`Não foi possível excluir a evidência: ${error.message}`);
-        deleteBtn.disabled = false;
-        deleteBtn.innerHTML = originalContent;
-      }
-    });
+    deleteBtn.disabled = true;
+    deleteBtn.innerHTML = '<i data-lucide="loader" style="width: 20px; height: 20px; animation: spin 1s linear infinite;"></i>';
+
+    try {
+      await window.CerneApp.Api.deleteEvidence(evidence.id);
+    alert('Evidência excluída com sucesso.');
+    doClose();
+    if (typeof onDelete === 'function') {
+      onDelete(evidence.id);
+    }
+    } catch (error) {
+      alert(`Não foi possível excluir a evidência: ${error.message}`);
+      deleteBtn.disabled = false;
+      deleteBtn.innerHTML = originalContent;
+    }
+  });
 
     return overlay;
   }

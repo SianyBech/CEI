@@ -3,7 +3,6 @@
 // ==========================================================================
 
 (function () {
-  // 1. Initial State with filters support
   const state = {
     evidences: [],
     searchQuery: '',
@@ -688,27 +687,31 @@
     lucide.createIcons();
   }
 
-  function openEvidenceDetails(evidenceId) {
+function openEvidenceDetails(evidenceId) {
     const evidence = state.evidences.find(item => item.id === evidenceId);
     if (!evidence) return;
 
     const detailsNode = window.CerneApp.EvidenceDetails.render(
       evidence,
       () => {
-        // Closed callback
+        // Callback de fechamento
       },
       (updatedEvidence) => {
+        // Callback de salvar edição
         state.evidences = state.evidences.map(item => item.id === updatedEvidence.id ? updatedEvidence : item);
         populateFilterOptions();
         renderList();
       },
       state.appSettings.categories,
-      state.appSettings.tags
+      state.appSettings.tags,
+      // NOVO: Adicione o callback de exclusão aqui!
+      (deletedId) => {
+        state.evidences = state.evidences.filter(item => item.id !== deletedId);
+        populateFilterOptions();
+        renderList();
+      }
     );
     document.body.appendChild(detailsNode);
     lucide.createIcons();
   }
-
-  // 5. Boot the Application when HTML DOM is fully ready
-  document.addEventListener('DOMContentLoaded', init);
-})();
+  })();
