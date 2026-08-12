@@ -43,105 +43,171 @@ window.CerneApp.SearchBar = {
 
     // Advanced filters row
     const filtersRow = document.createElement('div');
-    filtersRow.className = 'filters-row';
+    filtersRow.className = 'filters-panel';
     filtersRow.innerHTML = `
-      <div class="filter-group">
-        <span class="filter-label">Tipo</span>
-        <select class="filter-select" id="filter-tipo">
-          <option value="todos">Todos os tipos</option>
-          <option value="pdf">PDF</option>
-          <option value="imagem">Imagem</option>
-          <option value="documento">Documento</option>
-        </select>
+      <div class="filters-panel-header">
+        <div class="filters-panel-title">
+          <i data-lucide="filter" class="filters-panel-icon"></i>
+          <span>Filtros</span>
+        </div>
+        <button type="button" id="clear-date-filters" class="filters-panel-clear-btn">Limpar filtros</button>
       </div>
 
-      <div class="filter-group">
-        <span class="filter-label">Categoria CERNE</span>
-        <select class="filter-select" id="filter-categoria">
-          <option value="todos">Todas as categorias</option>
-          ${categoriesOptions}
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <span class="filter-label">Responsável</span>
-        <select class="filter-select" id="filter-responsavel">
-          <option value="todos">Todos os responsáveis</option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <span class="filter-label">Tag</span>
-        <select class="filter-select" id="filter-tag">
-          <option value="todos">Todas as tags</option>
-          ${tagsOptions}
-        </select>
-      </div>
-
-      <!-- Date filters row (second line) -->
-      <div class="date-filters-row">
-        <div class="date-filter-group">
-          <span class="date-filter-label">De</span>
-          <div class="date-selector-group">
-            <select class="date-select" id="filter-day-from" data-type="day">
-              <option value="">Dia</option>
-            </select>
-            <select class="date-select" id="filter-month-from" data-type="month">
-              <option value="">Mês</option>
-              <option value="1">Janeiro</option>
-              <option value="2">Fevereiro</option>
-              <option value="3">Março</option>
-              <option value="4">Abril</option>
-              <option value="5">Maio</option>
-              <option value="6">Junho</option>
-              <option value="7">Julho</option>
-              <option value="8">Agosto</option>
-              <option value="9">Setembro</option>
-              <option value="10">Outubro</option>
-              <option value="11">Novembro</option>
-              <option value="12">Dezembro</option>
-            </select>
-            <select class="date-select" id="filter-year-from" data-type="year">
-              <option value="">Ano</option>
-            </select>
-          </div>
+      <div class="filters-panel-grid">
+        <div class="filter-group">
+          <span class="filter-label">Tipo</span>
+          <select class="filter-select" id="filter-tipo">
+            <option value="todos">Todos os tipos</option>
+            <option value="pdf">PDF</option>
+            <option value="imagem">Imagem</option>
+            <option value="documento">Documento</option>
+          </select>
         </div>
 
-        <div class="date-filter-group">
-          <span class="date-filter-label">Até</span>
-          <div class="date-selector-group">
-            <select class="date-select" id="filter-day-to" data-type="day">
-              <option value="">Dia</option>
-            </select>
-            <select class="date-select" id="filter-month-to" data-type="month">
-              <option value="">Mês</option>
-              <option value="1">Janeiro</option>
-              <option value="2">Fevereiro</option>
-              <option value="3">Março</option>
-              <option value="4">Abril</option>
-              <option value="5">Maio</option>
-              <option value="6">Junho</option>
-              <option value="7">Julho</option>
-              <option value="8">Agosto</option>
-              <option value="9">Setembro</option>
-              <option value="10">Outubro</option>
-              <option value="11">Novembro</option>
-              <option value="12">Dezembro</option>
-            </select>
-            <select class="date-select" id="filter-year-to" data-type="year">
-              <option value="">Ano</option>
-            </select>
-          </div>
+        <div class="filter-group">
+          <span class="filter-label">Categoria CERNE</span>
+          <select class="filter-select" id="filter-categoria">
+            <option value="todos">Todas as categorias</option>
+            ${categoriesOptions}
+          </select>
         </div>
 
-        <button id="clear-date-filters" class="clear-date-btn" title="Limpar filtros de data">
-          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
-        </button>
+        <div class="filter-group">
+          <span class="filter-label">Responsável</span>
+          <select class="filter-select" id="filter-responsavel">
+            <option value="todos">Todos os responsáveis</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-label">Tag</span>
+          <select class="filter-select" id="filter-tag">
+            <option value="todos">Todas as tags</option>
+            ${tagsOptions}
+          </select>
+        </div>
+
+        <div class="filter-group filter-period-group">
+          <span class="filter-label">Período</span>
+          <div class="period-popover-container">
+            <input type="checkbox" id="period-popover-toggle" class="period-popover-toggle">
+            <label for="period-popover-toggle" class="period-popover-trigger">
+              <span class="period-trigger-text">Selecione o período</span>
+              <i data-lucide="calendar" class="period-trigger-icon" style="color: var(--success);"></i>
+            </label>
+
+            <div class="period-popover-panel">
+              <div class="date-selector-grid">
+                <select class="date-select" id="filter-day-from" data-type="day">
+                  <option value="">Dia</option>
+                </select>
+                <select class="date-select" id="filter-month-from" data-type="month">
+                  <option value="">Mês</option>
+                  <option value="1">Janeiro</option>
+                  <option value="2">Fevereiro</option>
+                  <option value="3">Março</option>
+                  <option value="4">Abril</option>
+                  <option value="5">Maio</option>
+                  <option value="6">Junho</option>
+                  <option value="7">Julho</option>
+                  <option value="8">Agosto</option>
+                  <option value="9">Setembro</option>
+                  <option value="10">Outubro</option>
+                  <option value="11">Novembro</option>
+                  <option value="12">Dezembro</option>
+                </select>
+                <select class="date-select" id="filter-year-from" data-type="year">
+                  <option value="">Ano</option>
+                </select>
+                <select class="date-select" id="filter-day-to" data-type="day">
+                  <option value="">Dia</option>
+                </select>
+                <select class="date-select" id="filter-month-to" data-type="month">
+                  <option value="">Mês</option>
+                  <option value="1">Janeiro</option>
+                  <option value="2">Fevereiro</option>
+                  <option value="3">Março</option>
+                  <option value="4">Abril</option>
+                  <option value="5">Maio</option>
+                  <option value="6">Junho</option>
+                  <option value="7">Julho</option>
+                  <option value="8">Agosto</option>
+                  <option value="9">Setembro</option>
+                  <option value="10">Outubro</option>
+                  <option value="11">Novembro</option>
+                  <option value="12">Dezembro</option>
+                </select>
+                <select class="date-select" id="filter-year-to" data-type="year">
+                  <option value="">Ano</option>
+                </select>
+              </div>
+            </div>
+
+            <label for="period-popover-toggle" class="period-popover-backdrop" aria-label="Fechar calendário"></label>
+          </div>
+        </div>
       </div>
     `;
 
     container.appendChild(searchRow);
     container.appendChild(filtersRow);
+
+    const cardsRow = document.createElement('div');
+    cardsRow.className = 'dashboard-cards';
+    cardsRow.innerHTML = `
+      <div class="dashboard-card">
+        <div class="dashboard-card-icon" style="color: var(--success);">
+          <i data-lucide="file-text"></i>
+        </div>
+        <div>
+          <div class="dashboard-card-counter">0</div>
+          <div class="dashboard-card-title">Evidências</div>
+          <div class="dashboard-card-subtitle">Total cadastrado</div>
+        </div>
+      </div>
+      <div class="dashboard-card">
+        <div class="dashboard-card-icon" style="color: var(--success);">
+          <i data-lucide="folder"></i>
+        </div>
+        <div>
+          <div class="dashboard-card-counter">0</div>
+          <div class="dashboard-card-title">Categorias</div>
+          <div class="dashboard-card-subtitle">Organizadas</div>
+        </div>
+      </div>
+      <div class="dashboard-card">
+        <div class="dashboard-card-icon" style="color: var(--success);">
+          <i data-lucide="users"></i>
+        </div>
+        <div>
+          <div class="dashboard-card-counter">0</div>
+          <div class="dashboard-card-title">Responsáveis</div>
+          <div class="dashboard-card-subtitle">Ativos</div>
+        </div>
+      </div>
+      <div class="dashboard-card">
+        <div class="dashboard-card-icon" style="color: var(--success);">
+          <i data-lucide="tag"></i>
+        </div>
+        <div>
+          <div class="dashboard-card-counter">0</div>
+          <div class="dashboard-card-title">Tags</div>
+          <div class="dashboard-card-subtitle">Em uso</div>
+        </div>
+      </div>
+      <div class="dashboard-card">
+        <div class="dashboard-card-icon" style="color: var(--success);">
+          <i data-lucide="calendar"></i>
+        </div>
+        <div>
+          <div class="dashboard-card-counter">0</div>
+          <div class="dashboard-card-title">Este mês</div>
+          <div class="dashboard-card-subtitle">Adicionadas</div>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(cardsRow);
 
     // Populate year options (1900 to current year)
     function populateYears() {

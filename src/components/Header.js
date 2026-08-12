@@ -8,24 +8,26 @@ window.CerneApp.Header = {
       ? 'user'
       : (['admin', 'administrator', 'owner'].includes(role) ? 'admin' : role);
     const canManageSettings = ['admin', 'user'].includes(normalizedRole);
+    const displayName = currentUser?.user_metadata?.full_name || currentUser?.email || 'Usuário';
     const header = document.createElement('header');
     header.className = 'header';
     header.innerHTML = `
       <div class="header-brand">
         <div class="header-logo">
-          <i data-lucide="brain-circuit" style="width: 20px; height: 20px;"></i>
+          <i data-lucide="brain-circuit" style="width: 20px; height: 20px; color: var(--success);"></i>
         </div>
         <div class="header-title-container">
-          <h1 class="header-title">Gestão de Evidências CERNE</h1>
-          <span class="header-subtitle">Incubadora de Empresas CEI — Inteligência Artificial</span>
+          <span class="header-brand-label">CERNE</span>
+          <h1 class="header-title">Olá, ${displayName} 👋</h1>
+          <span class="header-subtitle">Aqui está o panorama das evidências do CERNE.</span>
         </div>
       </div>
       <div class="header-actions">
         ${canManageSettings ? `<button class="btn btn-secondary" id="btn-settings">
-          <i data-lucide="settings" style="width: 16px; height: 16px;"></i>
+          <i data-lucide="settings" style="width: 16px; height: 16px; color: var(--success);"></i>
           Configurações
         </button>` : ''}
-        <button class="btn btn-primary" id="btn-nova-evidencia">
+        <button class="btn btn-primary header-primary-btn" id="btn-nova-evidencia">
           <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
           Nova Evidência
         </button>
@@ -33,21 +35,21 @@ window.CerneApp.Header = {
           <button class="user-menu-trigger" id="user-menu-trigger" type="button">
             <div class="user-avatar">${(currentUser?.user_metadata?.full_name || currentUser?.email || 'U').charAt(0).toUpperCase()}</div>
             <div class="user-menu-summary">
-              <strong>${currentUser?.user_metadata?.full_name || currentUser?.email || 'Usuário'}</strong>
-              <span>${currentUser?.email || ''}</span>
+              <strong>${displayName}</strong>
+              <span>${currentUser?.email ? currentUser.email : ''}</span>
             </div>
           </button>
           <div class="user-menu-dropdown" id="user-menu-dropdown">
             <button class="user-menu-item" type="button" id="menu-profile-btn">
-              <i data-lucide="user" style="width: 16px; height: 16px;"></i>
+              <i data-lucide="user" style="width: 16px; height: 16px; color: var(--success);"></i>
               Meu Perfil
             </button>
             <button class="user-menu-item" type="button" id="menu-password-btn">
-              <i data-lucide="lock" style="width: 16px; height: 16px;"></i>
+              <i data-lucide="lock" style="width: 16px; height: 16px; color: var(--success);"></i>
               Alterar Senha
             </button>
             <button class="user-menu-item danger" type="button" id="menu-logout-btn">
-              <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+              <i data-lucide="log-out" style="width: 16px; height: 16px; color: var(--danger);"></i>
               Sair
             </button>
           </div>

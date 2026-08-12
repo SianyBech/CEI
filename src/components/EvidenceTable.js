@@ -6,9 +6,20 @@ window.CerneApp.EvidenceTable = {
     if (evidences.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
-          <i data-lucide="search-x" class="empty-state-icon"></i>
+          <div class="empty-state-illustration">
+            <div class="empty-state-illustration-glow"></div>
+            <div class="empty-state-illustration-frame">
+              <i data-lucide="file-text" class="empty-state-illustration-icon doc-icon"></i>
+              <i data-lucide="search" class="empty-state-illustration-icon search-icon"></i>
+            </div>
+          </div>
           <h3>Nenhuma evidência encontrada</h3>
-          <p>Tente ajustar os termos de pesquisa ou cadastre uma nova evidência.</p>
+          <p>Tente ajustar os termos de pesquisa ou cadastrar uma nova evidência.</p>
+          <button type="button" class="empty-state-action-btn">
+            <i data-lucide="plus" class="empty-state-action-icon"></i>
+            Cadastrar nova evidência
+          </button>
+          <span class="empty-state-tip">Pressione C para cadastrar nova evidência.</span>
         </div>
       `;
       return container;
