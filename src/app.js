@@ -25,7 +25,8 @@
     appSettings: {
       categories: [],
       tags: []
-    }
+    },
+    showSidebarCard: localStorage.getItem('cerne:sidebar-card-closed') !== 'true'
   };
 
   // Cache DOM references
@@ -58,6 +59,73 @@
     const headerNode = window.CerneApp.Header.render(openUploadModal, openSettings, handleLogout);
     appContainer.appendChild(headerNode);
 
+    const bodyWrapper = document.createElement('div');
+    bodyWrapper.className = 'app-shell-body';
+
+    const sidebar = document.createElement('aside');
+    sidebar.className = 'sidebar';
+    sidebar.innerHTML = `
+      <div class="sidebar-brand">
+        <div class="sidebar-logo">
+          <i data-lucide="layers" style="width: 20px; height: 20px;"></i>
+        </div>
+        <div>
+          <span class="sidebar-brand-name">CERNE</span>
+          <span class="sidebar-brand-text">Gestão de Evidências</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="sidebar-group">
+          <div class="sidebar-item active">
+            <i data-lucide="folder"></i>
+            <span>Evidências</span>
+          </div>
+          <div class="sidebar-item">
+            <i data-lucide="grid"></i>
+            <span>Categorias</span>
+          </div>
+          <div class="sidebar-item">
+            <i data-lucide="tag"></i>
+            <span>Tags</span>
+          </div>
+          <div class="sidebar-item">
+            <i data-lucide="users"></i>
+            <span>Responsáveis</span>
+          </div>
+        </div>
+
+        <div class="sidebar-group">
+          <div class="sidebar-item">
+            <i data-lucide="calendar"></i>
+            <span>Calendário</span>
+          </div>
+          <div class="sidebar-item">
+            <i data-lucide="bar-chart-3"></i>
+            <span>Relatórios</span>
+          </div>
+          <div class="sidebar-item">
+            <i data-lucide="settings-2"></i>
+            <span>Configurações</span>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">
+          <div>
+            <p class="sidebar-card-title">Organize. Encontre.</p>
+            <p class="sidebar-card-description">Centralize suas evidências.</p>
+          </div>
+          <button type="button" class="sidebar-card-close" aria-label="Fechar card">
+            <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+          </button>
+        </div>
+      </div>
+    `;
+
+    bodyWrapper.appendChild(sidebar);
+
     // Create Main Content Wrapper
     mainContent = document.createElement('main');
     mainContent.className = 'main-content';
@@ -81,7 +149,11 @@
     listContainer.style.width = '100%';
     mainContent.appendChild(listContainer);
 
-    appContainer.appendChild(mainContent);
+    bodyWrapper.appendChild(mainContent);
+    appContainer.appendChild(bodyWrapper);
+
+    // Setup sidebar event listeners
+    setupSidebarEvents();
 
     // Load evidences from backend and render list
     await loadEvidences();
@@ -94,6 +166,76 @@
     appContainer.innerHTML = '';
     const headerNode = window.CerneApp.Header.render(openUploadModal, openSettings, handleLogout);
     appContainer.appendChild(headerNode);
+
+    const bodyWrapper = document.createElement('div');
+    bodyWrapper.className = 'app-shell-body';
+
+    const sidebar = document.createElement('aside');
+    sidebar.className = 'sidebar';
+    sidebar.innerHTML = `
+      <div class="sidebar-brand">
+        <div class="sidebar-logo">
+          <i data-lucide="layers" style="width: 20px; height: 20px; color: var(--success);"></i>
+        </div>
+        <div>
+          <span class="sidebar-brand-name">CERNE</span>
+          <span class="sidebar-brand-text">Gestão de Evidências</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="sidebar-group">
+          <div class="sidebar-item active" data-nav="evidences">
+            <i data-lucide="folder" style="color: var(--success);"></i>
+            <span>Evidências</span>
+          </div>
+          <div class="sidebar-item" data-nav="categories">
+            <i data-lucide="grid" style="color: var(--success);"></i>
+            <span>Categorias</span>
+          </div>
+          <div class="sidebar-item" data-nav="tags">
+            <i data-lucide="tag" style="color: var(--success);"></i>
+            <span>Tags</span>
+          </div>
+          <div class="sidebar-item" data-nav="responsaveis">
+            <i data-lucide="users" style="color: var(--success);"></i>
+            <span>Responsáveis</span>
+          </div>
+        </div>
+
+        <div class="sidebar-group">
+          <div class="sidebar-item" data-nav="calendario">
+            <i data-lucide="calendar" style="color: var(--success);"></i>
+            <span>Calendário</span>
+          </div>
+          <div class="sidebar-item" data-nav="relatorios">
+            <i data-lucide="bar-chart-3" style="color: var(--success);"></i>
+            <span>Relatórios</span>
+          </div>
+          <div class="sidebar-item" data-nav="settings" id="sidebar-settings-item">
+            <i data-lucide="settings-2" style="color: var(--success);"></i>
+            <span>Configurações</span>
+          </div>
+        </div>
+      </nav>
+
+      ${state.showSidebarCard ? `
+      <div class="sidebar-card" id="sidebar-info-card">
+        <div class="sidebar-card-header">
+          <div>
+            <p class="sidebar-card-title">Organize. Encontre.</p>
+            <p class="sidebar-card-description">Centralize suas evidências.</p>
+          </div>
+          <button type="button" class="sidebar-card-close" aria-label="Fechar card" id="sidebar-card-close-btn">
+            <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+          </button>
+        </div>
+      </div>
+      ` : ''}
+    `;
+
+    bodyWrapper.appendChild(sidebar);
+    setupSidebarEvents();
 
     mainContent = document.createElement('main');
     mainContent.className = 'main-content';
@@ -115,7 +257,8 @@
     listContainer.style.width = '100%';
     mainContent.appendChild(listContainer);
 
-    appContainer.appendChild(mainContent);
+    bodyWrapper.appendChild(mainContent);
+    appContainer.appendChild(bodyWrapper);
   }
 
   function showLoginView() {
@@ -150,11 +293,21 @@
     try {
       const evidences = await window.CerneApp.Api.fetchEvidences();
       state.evidences = evidences;
+      
+      // Add mock evidence if no evidences exist (for demo purposes)
+      if (state.evidences.length === 0) {
+        state.evidences.push(createMockEvidence());
+      }
+      
       populateFilterOptions();
       renderList();
     } catch (error) {
       console.error('Erro ao carregar evidências:', error);
       state.evidences = [];
+      
+      // Add mock evidence on error (for demo purposes)
+      state.evidences.push(createMockEvidence());
+      
       populateFilterOptions();
       renderList();
     }
@@ -388,6 +541,93 @@
     renderList();
   }
 
+  // Sidebar navigation setup
+  function setupSidebarEvents() {
+    // Close sidebar card
+    const closeCardBtn = document.getElementById('sidebar-card-close-btn');
+    if (closeCardBtn) {
+      closeCardBtn.addEventListener('click', () => {
+        localStorage.setItem('cerne:sidebar-card-closed', 'true');
+        state.showSidebarCard = false;
+        const card = document.getElementById('sidebar-info-card');
+        if (card) {
+          card.style.animation = 'fadeOut 0.3s ease-in-out';
+          setTimeout(() => card.remove(), 300);
+        }
+      });
+    }
+
+    // Sidebar navigation items
+    const sidebarItems = document.querySelectorAll('.sidebar-item[data-nav]');
+    sidebarItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const navTarget = item.getAttribute('data-nav');
+        handleSidebarNavigation(navTarget);
+        
+        // Update active state
+        sidebarItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+      });
+    });
+
+    // Settings button from header
+    const headerSettingsBtn = document.querySelector('#btn-settings');
+    if (headerSettingsBtn) {
+      headerSettingsBtn.addEventListener('click', () => {
+        const settingsItem = document.querySelector('.sidebar-item[data-nav="settings"]');
+        if (settingsItem) settingsItem.classList.add('active');
+        openSettings();
+      });
+    }
+  }
+
+  // Handle sidebar navigation
+  function handleSidebarNavigation(target) {
+    switch (target) {
+      case 'evidences':
+        // Reset filters and show all evidences
+        state.filters = { tipo: 'todos', categoria: 'todos', responsavel: 'todos', tag: 'todos' };
+        state.dateFilters = { dayFrom: '', monthFrom: '', yearFrom: '', dayTo: '', monthTo: '', yearTo: '' };
+        renderList();
+        break;
+      case 'categories':
+        alert('Seção de Categorias em desenvolvimento');
+        break;
+      case 'tags':
+        alert('Seção de Tags em desenvolvimento');
+        break;
+      case 'responsaveis':
+        alert('Seção de Responsáveis em desenvolvimento');
+        break;
+      case 'calendario':
+        alert('Seção de Calendário em desenvolvimento');
+        break;
+      case 'relatorios':
+        alert('Seção de Relatórios em desenvolvimento');
+        break;
+      case 'settings':
+        openSettings();
+        break;
+    }
+  }
+
+  // Create mock evidence for demo purposes
+  function createMockEvidence() {
+    const mockEvidence = {
+      id: 'mock-' + Date.now(),
+      nome: 'Documento de Demonstração CERNE',
+      tipo: 'documento',
+      data: new Date().toLocaleDateString('pt-BR'),
+      evento: 'Reunião de Alinhamento Estratégico',
+      categoria: 'Planejamento',
+      responsavel: 'Usuário Demo',
+      tags: ['CERNE', 'Demo', 'Teste'],
+      resumo: 'Este é um documento de demonstração do sistema CERNE para visualização da interface com dados.',
+      textoExtraido: 'CONTEÚDO EXTRAÍDO:\n\nEste documento apresenta os processos-chave do CERNE e demonstra como as evidências são organizadas, categorizadas e disponibilizadas no sistema de gestão.'
+    };
+    return mockEvidence;
+  }
+
   function openUploadModal() {
     if (!isAuthenticatedUser) {
       showLoginView();
@@ -400,6 +640,10 @@
       },
       // onAddEvidence callback
       (newEvidence) => {
+        // Remove mock evidence if it's the first entry
+        if (state.evidences.length === 1 && state.evidences[0].id.startsWith('mock-')) {
+          state.evidences = [];
+        }
         state.evidences.unshift(newEvidence);
         populateFilterOptions();
         renderList();
