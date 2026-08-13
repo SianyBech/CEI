@@ -1,5 +1,5 @@
 window.CerneApp.SearchBar = {
-  render(currentQuery, currentViewMode, categories, tags, onSearchChange, onFilterChange, onViewModeChange, onDateFilterChange) {
+  render(currentQuery, currentViewMode, categories, tags, onSearchChange, onFilterChange, onViewModeChange, onDateFilterChange, onClearFilters) {
     const escapeHtml = (str) => String(str || '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -307,6 +307,26 @@ window.CerneApp.SearchBar = {
         }
       });
     });
+
+    // --- NOVO: Listener do botão "Limpar Filtros" principal do painel ---
+    const clearFiltersBtn = filtersRow.querySelector('.filters-panel-clear-btn');
+    if (clearFiltersBtn) {
+      clearFiltersBtn.addEventListener('click', () => {
+        const searchInput = searchRow.querySelector('#search-input');
+        if (searchInput) searchInput.value = '';
+
+        filtersRow.querySelectorAll('.filter-select').forEach(select => {
+          select.value = 'todos';
+        });
+
+        allDateSelects.forEach(select => select.value = '');
+        updateDaysInMonth();
+
+        if (typeof onClearFilters === 'function') {
+          onClearFilters();
+        }
+      });
+    }
 
     // Clear date filters button
     filtersRow.querySelector('#clear-date-filters').addEventListener('click', () => {

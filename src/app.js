@@ -138,7 +138,8 @@
       handleSearchChange,
       handleFilterChange,
       handleViewModeChange,
-      handleDateFilterChange
+      handleDateFilterChange,
+      handleClearFilters
     );
     mainContent.appendChild(searchBarElement);
 
@@ -247,7 +248,8 @@
       handleSearchChange,
       handleFilterChange,
       handleViewModeChange,
-      handleDateFilterChange
+      handleDateFilterChange,
+      handleClearFilters
     );
     mainContent.appendChild(searchBarElement);
 
@@ -539,6 +541,29 @@
 
     renderList();
   }
+
+
+  // Adicione a função de limpeza no app.js:
+function handleClearFilters() {
+  state.searchQuery = '';
+  state.filters = {
+    tipo: 'todos',
+    categoria: 'todos',
+    responsavel: 'todos',
+    tag: 'todos'
+  };
+  state.dateFilters = {
+    dayFrom: '',
+    monthFrom: '',
+    yearFrom: '',
+    dayTo: '',
+    monthTo: '',
+    yearTo: ''
+  };
+
+  renderList();
+}
+
 
   // Sidebar navigation setup
   function setupSidebarEvents() {
