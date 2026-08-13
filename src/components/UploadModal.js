@@ -387,11 +387,12 @@ window.CerneApp.UploadModal = {
                 <input type="text" class="form-input" id="edit-responsavel" value="${escapeHtml(evidence.responsavel)}" placeholder="Nome do responsável">
               </div>
  
+             
               <div class="form-group">
                 <label class="form-label" for="edit-data">Data de Registro</label>
-                <input type="text" class="form-input" id="edit-data" value="${escapeHtml(evidence.data)}" placeholder="DD/MM/AAAA">
+                <input type="date" class="form-input" id="edit-data" value="${escapeHtml(evidence.data)}">
               </div>
- 
+              
               <div class="form-group">
                 <label class="form-label">Tags da Evidência</label>
                 <div class="tags-selector-wrapper">
@@ -486,6 +487,19 @@ window.CerneApp.UploadModal = {
       });
  
       footer.querySelector('#modal-success-done-btn').addEventListener('click', async () => {
+
+        const dataDigitada = modalBody.querySelector('#edit-data').value.trim() || new Date().toLocaleDateString('pt-BR');
+
+  // ⚠️ NOVO: Validação de Data Futura
+  if (window.CerneApp.Utils && window.CerneApp.Utils.isFutureDate(dataDigitada)) {
+    const confirmFuture = confirm(
+      'A data informada é uma data futura.\n\nTem certeza de que deseja cadastrar a evidência com esta data?'
+    );
+    if (!confirmFuture) {
+      return; // Interrompe o envio se o usuário clicar em "Cancelar"
+    }
+  }
+  
         const updatedMetadata = {
           titulo: modalBody.querySelector('#edit-titulo').value.trim() || evidence.nome,
           evento: modalBody.querySelector('#edit-evento').value.trim() || 'Sem Evento',

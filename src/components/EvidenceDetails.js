@@ -286,6 +286,18 @@ window.CerneApp.EvidenceDetails = {
     saveBtn.addEventListener('click', async () => {
       if (isSaving) return;
 
+      const dataDigitada = dataInput.value.trim() || new Date().toLocaleDateString('pt-BR');
+
+  // Validação de Data Futura
+  if (window.CerneApp.Utils.isFutureDate(dataDigitada)) {
+    const confirmFuture = confirm(
+      'A data informada é uma data futura.\n\nTem certeza de que deseja salvar a evidência com esta data?'
+    );
+    if (!confirmFuture) {
+      return; // Interrompe o salvamento se o usuário clicar em "Cancelar"
+    }
+  }
+
       const updatedMetadata = {
         titulo: titleInput.value.trim() || evidence.nome,
         evento: eventoInput.value.trim() || 'Sem Evento',
