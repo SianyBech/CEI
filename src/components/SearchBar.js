@@ -160,9 +160,9 @@ window.CerneApp.SearchBar = {
           <i data-lucide="file-text"></i>
         </div>
         <div>
-          <div class="dashboard-card-counter">0</div>
+          <div class="dashboard-card-counter" id="counter-total">0</div>
           <div class="dashboard-card-title">Evidências</div>
-          <div class="dashboard-card-subtitle">Total cadastrado</div>
+          <div class="dashboard-card-subtitle">Total cadastradas</div>
         </div>
       </div>
       <div class="dashboard-card">
@@ -170,7 +170,7 @@ window.CerneApp.SearchBar = {
           <i data-lucide="folder"></i>
         </div>
         <div>
-          <div class="dashboard-card-counter">0</div>
+          <div class="dashboard-card-counter" id="counter-categorias">0</div>
           <div class="dashboard-card-title">Categorias</div>
           <div class="dashboard-card-subtitle">Organizadas</div>
         </div>
@@ -180,7 +180,7 @@ window.CerneApp.SearchBar = {
           <i data-lucide="users"></i>
         </div>
         <div>
-          <div class="dashboard-card-counter">0</div>
+          <div class="dashboard-card-counter" id="counter-responsaveis">0</div>
           <div class="dashboard-card-title">Responsáveis</div>
           <div class="dashboard-card-subtitle">Ativos</div>
         </div>
@@ -190,7 +190,7 @@ window.CerneApp.SearchBar = {
           <i data-lucide="tag"></i>
         </div>
         <div>
-          <div class="dashboard-card-counter">0</div>
+          <div class="dashboard-card-counter" id="counter-tags">0</div>
           <div class="dashboard-card-title">Tags</div>
           <div class="dashboard-card-subtitle">Em uso</div>
         </div>
@@ -200,7 +200,7 @@ window.CerneApp.SearchBar = {
           <i data-lucide="calendar"></i>
         </div>
         <div>
-          <div class="dashboard-card-counter">0</div>
+          <div class="dashboard-card-counter" id="counter-novas-mes>0</div>
           <div class="dashboard-card-title">Este mês</div>
           <div class="dashboard-card-subtitle">Adicionadas</div>
         </div>

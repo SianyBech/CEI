@@ -302,6 +302,7 @@
       
       populateFilterOptions();
       renderList();
+      updateDashboardCounters();
     } catch (error) {
       console.error('Erro ao carregar evidências:', error);
       state.evidences = [];
@@ -684,6 +685,7 @@ function handleClearFilters() {
         state.evidences.unshift(newEvidence);
         populateFilterOptions();
         renderList();
+        updateDashboardCounters();
       },
       state.appSettings.categories,
       state.appSettings.tags
@@ -726,6 +728,65 @@ function handleClearFilters() {
   lucide.createIcons();
 }
 
+function updateDashboardCounters() {
+  const evidences = state.evidences || [];
+
+  // 1. Total de Evidências
+  const total = evidences.length;
+
+  // 2. Categorias Únicas
+  const categoriasUnicas = new Set(
+    evidences.map(e => e.categoria).filter(Boolean)
+  ).size;
+
+  // 3. Tags Únicas (achata a lista de arrays de tags)
+  const tagsUnicas = new Set(
+    evidences.flatMap(e => Array.isArray(e.tags) ? e.tags : [])
+  ).size;
+
+  // 4. Responsáveis Únicos
+  const responsaveisUnicos = new Set(
+    evidences.map(e => e.responsavel).filter(Boolean)
+  ).size;
+
+  // 5. Novas Adicionadas no Mês Atual
+  const now = new Date();
+  const currentMonth = now.getMonth(); // 0-indexed (0 = Jan)
+  const currentYear = now.getFullYear();
+
+  const novasNoMes = evidences.filter(e => {
+    // Tenta validar pela coluna de criação ou do formato de data em string "DD/MM/YYYY"
+    if (e.criadoEm) {
+      const date = new Date(e.criadoEm);
+      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+    }
+    
+    if (e.data && typeof e.data === 'string') {
+      const parts = e.data.split('/');
+      if (parts.length === 3) {
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2], 10);
+        return month === currentMonth && year === currentYear;
+      }
+    }
+    
+    return false;
+  }).length;
+
+  // Atualizar elementos no DOM
+  const elTotal = document.getElementById('counter-total');
+  const elCategorias = document.getElementById('counter-categorias');
+  const elTags = document.getElementById('counter-tags');
+  const elResponsaveis = document.getElementById('counter-responsaveis');
+  const elNovasMes = document.getElementById('counter-novas-mes');
+
+  if (elTotal) elTotal.textContent = total;
+  if (elCategorias) elCategorias.textContent = categoriasUnicas;
+  if (elTags) elTags.textContent = tagsUnicas;
+  if (elResponsaveis) elResponsaveis.textContent = responsaveisUnicos;
+  if (elNovasMes) elNovasMes.textContent = novasNoMes;
+}
+
 function openEvidenceDetails(evidenceId) {
     const evidence = state.evidences.find(item => item.id === evidenceId);
     if (!evidence) return;
@@ -740,6 +801,7 @@ function openEvidenceDetails(evidenceId) {
         state.evidences = state.evidences.map(item => item.id === updatedEvidence.id ? updatedEvidence : item);
         populateFilterOptions();
         renderList();
+        updateDashboardCounters();
       },
       state.appSettings.categories,
       state.appSettings.tags,
@@ -748,6 +810,7 @@ function openEvidenceDetails(evidenceId) {
         state.evidences = state.evidences.filter(item => item.id !== deletedId);
         populateFilterOptions();
         renderList();
+        updateDashboardCounters();
       }
     );
     document.body.appendChild(detailsNode);
