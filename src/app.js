@@ -589,12 +589,25 @@
         state.dateFilters = { dayFrom: '', monthFrom: '', yearFrom: '', dayTo: '', monthTo: '', yearTo: '' };
         renderList();
         break;
-      case 'categories':
-        alert('Seção de Categorias em desenvolvimento');
-        break;
-      case 'tags':
-        alert('Seção de Tags em desenvolvimento');
-        break;
+   //   case 'categories':
+   //     alert('Seção de Categorias em desenvolvimento');
+   //     break;
+   //   case 'tags':
+   //     alert('Seção de Tags em desenvolvimento');
+   //     break;
+
+   case 'categories':
+      openSettings('categories'); // Abre focado APENAS em Categorias
+      break;
+
+    case 'tags':
+      openSettings('tags'); // Abre focado APENAS em Tags
+      break;
+
+    case 'settings':
+      openSettings('all'); // Abre a tela completa de configurações
+      break;
+
       case 'responsaveis':
         alert('Seção de Responsáveis em desenvolvimento');
         break;
@@ -654,38 +667,39 @@
     lucide.createIcons();
   }
 
-  function openSettings() {
-    const settingsNode = window.CerneApp.SettingsPage.render(
-      state.appSettings,
-      async (updatedSettings) => {
-        const savedSettings = await window.CerneApp.Api.updateSettings(updatedSettings);
-        state.appSettings = {
-          categories: Array.isArray(savedSettings.categories) ? savedSettings.categories : [],
-          tags: Array.isArray(savedSettings.tags) ? savedSettings.tags : []
-        };
+  function openSettings(activeTab = 'all') {
+  const settingsNode = window.CerneApp.SettingsPage.render(
+    state.appSettings,
+    async (updatedSettings) => {
+      const savedSettings = await window.CerneApp.Api.updateSettings(updatedSettings);
+      state.appSettings = {
+        categories: Array.isArray(savedSettings.categories) ? savedSettings.categories : [],
+        tags: Array.isArray(savedSettings.tags) ? savedSettings.tags : []
+      };
 
-        const newSearchBar = window.CerneApp.SearchBar.render(
-          state.searchQuery,
-          state.viewMode,
-          state.appSettings.categories,
-          state.appSettings.tags,
-          handleSearchChange,
-          handleFilterChange,
-          handleViewModeChange
-        );
+      const newSearchBar = window.CerneApp.SearchBar.render(
+        state.searchQuery,
+        state.viewMode,
+        state.appSettings.categories,
+        state.appSettings.tags,
+        handleSearchChange,
+        handleFilterChange,
+        handleViewModeChange
+      );
 
-        mainContent.replaceChild(newSearchBar, searchBarElement);
-        searchBarElement = newSearchBar;
-        populateFilterOptions();
-        renderList();
+      mainContent.replaceChild(newSearchBar, searchBarElement);
+      searchBarElement = newSearchBar;
+      populateFilterOptions();
+      renderList();
 
-        return savedSettings;
-      }
-    );
+      return savedSettings;
+    },
+    activeTab // <-- Passamos qual aba/seção queremos exibir!
+  );
 
-    document.body.appendChild(settingsNode);
-    lucide.createIcons();
-  }
+  document.body.appendChild(settingsNode);
+  lucide.createIcons();
+}
 
 function openEvidenceDetails(evidenceId) {
     const evidence = state.evidences.find(item => item.id === evidenceId);

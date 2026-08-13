@@ -23,10 +23,10 @@ window.CerneApp.Header = {
         </div>
       </div>
       <div class="header-actions">
-        ${canManageSettings ? `<button class="btn btn-secondary" id="btn-settings">
-          <i data-lucide="settings" style="width: 16px; height: 16px; color: var(--success);"></i>
-          Configurações
-        </button>` : ''}
+        
+
+
+
         <button class="btn btn-primary header-primary-btn" id="btn-nova-evidencia">
           <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
           Nova Evidência
@@ -58,10 +58,10 @@ window.CerneApp.Header = {
     `;
 
     header.querySelector('#btn-nova-evidencia').addEventListener('click', onNewEvidenceClick);
-    const settingsButton = header.querySelector('#btn-settings');
-    if (settingsButton) {
-      settingsButton.addEventListener('click', onSettingsClick);
-    }
+  //  const settingsButton = header.querySelector('#btn-settings');
+  //  if (settingsButton) {
+  //    settingsButton.addEventListener('click', onSettingsClick);
+  //  }
 
     const trigger = header.querySelector('#user-menu-trigger');
     const dropdown = header.querySelector('#user-menu-dropdown');

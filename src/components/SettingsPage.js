@@ -1,15 +1,31 @@
 window.CerneApp.SettingsPage = {
-  render(settings, onSave, onClose) {
+  render(settings, onSave, activeTab = 'all') {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
 
-    overlay.innerHTML = `
+    // 1. Define dinamicamente o título e subtítulo da janela
+    let mainTitle = 'Configurações de Filtros';
+    let mainDescription = 'Adicione ou remova as categorias CERNE e as tags que estarão disponíveis nos filtros da tabela.';
+
+    if (activeTab === 'categories') {
+      mainTitle = 'Gerenciamento de Categorias';
+      mainDescription = 'Adicione, edite ou remova as categorias CERNE disponíveis no sistema.';
+    } else if (activeTab === 'tags') {
+      mainTitle = 'Gerenciamento de Tags';
+      mainDescription = 'Adicione, edite ou remova as tags de classificação disponíveis no sistema.';
+    }
+
+    // 2. Define quais seções devem ser visíveis no HTML
+    const showCategories = activeTab === 'all' || activeTab === 'categories';
+    const showTags = activeTab === 'all' || activeTab === 'tags';
+
+   overlay.innerHTML = `
       <div class="modal-content settings-modal-width">
         <div class="modal-header">
           <div>
-            <h2 class="modal-title">Configurações de Filtros</h2>
+            <h2 class="modal-title">${mainTitle}</h2>
             <p style="margin-top: 0.35rem; color: var(--text-secondary); font-size: 0.9rem; max-width: 520px;">
-              Adicione ou remova as categorias CERNE e as tags que estarão disponíveis nos filtros da tabela.
+              ${mainDescription}
             </p>
           </div>
           <button class="modal-close" id="settings-close-btn">
@@ -19,7 +35,9 @@ window.CerneApp.SettingsPage = {
 
         <div class="modal-body settings-modal-body">
           <div class="settings-panel">
-            <div class="settings-section">
+
+            <!-- Seção de Categorias -->
+            <div class="settings-section" style="${showCategories ? '' : 'display: none;'}">
               <div class="settings-section-header">
                 <div>
                   <h3>Categoria CERNE</h3>
@@ -30,7 +48,8 @@ window.CerneApp.SettingsPage = {
               <div id="categories-list" class="settings-list"></div>
             </div>
 
-            <div class="settings-section">
+            <!-- Seção de Tags -->
+            <div class="settings-section" style="${showTags ? '' : 'display: none;'}">
               <div class="settings-section-header">
                 <div>
                   <h3>Tags</h3>
@@ -40,6 +59,7 @@ window.CerneApp.SettingsPage = {
               </div>
               <div id="tags-list" class="settings-list"></div>
             </div>
+
           </div>
         </div>
 
