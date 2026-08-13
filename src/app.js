@@ -36,7 +36,7 @@
   let authView = null;
   let isAuthenticatedUser = false;
 
-  // 2. Initialization Function
+// 2. Initialization Function
   async function init() {
     appContainer = document.getElementById('app');
     appContainer.innerHTML = '';
@@ -76,34 +76,34 @@
 
       <nav class="sidebar-nav">
         <div class="sidebar-group">
-          <div class="sidebar-item active">
+          <div class="sidebar-item active" data-nav="evidences">
             <i data-lucide="folder"></i>
             <span>Evidências</span>
           </div>
-          <div class="sidebar-item">
+          <div class="sidebar-item" data-nav="categories">
             <i data-lucide="grid"></i>
             <span>Categorias</span>
           </div>
-          <div class="sidebar-item">
+          <div class="sidebar-item" data-nav="tags">
             <i data-lucide="tag"></i>
             <span>Tags</span>
           </div>
-          <div class="sidebar-item">
+          <div class="sidebar-item" data-nav="responsaveis">
             <i data-lucide="users"></i>
             <span>Responsáveis</span>
           </div>
         </div>
 
         <div class="sidebar-group">
-          <div class="sidebar-item">
+          <div class="sidebar-item" data-nav="calendario">
             <i data-lucide="calendar"></i>
             <span>Calendário</span>
           </div>
-          <div class="sidebar-item">
+          <div class="sidebar-item" data-nav="relatorios">
             <i data-lucide="bar-chart-3"></i>
             <span>Relatórios</span>
           </div>
-          <div class="sidebar-item">
+          <div class="sidebar-item" data-nav="settings">
             <i data-lucide="settings-2"></i>
             <span>Configurações</span>
           </div>
@@ -116,7 +116,7 @@
             <p class="sidebar-card-title">Organize. Encontre.</p>
             <p class="sidebar-card-description">Centralize suas evidências.</p>
           </div>
-          <button type="button" class="sidebar-card-close" aria-label="Fechar card">
+          <button type="button" class="sidebar-card-close" aria-label="Fechar card" id="sidebar-card-close-btn">
             <i data-lucide="x" style="width: 16px; height: 16px;"></i>
           </button>
         </div>
