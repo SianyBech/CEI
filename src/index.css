@@ -2017,3 +2017,223 @@ textarea:focus-visible,
 .tag-badge-remove:hover {
   color: var(--danger);
 }
+
+
+/* ==========================================================================
+   DATE PICKER / CALENDÁRIO ESTILO COMPANHIA AÉREA
+   ========================================================================== */
+
+/* Container dos dois campos de data (Data e Até) */
+.custom-date-range-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  width: 100%;
+}
+
+.date-input-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  flex: 1;
+  transition: all var(--transition-fast);
+}
+
+.date-input-field:hover, .date-input-field.active {
+  border-color: var(--success);
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.15);
+}
+
+.date-input-field span {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.date-input-field .placeholder {
+  color: var(--text-tertiary);
+}
+
+.date-input-field i {
+  color: var(--text-secondary);
+  width: 18px;
+  height: 18px;
+}
+
+.date-separator {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Popover do Calendário */
+.calendar-popover {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  z-index: 100;
+  width: 310px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 1rem;
+  display: none;
+  flex-direction: column;
+  gap: 0.85rem;
+  animation: slideUp var(--transition-fast) forwards;
+}
+
+.calendar-popover.open {
+  display: flex;
+}
+
+/* Cabeçalho do Calendário com Mês e Ano Selecionáveis */
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.calendar-title-selectors {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.calendar-select-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0.2rem 0.4rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.calendar-select-btn:hover {
+  background: var(--border-color);
+}
+
+.calendar-nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-nav-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Seletor rápido de Mês e Ano em modo Lista */
+.calendar-picker-view {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+}
+
+.calendar-picker-item {
+  padding: 0.4rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  cursor: pointer;
+}
+
+.calendar-picker-item:hover, .calendar-picker-item.active {
+  background: var(--success-bg);
+  color: var(--success);
+  border-color: var(--success-border);
+  font-weight: 700;
+}
+
+/* Grade de Dias do Mês */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.2rem;
+  text-align: center;
+}
+
+.calendar-day-header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  padding: 0.25rem 0;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+}
+
+.calendar-day:hover {
+  background: var(--bg-tertiary);
+}
+
+.calendar-day.empty {
+  cursor: default;
+  background: transparent !important;
+}
+
+.calendar-day.selected {
+  background-color: var(--success) !important;
+  color: white !important;
+  font-weight: 700;
+}
+
+.calendar-day.in-range {
+  background-color: var(--success-bg);
+  color: #047857;
+  border-radius: 0;
+}
+
+.calendar-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.calendar-clear-btn {
+  background: none;
+  border: none;
+  font-size: 0.75rem;
+  color: var(--danger);
+  cursor: pointer;
+  font-weight: 600;
+}

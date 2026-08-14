@@ -21,14 +21,14 @@ window.CerneApp.SearchBar = {
       ? tags.map((tag) => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`).join('')
       : '';
 
-    // Search input and layout toggler row
+    // 1. Search input and layout toggler row
     const searchRow = document.createElement('div');
     searchRow.className = 'search-filter-row';
     searchRow.innerHTML = `
       <div class="search-bar-container">
         <div class="search-input-wrapper">
           <i data-lucide="search" class="search-icon" style="width: 18px; height: 18px;"></i>
-          <input type="text" class="search-input" id="search-input" placeholder="Pesquisar por evento, categoria, tags, responsável ou nome de arquivo..." value="${currentQuery}">
+          <input type="text" class="search-input" id="search-input" placeholder="Pesquisar por evento, categoria, tags, responsável ou nome de arquivo..." value="${escapeHtml(currentQuery)}">
         </div>
       </div>
       <div class="view-toggle-group">
@@ -41,7 +41,7 @@ window.CerneApp.SearchBar = {
       </div>
     `;
 
-    // Advanced filters row
+    // 2. Advanced filters row
     const filtersRow = document.createElement('div');
     filtersRow.className = 'filters-panel';
     filtersRow.innerHTML = `
@@ -88,62 +88,47 @@ window.CerneApp.SearchBar = {
         </div>
 
         <div class="filter-group filter-period-group">
-          <span class="filter-label">Período</span>
-          <div class="period-popover-container">
-            <input type="checkbox" id="period-popover-toggle" class="period-popover-toggle">
-            <label for="period-popover-toggle" class="period-popover-trigger">
-              <span class="period-trigger-text">Selecione o período</span>
-              <i data-lucide="calendar" class="period-trigger-icon" style="color: var(--success);"></i>
-            </label>
-
-            <div class="period-popover-panel">
-              <div class="date-selector-grid">
-                <select class="date-select" id="filter-day-from" data-type="day">
-                  <option value="">Dia</option>
-                </select>
-                <select class="date-select" id="filter-month-from" data-type="month">
-                  <option value="">Mês</option>
-                  <option value="1">Janeiro</option>
-                  <option value="2">Fevereiro</option>
-                  <option value="3">Março</option>
-                  <option value="4">Abril</option>
-                  <option value="5">Maio</option>
-                  <option value="6">Junho</option>
-                  <option value="7">Julho</option>
-                  <option value="8">Agosto</option>
-                  <option value="9">Setembro</option>
-                  <option value="10">Outubro</option>
-                  <option value="11">Novembro</option>
-                  <option value="12">Dezembro</option>
-                </select>
-                <select class="date-select" id="filter-year-from" data-type="year">
-                  <option value="">Ano</option>
-                </select>
-                <select class="date-select" id="filter-day-to" data-type="day">
-                  <option value="">Dia</option>
-                </select>
-                <select class="date-select" id="filter-month-to" data-type="month">
-                  <option value="">Mês</option>
-                  <option value="1">Janeiro</option>
-                  <option value="2">Fevereiro</option>
-                  <option value="3">Março</option>
-                  <option value="4">Abril</option>
-                  <option value="5">Maio</option>
-                  <option value="6">Junho</option>
-                  <option value="7">Julho</option>
-                  <option value="8">Agosto</option>
-                  <option value="9">Setembro</option>
-                  <option value="10">Outubro</option>
-                  <option value="11">Novembro</option>
-                  <option value="12">Dezembro</option>
-                </select>
-                <select class="date-select" id="filter-year-to" data-type="year">
-                  <option value="">Ano</option>
-                </select>
-              </div>
+          <span class="filter-label">Período da Evidência</span>
+          <div class="custom-date-range-container">
+            <!-- Campo De -->
+            <div class="date-input-field" id="date-from-trigger">
+              <i data-lucide="calendar"></i>
+              <span id="date-from-text" class="placeholder">Data</span>
             </div>
 
-            <label for="period-popover-toggle" class="period-popover-backdrop" aria-label="Fechar calendário"></label>
+            <span class="date-separator">até</span>
+
+            <!-- Campo Até -->
+            <div class="date-input-field" id="date-to-trigger">
+              <i data-lucide="calendar"></i>
+              <span id="date-to-text" class="placeholder">Até</span>
+            </div>
+
+            <!-- Popover Unificado do Calendário -->
+            <div class="calendar-popover" id="calendar-popover">
+              <div class="calendar-header">
+                <button type="button" class="calendar-nav-btn" id="cal-prev-btn">&lt;</button>
+                <div class="calendar-title-selectors">
+                  <button type="button" class="calendar-select-btn" id="cal-month-selector">
+                    <span id="cal-month-label">Mês</span>
+                    <i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i>
+                  </button>
+                  <button type="button" class="calendar-select-btn" id="cal-year-selector">
+                    <span id="cal-year-label">Ano</span>
+                    <i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i>
+                  </button>
+                </div>
+                <button type="button" class="calendar-nav-btn" id="cal-next-btn">&gt;</button>
+              </div>
+
+              <!-- Conteúdo Dinâmico do Calendário (Dias / Meses / Anos) -->
+              <div id="calendar-body"></div>
+
+              <div class="calendar-footer">
+                <button type="button" class="calendar-clear-btn" id="cal-clear-btn">Limpar datas</button>
+                <button type="button" class="btn btn-primary" id="cal-apply-btn" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">OK</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -152,6 +137,7 @@ window.CerneApp.SearchBar = {
     container.appendChild(searchRow);
     container.appendChild(filtersRow);
 
+    // 3. Dashboard Cards (Com aspas corrigidas no counter-novas-mes)
     const cardsRow = document.createElement('div');
     cardsRow.className = 'dashboard-cards';
     cardsRow.innerHTML = `
@@ -200,7 +186,7 @@ window.CerneApp.SearchBar = {
           <i data-lucide="calendar"></i>
         </div>
         <div>
-          <div class="dashboard-card-counter" id="counter-novas-mes>0</div>
+          <div class="dashboard-card-counter" id="counter-novas-mes">0</div>
           <div class="dashboard-card-title">Este mês</div>
           <div class="dashboard-card-subtitle">Adicionadas</div>
         </div>
@@ -209,76 +195,14 @@ window.CerneApp.SearchBar = {
 
     container.appendChild(cardsRow);
 
-    // Populate year options (1900 to current year)
-    function populateYears() {
-      const currentYear = new Date().getFullYear();
-      const yearSelects = filtersRow.querySelectorAll('select[data-type="year"]');
-      
-      yearSelects.forEach(select => {
-        for (let year = currentYear; year >= 1900; year--) {
-          const option = document.createElement('option');
-          option.value = year;
-          option.textContent = year;
-          select.appendChild(option);
-        }
-      });
-    }
-
-    // Populate days based on selected month and year
-    function updateDaysInMonth() {
-      const daySelectsFrom = filtersRow.querySelector('#filter-day-from');
-      const daySelectsTo = filtersRow.querySelector('#filter-day-to');
-      const monthFromVal = filtersRow.querySelector('#filter-month-from').value;
-      const yearFromVal = filtersRow.querySelector('#filter-year-from').value;
-      const monthToVal = filtersRow.querySelector('#filter-month-to').value;
-      const yearToVal = filtersRow.querySelector('#filter-year-to').value;
-
-      // Calculate days for "De"
-      let daysInMonthFrom = 31;
-      if (monthFromVal && yearFromVal) {
-        daysInMonthFrom = new Date(parseInt(yearFromVal), parseInt(monthFromVal), 0).getDate();
-      }
-
-      // Calculate days for "Até"
-      let daysInMonthTo = 31;
-      if (monthToVal && yearToVal) {
-        daysInMonthTo = new Date(parseInt(yearToVal), parseInt(monthToVal), 0).getDate();
-      }
-
-      // Update "De" days
-      const currentDayFrom = daySelectsFrom.value;
-      daySelectsFrom.innerHTML = '<option value="">Dia</option>';
-      for (let i = 1; i <= daysInMonthFrom; i++) {
-        const option = document.createElement('option');
-        option.value = String(i).padStart(2, '0');
-        option.textContent = String(i).padStart(2, '0');
-        if (option.value === currentDayFrom) option.selected = true;
-        daySelectsFrom.appendChild(option);
-      }
-
-      // Update "Até" days
-      const currentDayTo = daySelectsTo.value;
-      daySelectsTo.innerHTML = '<option value="">Dia</option>';
-      for (let i = 1; i <= daysInMonthTo; i++) {
-        const option = document.createElement('option');
-        option.value = String(i).padStart(2, '0');
-        option.textContent = String(i).padStart(2, '0');
-        if (option.value === currentDayTo) option.selected = true;
-        daySelectsTo.appendChild(option);
-      }
-    }
-
-    populateYears();
-    updateDaysInMonth();
-
-    // Event listeners for search and view mode
+    // 4. Event listeners do Search Input e Toggles de Visualização
     const input = searchRow.querySelector('#search-input');
     input.addEventListener('input', (e) => onSearchChange(e.target.value));
 
     searchRow.querySelector('#toggle-table').addEventListener('click', () => onViewModeChange('table'));
     searchRow.querySelector('#toggle-grid').addEventListener('click', () => onViewModeChange('grid'));
 
-    // Filter selectors change listeners
+    // Listeners dos selects simples (Tipo, Categoria, Responsável, Tag)
     filtersRow.querySelectorAll('.filter-select').forEach(select => {
       select.addEventListener('change', (e) => {
         const filterId = e.target.id.replace('filter-', '');
@@ -286,29 +210,259 @@ window.CerneApp.SearchBar = {
       });
     });
 
-    // Date filter selectors change listeners
-    const allDateSelects = filtersRow.querySelectorAll('.date-select');
-    allDateSelects.forEach(select => {
-      select.addEventListener('change', (e) => {
-        updateDaysInMonth();
-        
-        if (typeof onDateFilterChange === 'function') {
-          const dayFrom = filtersRow.querySelector('#filter-day-from').value;
-          const monthFrom = filtersRow.querySelector('#filter-month-from').value;
-          const yearFrom = filtersRow.querySelector('#filter-year-from').value;
-          const dayTo = filtersRow.querySelector('#filter-day-to').value;
-          const monthTo = filtersRow.querySelector('#filter-month-to').value;
-          const yearTo = filtersRow.querySelector('#filter-year-to').value;
+    // 5. Estado e Manipulação do Calendário estilo Cia Aérea
+    let activeInputTarget = 'from'; // 'from' ou 'to'
+    let selectedFromDate = null;
+    let selectedToDate = null;
 
-          onDateFilterChange({
-            dayFrom, monthFrom, yearFrom,
-            dayTo, monthTo, yearTo
+    const today = new Date();
+    let viewMonth = today.getMonth();
+    let viewYear = today.getFullYear();
+    let pickerMode = 'days'; // 'days', 'months', 'years'
+
+    const monthNames = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+
+    const popover = filtersRow.querySelector('#calendar-popover');
+    const dateFromTrigger = filtersRow.querySelector('#date-from-trigger');
+    const dateToTrigger = filtersRow.querySelector('#date-to-trigger');
+    const dateFromText = filtersRow.querySelector('#date-from-text');
+    const dateToText = filtersRow.querySelector('#date-to-text');
+    const calendarBody = filtersRow.querySelector('#calendar-body');
+    const monthLabel = filtersRow.querySelector('#cal-month-label');
+    const yearLabel = filtersRow.querySelector('#cal-year-label');
+
+    function formatDateBR(dateObj) {
+      if (!dateObj) return '';
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = dateObj.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+
+    function updateTriggerTexts() {
+      if (selectedFromDate) {
+        dateFromText.textContent = formatDateBR(selectedFromDate);
+        dateFromText.classList.remove('placeholder');
+      } else {
+        dateFromText.textContent = 'Data';
+        dateFromText.classList.add('placeholder');
+      }
+
+      if (selectedToDate) {
+        dateToText.textContent = formatDateBR(selectedToDate);
+        dateToText.classList.remove('placeholder');
+      } else {
+        dateToText.textContent = 'Até';
+        dateToText.classList.add('placeholder');
+      }
+    }
+
+    function notifyDateFilterChange() {
+      updateTriggerTexts();
+
+      if (typeof onDateFilterChange === 'function') {
+        onDateFilterChange({
+          dayFrom: selectedFromDate ? String(selectedFromDate.getDate()).padStart(2, '0') : '',
+          monthFrom: selectedFromDate ? String(selectedFromDate.getMonth() + 1) : '',
+          yearFrom: selectedFromDate ? String(selectedFromDate.getFullYear()) : '',
+          dayTo: selectedToDate ? String(selectedToDate.getDate()).padStart(2, '0') : '',
+          monthTo: selectedToDate ? String(selectedToDate.getMonth() + 1) : '',
+          yearTo: selectedToDate ? String(selectedToDate.getFullYear()) : ''
+        });
+      }
+    }
+
+    function renderCalendar() {
+      monthLabel.textContent = monthNames[viewMonth];
+      yearLabel.textContent = viewYear;
+      calendarBody.innerHTML = '';
+
+      if (pickerMode === 'months') {
+        const monthGrid = document.createElement('div');
+        monthGrid.className = 'calendar-picker-view';
+        monthNames.forEach((name, idx) => {
+          const item = document.createElement('div');
+          item.className = `calendar-picker-item ${idx === viewMonth ? 'active' : ''}`;
+          item.textContent = name.substring(0, 3);
+          item.addEventListener('click', () => {
+            viewMonth = idx;
+            pickerMode = 'days';
+            renderCalendar();
           });
+          monthGrid.appendChild(item);
+        });
+        calendarBody.appendChild(monthGrid);
+        return;
+      }
+
+      if (pickerMode === 'years') {
+        const yearGrid = document.createElement('div');
+        yearGrid.className = 'calendar-picker-view';
+        const startYear = viewYear - 10;
+        for (let y = startYear; y <= startYear + 19; y++) {
+          const item = document.createElement('div');
+          item.className = `calendar-picker-item ${y === viewYear ? 'active' : ''}`;
+          item.textContent = y;
+          item.addEventListener('click', () => {
+            viewYear = y;
+            pickerMode = 'days';
+            renderCalendar();
+          });
+          yearGrid.appendChild(item);
         }
+        calendarBody.appendChild(yearGrid);
+        return;
+      }
+
+      // Grade de Dias
+      const grid = document.createElement('div');
+      grid.className = 'calendar-grid';
+
+      ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].forEach(dayName => {
+        const dh = document.createElement('div');
+        dh.className = 'calendar-day-header';
+        dh.textContent = dayName;
+        grid.appendChild(dh);
       });
+
+      const firstDayIdx = new Date(viewYear, viewMonth, 1).getDay();
+      const totalDays = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+      for (let i = 0; i < firstDayIdx; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = 'calendar-day empty';
+        grid.appendChild(emptyCell);
+      }
+
+      for (let day = 1; day <= totalDays; day++) {
+        const dayBtn = document.createElement('button');
+        dayBtn.type = 'button';
+        dayBtn.className = 'calendar-day';
+        dayBtn.textContent = day;
+
+        const currentDayDate = new Date(viewYear, viewMonth, day);
+
+        const isFrom = selectedFromDate && currentDayDate.getTime() === selectedFromDate.getTime();
+        const isTo = selectedToDate && currentDayDate.getTime() === selectedToDate.getTime();
+        const isInRange = selectedFromDate && selectedToDate && currentDayDate > selectedFromDate && currentDayDate < selectedToDate;
+
+        if (isFrom || isTo) dayBtn.classList.add('selected');
+        if (isInRange) dayBtn.classList.add('in-range');
+
+        dayBtn.addEventListener('click', () => {
+          if (activeInputTarget === 'from') {
+            selectedFromDate = currentDayDate;
+            if (selectedToDate && selectedToDate < selectedFromDate) {
+              selectedToDate = null;
+            }
+            activeInputTarget = 'to';
+            dateFromTrigger.classList.remove('active');
+            dateToTrigger.classList.add('active');
+          } else {
+            if (selectedFromDate && currentDayDate < selectedFromDate) {
+              selectedFromDate = currentDayDate;
+              selectedToDate = null;
+            } else {
+              selectedToDate = currentDayDate;
+            }
+          }
+
+          renderCalendar();
+          notifyDateFilterChange();
+        });
+
+        grid.appendChild(dayBtn);
+      }
+
+      calendarBody.appendChild(grid);
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function openPopover(targetField) {
+      activeInputTarget = targetField;
+      dateFromTrigger.classList.toggle('active', targetField === 'from');
+      dateToTrigger.classList.toggle('active', targetField === 'to');
+
+      const focusDate = (targetField === 'from' ? selectedFromDate : selectedToDate) || selectedFromDate || new Date();
+      viewMonth = focusDate.getMonth();
+      viewYear = focusDate.getFullYear();
+      pickerMode = 'days';
+
+      popover.classList.add('open');
+      renderCalendar();
+    }
+
+    function closePopover() {
+      popover.classList.remove('open');
+      dateFromTrigger.classList.remove('active');
+      dateToTrigger.classList.remove('active');
+    }
+
+    dateFromTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openPopover('from');
     });
 
-    // --- NOVO: Listener do botão "Limpar Filtros" principal do painel ---
+    dateToTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openPopover('to');
+    });
+
+    filtersRow.querySelector('#cal-month-selector').addEventListener('click', (e) => {
+      e.stopPropagation();
+      pickerMode = pickerMode === 'months' ? 'days' : 'months';
+      renderCalendar();
+    });
+
+    filtersRow.querySelector('#cal-year-selector').addEventListener('click', (e) => {
+      e.stopPropagation();
+      pickerMode = pickerMode === 'years' ? 'days' : 'years';
+      renderCalendar();
+    });
+
+    filtersRow.querySelector('#cal-prev-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (viewMonth === 0) {
+        viewMonth = 11;
+        viewYear--;
+      } else {
+        viewMonth--;
+      }
+      renderCalendar();
+    });
+
+    filtersRow.querySelector('#cal-next-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (viewMonth === 11) {
+        viewMonth = 0;
+        viewYear++;
+      } else {
+        viewMonth++;
+      }
+      renderCalendar();
+    });
+
+    const resetCalendarDates = () => {
+      selectedFromDate = null;
+      selectedToDate = null;
+      notifyDateFilterChange();
+      renderCalendar();
+    };
+
+    filtersRow.querySelector('#cal-clear-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetCalendarDates();
+    });
+
+    filtersRow.querySelector('#cal-apply-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      closePopover();
+    });
+
+    // 6. Listener global do botão "Limpar Filtros" principal
     const clearFiltersBtn = filtersRow.querySelector('.filters-panel-clear-btn');
     if (clearFiltersBtn) {
       clearFiltersBtn.addEventListener('click', () => {
@@ -319,8 +473,8 @@ window.CerneApp.SearchBar = {
           select.value = 'todos';
         });
 
-        allDateSelects.forEach(select => select.value = '');
-        updateDaysInMonth();
+        resetCalendarDates();
+        closePopover();
 
         if (typeof onClearFilters === 'function') {
           onClearFilters();
@@ -328,18 +482,14 @@ window.CerneApp.SearchBar = {
       });
     }
 
-    // Clear date filters button
-    filtersRow.querySelector('#clear-date-filters').addEventListener('click', () => {
-      allDateSelects.forEach(select => select.value = '');
-      updateDaysInMonth();
-      
-      if (typeof onDateFilterChange === 'function') {
-        onDateFilterChange({
-          dayFrom: '', monthFrom: '', yearFrom: '',
-          dayTo: '', monthTo: '', yearTo: ''
-        });
+    // Fechar popover ao clicar fora
+    document.addEventListener('click', (e) => {
+      if (!popover.contains(e.target) && !dateFromTrigger.contains(e.target) && !dateToTrigger.contains(e.target)) {
+        closePopover();
       }
     });
+
+    popover.addEventListener('click', (e) => e.stopPropagation());
 
     return container;
   }
