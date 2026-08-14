@@ -45,7 +45,7 @@
       showLoginView();
     });
 
-   const session = await window.CerneApp.Auth.getSession();
+    const session = await window.CerneApp.Auth.getSession();
     if (!session?.user) {
       showLoginView();
       return;
@@ -143,22 +143,27 @@
     );
     mainContent.appendChild(searchBarElement);
 
-    // Create list container for dynamic tables/grids
     listContainer = document.createElement('div');
     listContainer.id = 'evidence-list-container';
     listContainer.style.width = '100%';
     mainContent.appendChild(listContainer);
 
     bodyWrapper.appendChild(mainContent);
+
+    // 3. Painel Lateral Direito (Sidebar Direita)
+    const rightSidebar = document.createElement('aside');
+    rightSidebar.className = 'right-sidebar';
+    rightSidebar.id = 'right-sidebar-stats';
+    bodyWrapper.appendChild(rightSidebar);
+
+    // 4. Injeta a estrutura completa no DOM
     appContainer.appendChild(bodyWrapper);
 
-    // Setup sidebar event listeners
+    // 5. Configura eventos e carrega as evidências
     setupSidebarEvents();
-
-    // Load evidences from backend and render list
     await loadEvidences();
 
-    // Trigger initial icon replacement
+    // 6. Atualiza ícones Lucide
     lucide.createIcons();
   }
 
@@ -259,7 +264,21 @@
     mainContent.appendChild(listContainer);
 
     bodyWrapper.appendChild(mainContent);
+    
+    // =========================================================================
+    // NOVO: Painel Lateral Direito
+    // =========================================================================
+    const rightSidebar = document.createElement('aside');
+    rightSidebar.className = 'right-sidebar';
+    rightSidebar.id = 'right-sidebar-stats';
+    
+    bodyWrapper.appendChild(rightSidebar);
+
+    // Adiciona o bodyWrapper no container do app
     appContainer.appendChild(bodyWrapper);
+
+    // Renderiza as métricas
+    renderRightSidebarStats();
   }
 
   function showLoginView() {
@@ -496,6 +515,9 @@
 
     listContainer.appendChild(renderedComponent);
 
+    // Atualiza os dados do painel lateral direito
+    renderRightSidebarStats();
+
     // D. Re-compile Lucide Icons for the newly injected HTML components
     lucide.createIcons();
   }
@@ -646,6 +668,116 @@ function handleClearFilters() {
       case 'settings':
         openSettings();
         break;
+    }
+  }
+
+  // Função responsável por calcular e renderizar os cards laterais à direita
+  function renderRightSidebarStats() {
+    const rightSidebar = document.getElementById('right-sidebar-stats');
+    if (!rightSidebar) return; // Trava de segurança contra erros de inicialização
+
+    const evidences = state.evidences || [];
+    const totalEvidences = evidences.length;
+
+    // Métricas calculadas dinamicamente
+    const totalCategories = new Set(evidences.map(e => e.categoria).filter(Boolean)).size;
+    const totalResponsaveis = new Set(evidences.map(e => e.responsavel).filter(Boolean)).size;
+    
+    const allTags = evidences.flatMap(e => Array.isArray(e.tags) ? e.tags : []);
+    const totalTags = new Set(allTags).size;
+
+    // Cálculo de evidências adicionadas no mês atual
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const newThisMonth = evidences.filter(e => {
+      if (e.criadoEm) {
+        const date = new Date(e.criadoEm);
+        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+      }
+      if (e.data && typeof e.data === 'string') {
+        const parts = e.data.split('/');
+        if (parts.length === 3) {
+          const month = parseInt(parts[1], 10) - 1;
+          const year = parseInt(parts[2], 10);
+          return month === currentMonth && year === currentYear;
+        }
+      }
+      return false;
+    }).length;
+
+    rightSidebar.innerHTML = /*
+      <div class="right-sidebar-header">
+        <i data-lucide="bar-chart-2" style="width: 18px; height: 18px; color: var(--success);"></i>
+        <span>Resumo Geral</span>
+      </div>  */
+`
+      <div class="right-sidebar-cards">
+        <!-- Card 1: Evidências -->
+        <div class="dashboard-card vertical-card">
+          <div class="dashboard-card-icon">
+            <i data-lucide="folder"></i>
+          </div>
+          <div class="dashboard-card-content">
+            <div class="dashboard-card-counter">${totalEvidences}</div>
+            <div class="dashboard-card-title">Evidências</div>
+            <div class="dashboard-card-subtitle">Registradas no sistema</div>
+          </div>
+        </div>
+
+        <!-- Card 2: Categorias -->
+        <div class="dashboard-card vertical-card">
+          <div class="dashboard-card-icon">
+            <i data-lucide="grid"></i>
+          </div>
+          <div class="dashboard-card-content">
+            <div class="dashboard-card-counter">${totalCategories}</div>
+            <div class="dashboard-card-title">Categorias</div>
+            <div class="dashboard-card-subtitle">Categorias ativas</div>
+          </div>
+        </div>
+
+        <!-- Card 3: Responsáveis -->
+        <div class="dashboard-card vertical-card">
+          <div class="dashboard-card-icon">
+            <i data-lucide="users"></i>
+          </div>
+          <div class="dashboard-card-content">
+            <div class="dashboard-card-counter">${totalResponsaveis}</div>
+            <div class="dashboard-card-title">Responsáveis</div>
+            <div class="dashboard-card-subtitle">Membros com envios</div>
+          </div>
+        </div>
+
+        <!-- Card 4: Tags -->
+        <div class="dashboard-card vertical-card">
+          <div class="dashboard-card-icon">
+            <i data-lucide="tag"></i>
+          </div>
+          <div class="dashboard-card-content">
+            <div class="dashboard-card-counter">${totalTags}</div>
+            <div class="dashboard-card-title">Tags</div>
+            <div class="dashboard-card-subtitle">Rotulagens criadas</div>
+          </div>
+        </div>
+
+        <!-- Card 5: Novas do Mês -->
+        <div class="dashboard-card vertical-card">
+          <div class="dashboard-card-icon">
+            <i data-lucide="sparkles"></i>
+          </div>
+          <div class="dashboard-card-content">
+            <div class="dashboard-card-counter">${newThisMonth}</div>
+            <div class="dashboard-card-title">Novas do Mês</div>
+            <div class="dashboard-card-subtitle">Cadastradas este mês</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) {
+      lucide.createIcons();
     }
   }
 

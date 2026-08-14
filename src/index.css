@@ -29,7 +29,7 @@
   --font-display: 'Inter', var(--font-sans);
   
   /* Layout & Spacing */
-  --max-width: 1450px;
+  --max-width: 1800px;
   --header-height: 72px;
   
   /* Shadows & Borders */
@@ -130,6 +130,28 @@ textarea:focus-visible,
   margin: 0 auto;
   padding: 0 1.5rem 2rem;
   min-width: 0;
+}
+
+/* 1. Container que segura os cards verticais */
+.right-sidebar-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem; /* <--- AUMENTADO: de 0.85rem/1rem para 1.25rem (20px de espaçamento entre cada card) */
+}
+
+/* 2. Ajuste fino de margem/respiro dos cards verticais */
+.dashboard-card.vertical-card {
+  width: 90%;
+  padding: 1.25rem 1.5rem; /* Um pouco mais de padding interno para o conteúdo respirar */
+  margin-top: 0;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 .sidebar {
@@ -839,7 +861,7 @@ textarea:focus-visible,
   gap: 0.25rem;
 }
 
-/* Table Card Base Layout */
+/* Table Card Base Layout - Otimizado para não rolar */
 .table-container {
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
@@ -855,45 +877,76 @@ textarea:focus-visible,
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  min-width: 1200px;
+  /* Removido min-width: 1200px para que a tabela caiba 100% no espaço central */
+  min-width: 0;
+  table-layout: auto; /* Permite ajuste automático e proporcional das colunas */
 }
 
 .evidence-table th {
   background-color: #fafafa;
-  padding: 0.875rem 1.25rem;
-  font-size: 0.75rem;
+  padding: 0.65rem 0.6rem; /* Reduzido de 0.875rem 1rem para aproximar os elementos */
+  font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
   color: var(--text-secondary);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
 }
 
 .evidence-table td {
-  padding: 1rem 1.25rem;
-  font-size: 0.875rem;
+  padding: 0.65rem 0.6rem; /* Reduzido de 0.9rem 0.7rem para ficar mais compacto */
+  font-size: 0.825rem;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-secondary);
   vertical-align: middle;
   white-space: nowrap;
 }
 
+/* Coluna 1: Título da Evidência (Quebra suave para não empurrar as outras) */
 .evidence-table td:nth-child(1) {
   white-space: normal;
-  word-break: break-all;
-  min-width: 210px;
+  word-break: break-word;
+  max-width: 260px; /* Impede que títulos longos estourem a largura */
+  font-weight: 500;
 }
 
+/* Coluna 2: Tipo */
+.evidence-table td:nth-child(2) {
+  width: 70px;
+}
+
+/* Coluna 3: Data */
+.evidence-table td:nth-child(3) {
+  width: 90px;
+}
+
+/* Coluna 4: Evento */
 .evidence-table td:nth-child(4) {
   white-space: normal;
   word-break: break-word;
-  min-width: 150px;
+  max-width: 160px;
+}
+
+/* Coluna 5: Categoria CERNE */
+.evidence-table td:nth-child(5) {
+  white-space: nowrap;
+}
+
+/* Coluna 6: Responsável */
+.evidence-table td:nth-child(6) {
+  white-space: nowrap;
+}
+
+/* Coluna 7: Tags */
+.evidence-table td:nth-child(7) {
+  white-space: normal;
+  max-width: 180px;
 }
 
 .evidence-table td:last-child,
 .evidence-table th:last-child {
-  text-align: right;
-  white-space: nowrap;
+  text-align: left; /* Mantido alinhamento natural com o resto da tabela */
 }
 
 .evidence-table tr:last-child td {
@@ -907,7 +960,6 @@ textarea:focus-visible,
 .evidence-table tr:hover {
   background-color: #fafafa;
 }
-
 .file-name-cell {
   display: flex;
   align-items: center;
@@ -2253,7 +2305,7 @@ textarea:focus-visible,
 .header-date-filter-wrapper {
   display: flex;
   align-items: center;
-  min-width: 320px;
+  min-width: 380px;
 }
 
 /* Ajuste dos botões "Data" e "Até" na linha principal */

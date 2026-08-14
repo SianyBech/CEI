@@ -44,6 +44,7 @@ window.CerneApp.SearchBar = {
             <span id="date-from-text" class="placeholder">De</span>
           </div>
 
+          <span class="date-separator">Até</span>
 
           <!-- Campo Até -->
           <div class="date-input-field" id="date-to-trigger">
@@ -142,7 +143,7 @@ window.CerneApp.SearchBar = {
     container.appendChild(searchRow);
     container.appendChild(filtersRow);
 
-    // 3. Dashboard Cards (Com aspas corrigidas no counter-novas-mes)
+  /*  // 3. Dashboard Cards (Com aspas corrigidas no counter-novas-mes)
     const cardsRow = document.createElement('div');
     cardsRow.className = 'dashboard-cards';
     cardsRow.innerHTML = `
@@ -194,11 +195,11 @@ window.CerneApp.SearchBar = {
           <div class="dashboard-card-counter" id="counter-novas-mes">0</div>
           <div class="dashboard-card-title">Este mês</div>
           <div class="dashboard-card-subtitle">Adicionadas</div>
-        </div>
-      </div>
-    `;
+        </div> 
+      </div> 
+    `; 
 
-    container.appendChild(cardsRow);
+    container.appendChild(cardsRow); */
 
     // 4. Event listeners do Search Input e Toggles de Visualização
     const input = searchRow.querySelector('#search-input');
