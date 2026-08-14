@@ -21,7 +21,7 @@ window.CerneApp.SearchBar = {
       ? tags.map((tag) => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`).join('')
       : '';
 
-    // 1. Search input and layout toggler row
+   // Search input, Date Range Picker and layout toggler row (Primeira linha alinhada)
     const searchRow = document.createElement('div');
     searchRow.className = 'search-filter-row';
     searchRow.innerHTML = `
@@ -31,6 +31,54 @@ window.CerneApp.SearchBar = {
           <input type="text" class="search-input" id="search-input" placeholder="Pesquisar por evento, categoria, tags, responsável ou nome de arquivo..." value="${escapeHtml(currentQuery)}">
         </div>
       </div>
+
+      <!-- NOVO LOCAL: Período da Evidência colocado ao lado da barra de pesquisa -->
+      <div class="header-date-filter-wrapper">
+        <div class="custom-date-range-container">
+
+        <span class="date-separator">Período</span>
+
+          <!-- Campo De -->
+          <div class="date-input-field" id="date-from-trigger">
+            <i data-lucide="calendar"></i>
+            <span id="date-from-text" class="placeholder">De</span>
+          </div>
+
+
+          <!-- Campo Até -->
+          <div class="date-input-field" id="date-to-trigger">
+            <i data-lucide="calendar"></i>
+            <span id="date-to-text" class="placeholder">Até</span>
+          </div>
+
+          <!-- Popover Unificado do Calendário -->
+          <div class="calendar-popover" id="calendar-popover">
+            <div class="calendar-header">
+              <button type="button" class="calendar-nav-btn" id="cal-prev-btn">&lt;</button>
+              <div class="calendar-title-selectors">
+                <button type="button" class="calendar-select-btn" id="cal-month-selector">
+                  <span id="cal-month-label">Mês</span>
+                  <i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i>
+                </button>
+                <button type="button" class="calendar-select-btn" id="cal-year-selector">
+                  <span id="cal-year-label">Ano</span>
+                  <i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i>
+                </button>
+              </div>
+              <button type="button" class="calendar-nav-btn" id="cal-next-btn">&gt;</button>
+            </div>
+
+            <!-- Conteúdo Dinâmico do Calendário (Dias / Meses / Anos) -->
+            <div id="calendar-body"></div>
+
+            <div class="calendar-footer">
+              <button type="button" class="calendar-clear-btn" id="cal-clear-btn">Limpar datas</button>
+              <button type="button" class="btn btn-primary" id="cal-apply-btn" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">OK</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="view-toggle-group">
         <button class="view-toggle-btn ${currentViewMode === 'table' ? 'active' : ''}" id="toggle-table" title="Visualizar Tabela">
           <i data-lucide="list" style="width: 18px; height: 18px;"></i>
@@ -50,7 +98,9 @@ window.CerneApp.SearchBar = {
           <i data-lucide="filter" class="filters-panel-icon"></i>
           <span>Filtros</span>
         </div>
-        <button type="button" id="clear-date-filters" class="filters-panel-clear-btn">Limpar filtros</button>
+        <button type="button" id="clear-date-filters" class="filters-panel-clear-btn">Limpar filtros
+        <i data-lucide="filter-x" style="width: 14px; height: 14px;"></i>
+        </button>
       </div>
 
       <div class="filters-panel-grid">
@@ -87,51 +137,6 @@ window.CerneApp.SearchBar = {
           </select>
         </div>
 
-        <div class="filter-group filter-period-group">
-          <span class="filter-label">Período da Evidência</span>
-          <div class="custom-date-range-container">
-            <!-- Campo De -->
-            <div class="date-input-field" id="date-from-trigger">
-              <i data-lucide="calendar"></i>
-              <span id="date-from-text" class="placeholder">Data</span>
-            </div>
-
-            <span class="date-separator">até</span>
-
-            <!-- Campo Até -->
-            <div class="date-input-field" id="date-to-trigger">
-              <i data-lucide="calendar"></i>
-              <span id="date-to-text" class="placeholder">Até</span>
-            </div>
-
-            <!-- Popover Unificado do Calendário -->
-            <div class="calendar-popover" id="calendar-popover">
-              <div class="calendar-header">
-                <button type="button" class="calendar-nav-btn" id="cal-prev-btn">&lt;</button>
-                <div class="calendar-title-selectors">
-                  <button type="button" class="calendar-select-btn" id="cal-month-selector">
-                    <span id="cal-month-label">Mês</span>
-                    <i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i>
-                  </button>
-                  <button type="button" class="calendar-select-btn" id="cal-year-selector">
-                    <span id="cal-year-label">Ano</span>
-                    <i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i>
-                  </button>
-                </div>
-                <button type="button" class="calendar-nav-btn" id="cal-next-btn">&gt;</button>
-              </div>
-
-              <!-- Conteúdo Dinâmico do Calendário (Dias / Meses / Anos) -->
-              <div id="calendar-body"></div>
-
-              <div class="calendar-footer">
-                <button type="button" class="calendar-clear-btn" id="cal-clear-btn">Limpar datas</button>
-                <button type="button" class="btn btn-primary" id="cal-apply-btn" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">OK</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     `;
 
     container.appendChild(searchRow);
@@ -225,14 +230,14 @@ window.CerneApp.SearchBar = {
       'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
     ];
 
-    const popover = filtersRow.querySelector('#calendar-popover');
-    const dateFromTrigger = filtersRow.querySelector('#date-from-trigger');
-    const dateToTrigger = filtersRow.querySelector('#date-to-trigger');
-    const dateFromText = filtersRow.querySelector('#date-from-text');
-    const dateToText = filtersRow.querySelector('#date-to-text');
-    const calendarBody = filtersRow.querySelector('#calendar-body');
-    const monthLabel = filtersRow.querySelector('#cal-month-label');
-    const yearLabel = filtersRow.querySelector('#cal-year-label');
+const popover = searchRow.querySelector('#calendar-popover');
+    const dateFromTrigger = searchRow.querySelector('#date-from-trigger');
+    const dateToTrigger = searchRow.querySelector('#date-to-trigger');
+    const dateFromText = searchRow.querySelector('#date-from-text');
+    const dateToText = searchRow.querySelector('#date-to-text');
+    const calendarBody = searchRow.querySelector('#calendar-body');
+    const monthLabel = searchRow.querySelector('#cal-month-label');
+    const yearLabel = searchRow.querySelector('#cal-year-label');
 
     function formatDateBR(dateObj) {
       if (!dateObj) return '';
@@ -247,7 +252,7 @@ window.CerneApp.SearchBar = {
         dateFromText.textContent = formatDateBR(selectedFromDate);
         dateFromText.classList.remove('placeholder');
       } else {
-        dateFromText.textContent = 'Data';
+        dateFromText.textContent = 'De';
         dateFromText.classList.add('placeholder');
       }
 
@@ -411,19 +416,19 @@ window.CerneApp.SearchBar = {
       openPopover('to');
     });
 
-    filtersRow.querySelector('#cal-month-selector').addEventListener('click', (e) => {
+    searchRow.querySelector('#cal-month-selector').addEventListener('click', (e) => {
       e.stopPropagation();
       pickerMode = pickerMode === 'months' ? 'days' : 'months';
       renderCalendar();
     });
 
-    filtersRow.querySelector('#cal-year-selector').addEventListener('click', (e) => {
+    searchRow.querySelector('#cal-year-selector').addEventListener('click', (e) => {
       e.stopPropagation();
       pickerMode = pickerMode === 'years' ? 'days' : 'years';
       renderCalendar();
     });
 
-    filtersRow.querySelector('#cal-prev-btn').addEventListener('click', (e) => {
+    searchRow.querySelector('#cal-prev-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       if (viewMonth === 0) {
         viewMonth = 11;
@@ -434,7 +439,7 @@ window.CerneApp.SearchBar = {
       renderCalendar();
     });
 
-    filtersRow.querySelector('#cal-next-btn').addEventListener('click', (e) => {
+    searchRow.querySelector('#cal-next-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       if (viewMonth === 11) {
         viewMonth = 0;
@@ -452,12 +457,12 @@ window.CerneApp.SearchBar = {
       renderCalendar();
     };
 
-    filtersRow.querySelector('#cal-clear-btn').addEventListener('click', (e) => {
+    searchRow.querySelector('#cal-clear-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       resetCalendarDates();
     });
 
-    filtersRow.querySelector('#cal-apply-btn').addEventListener('click', (e) => {
+    searchRow.querySelector('#cal-apply-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       closePopover();
     });

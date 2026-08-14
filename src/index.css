@@ -1497,10 +1497,14 @@ textarea:focus-visible,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.6rem 1rem;
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-secondary);
-  color: var(--text-secondary);
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  
+  /* Fundo cinza bem suave e sem borda pesada */
+  background-color: #F0FDF4; /* #F0FDF4 */
+  border: 1px solid #E5E7EB; /* #E5E7EB */
+  color: #16A34A; /* #6B7280 */
+  
   border-radius: var(--radius-sm);
   font-size: 0.78rem;
   font-weight: 600;
@@ -1509,9 +1513,15 @@ textarea:focus-visible,
 }
 
 .filters-panel-clear-btn:hover {
-  background-color: var(--bg-accent);
+  /* No hover, o fundo ganha um leve destaque e o texto fica mais escuro */
+  background-color: var(--border-color); /* #E5E7EB */
   border-color: var(--border-color-hover);
-  color: var(--text-primary);
+  color: var(--text-primary); /* #111827 */
+  transform: translateY(-1px);
+}
+
+.filters-panel-clear-btn:active {
+  transform: translateY(0);
 }
 
 .filters-panel-grid {
@@ -2034,6 +2044,7 @@ textarea:focus-visible,
 
 .date-input-field {
   display: flex;
+  color: var(--success);
   align-items: center;
   gap: 0.5rem;
   background-color: var(--bg-primary);
@@ -2236,4 +2247,41 @@ textarea:focus-visible,
   color: var(--danger);
   cursor: pointer;
   font-weight: 600;
+}
+
+/* Container de apoio para alinhar ao lado da barra de pesquisa */
+.header-date-filter-wrapper {
+  display: flex;
+  align-items: center;
+  min-width: 320px;
+}
+
+/* Ajuste dos botões "Data" e "Até" na linha principal */
+.custom-date-range-container .date-input-field {
+  height: 52px; /* Mesma altura que o .search-input */
+  min-width: 130px; /* <--- AQUI: Garante tamanho fixo ideal para "DD/MM/YYYY" */
+  padding: 0 0.85rem;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0 0.85rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* 3. Evita que o texto ou ícone encolham */
+.date-input-field span {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* Garante que a grade de filtros secundária continue com 4 colunas perfeitas */
+.filters-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 1rem;
+  align-items: flex-end;
 }
