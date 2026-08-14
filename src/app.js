@@ -42,15 +42,15 @@
     appContainer.innerHTML = '';
 
     window.addEventListener('cerne:auth:required', () => {
-//      showLoginView();
+      showLoginView();
     });
 
-/*    const session = await window.CerneApp.Auth.getSession();
+   const session = await window.CerneApp.Auth.getSession();
     if (!session?.user) {
       showLoginView();
       return;
     }
-*/
+
     isAuthenticatedUser = true;
     await loadSettings();
 
