@@ -87,10 +87,15 @@ window.CerneApp.EvidenceDetails = {
               </div>
 
               <div class="detail-item">
-                <label class="detail-label" for="detail-categoria-select">Categoria CERNE</label>
-                <select id="detail-categoria-select" class="form-select">
-                  ${buildCategoryOptions(evidence.categoria)}
-                </select>
+                <label class="detail-label">Categorias CERNE</label>
+                <div class="tags-selector-wrapper">
+                  <div class="selected-tags-display" id="detail-selected-categories-display">
+                    <!-- As badges das categorias selecionadas são inseridas aqui dinamicamente -->
+                  </div>
+                  <select class="form-select" id="detail-add-category-select" style="margin-top: 0.35rem;">
+                    <!-- Dropdown para escolher e adicionar mais uma categoria -->
+                  </select>
+                </div>
               </div>
 
               <div class="detail-item">
@@ -173,6 +178,74 @@ window.CerneApp.EvidenceDetails = {
     const responsavelInput = overlay.querySelector('#detail-responsavel-input');
     const dataInput = overlay.querySelector('#detail-data-input');
     const resumoInput = overlay.querySelector('#detail-resumo-input');
+
+    // Garantir que carregamos um Array (lidando com retrocompatibilidade)
+let selectedCategories = Array.isArray(evidence.categorias) 
+  ? [...evidence.categorias] 
+  : (evidence.categoria ? [evidence.categoria] : []);
+
+// Função de renderização dinâmica das badges de categoria
+function renderCategoriesWidget() {
+  const displayContainer = overlay.querySelector('#detail-selected-categories-display');
+  const selectElement = overlay.querySelector('#detail-add-category-select');
+  if (!displayContainer || !selectElement) return;
+
+  displayContainer.innerHTML = '';
+  if (selectedCategories.length === 0) {
+    displayContainer.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-tertiary); font-style: italic;">Nenhuma categoria selecionada</span>';
+  } else {
+    selectedCategories.forEach(cat => {
+      const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
+      const badge = document.createElement('span');
+      badge.className = `badge ${categoryClass}`;
+      badge.style.display = 'inline-flex';
+      badge.style.alignItems = 'center';
+      badge.style.gap = '0.35rem';
+      badge.style.padding = '0.25rem 0.5rem';
+
+      badge.innerHTML = `
+        <span>${escapeHtml(cat)}</span>
+        <button type="button" class="tag-badge-remove" style="background:none; border:none; cursor:pointer; font-size: 0.9rem;" title="Remover categoria">&times;</button>
+      `;
+      badge.querySelector('.tag-badge-remove').addEventListener('click', (e) => {
+        e.preventDefault();
+        selectedCategories = selectedCategories.filter(c => c !== cat);
+        renderCategoriesWidget();
+      });
+      displayContainer.appendChild(badge);
+    });
+  }
+
+  selectElement.innerHTML = '';
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.textContent = 'Adicionar categoria...';
+  defaultOpt.selected = true;
+  selectElement.appendChild(defaultOpt);
+
+  const categoriesArray = Array.isArray(categories) ? categories : [];
+  const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
+
+  availableCategories.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = cat;
+    selectElement.appendChild(opt);
+  });
+
+  selectElement.disabled = availableCategories.length === 0;
+}
+
+// Inicializa e adiciona o listener
+renderCategoriesWidget();
+
+overlay.querySelector('#detail-add-category-select').addEventListener('change', (e) => {
+  const val = e.target.value;
+  if (val && !selectedCategories.includes(val)) {
+    selectedCategories.push(val);
+    renderCategoriesWidget();
+  }
+});
 
     let selectedTags = [...(evidence.tags || [])];
 
@@ -301,7 +374,8 @@ window.CerneApp.EvidenceDetails = {
       const updatedMetadata = {
         titulo: titleInput.value.trim() || evidence.nome,
         evento: eventoInput.value.trim() || 'Sem Evento',
-        categoria: categorySelect.value,
+        categoria: selectedCategories[0] || 'Geral', // Fallback retrocompatível
+        categorias: selectedCategories,              // Novo Array de categorias
         responsavel: responsavelInput.value.trim() || 'Não especificado',
         data: dataInput.value.trim() || new Date().toLocaleDateString('pt-BR'),
         resumo: resumoInput.value.trim() || 'Sem resumo disponível.',

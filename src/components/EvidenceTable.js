@@ -3,6 +3,15 @@ window.CerneApp.EvidenceTable = {
     const container = document.createElement('div');
     container.className = 'table-container';
 
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     if (evidences.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
@@ -46,6 +55,16 @@ window.CerneApp.EvidenceTable = {
       // Match CERNE category badge color
       const categoryClass = `badge-${evidence.categoria.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
 
+      // Trata se veio array de categorias ou string única
+const categoriesList = Array.isArray(evidence.categorias) && evidence.categorias.length > 0
+  ? evidence.categorias
+  : (evidence.categoria ? [evidence.categoria] : []);
+
+const categoriesHTML = categoriesList.map(cat => {
+  const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
+  return `<span class="badge ${categoryClass}">${escapeHtml(cat)}</span>`;
+}).join(' ');
+
       rowsHTML += `
         <tr data-id="${evidence.id}">
           <td>
@@ -62,9 +81,9 @@ window.CerneApp.EvidenceTable = {
           <td>${evidence.data}</td>
           <td>${evidence.evento}</td>
           <td>
-            <span class="badge ${categoryClass}">
-              ${evidence.categoria}
-            </span>
+            <div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">
+              ${categoriesHTML}
+            </div>
           </td>
           <td>
             <div style="display: flex; align-items: center; gap: 0.5rem;">

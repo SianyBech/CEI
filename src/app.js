@@ -42,15 +42,15 @@
     appContainer.innerHTML = '';
 
     window.addEventListener('cerne:auth:required', () => {
-      showLoginView();
+//      showLoginView();
     });
 
-    const session = await window.CerneApp.Auth.getSession();
+/*    const session = await window.CerneApp.Auth.getSession();
     if (!session?.user) {
       showLoginView();
       return;
     }
-
+*/
     isAuthenticatedUser = true;
     await loadSettings();
 
@@ -409,33 +409,46 @@
     
     const filteredEvidences = state.evidences.filter(item => {
       // 1. Text Search Filter (cumulative match)
-      if (query) {
-        const nome = normalizeString(item.nome);
-        const evento = normalizeString(item.evento);
-        const categoria = normalizeString(item.categoria);
-        const responsavel = normalizeString(item.responsavel);
-        const resumo = normalizeString(item.resumo);
-        const tags = (item.tags || []).map(t => normalizeString(t));
+        if (query) {
+      const nome = normalizeString(item.nome);
+      const evento = normalizeString(item.evento);
+      const responsavel = normalizeString(item.responsavel);
+      const resumo = normalizeString(item.resumo);
+      
+      // Trata categorias (array ou string)
+      const itemCats = Array.isArray(item.categorias) && item.categorias.length > 0
+        ? item.categorias
+        : (item.categoria ? [item.categoria] : []);
+      const categoriasStr = itemCats.map(c => normalizeString(c));
 
-        const matchesQuery = (
-          nome.includes(query) ||
-          evento.includes(query) ||
-          categoria.includes(query) ||
-          responsavel.includes(query) ||
-          resumo.includes(query) ||
-          tags.some(tag => tag.includes(query))
-        );
-        
-        if (!matchesQuery) return false;
-      }
+      const tags = (item.tags || []).map(t => normalizeString(t));
+
+      const matchesQuery = (
+        nome.includes(query) ||
+        evento.includes(query) ||
+        categoriasStr.some(cat => cat.includes(query)) ||
+        responsavel.includes(query) ||
+        resumo.includes(query) ||
+        tags.some(tag => tag.includes(query))
+      );
+      
+      if (!matchesQuery) return false;
+    }
 
       // 2. Select Dropdowns Filters
       if (state.filters.tipo !== 'todos' && item.tipo !== state.filters.tipo) {
         return false;
       }
-      if (state.filters.categoria !== 'todos' && item.categoria !== state.filters.categoria) {
-        return false;
-      }
+      // 2. Select Dropdowns Filters
+          if (state.filters.categoria !== 'todos') {
+            const itemCats = Array.isArray(item.categorias) && item.categorias.length > 0 
+              ? item.categorias 
+              : [item.categoria];
+              
+            if (!itemCats.includes(state.filters.categoria)) {
+              return false;
+            }
+          }
       if (state.filters.responsavel !== 'todos' && item.responsavel !== state.filters.responsavel) {
         return false;
       }

@@ -1959,10 +1959,30 @@ textarea:focus-visible,
   min-width: 0;
 }
 
+/* Botão de lixeira/remover itens em Configurações (Vermelho Suave) */
 .settings-item-remove {
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 38px;
+  min-height: 38px;
   padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #FEF2F2; /* Vermelho claro suave */
+  color: #DC2626;             /* Ícone em vermelho escuro para alto contraste */
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.settings-item-remove:hover {
+  background-color: #FEE2E2; /* Fundo levemente mais escuro ao passar o mouse */
+  border-color: #F87171;
+  color: #B91C1C;
+  transform: translateY(-1px);
+}
+
+.settings-item-remove i {
+  color: #DC2626; /* Garante que o ícone Lucide assuma a cor vermelha */
 }
 
 .settings-empty-state {
@@ -2337,3 +2357,29 @@ textarea:focus-visible,
   gap: 1rem;
   align-items: flex-end;
 }
+
+/* Estilo do botão de adicionar com verde bem clarinho */
+.btn-add-header {
+  background-color: #E6F4EA; /* Verde bem suave/clarinho */
+  color: #15803D;             /* Texto e ícone em verde escuro para dar contraste perfeito */
+  font-weight: 600;
+  border-radius: var(--radius-button);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-add-header:hover {
+  background-color: #D1E7DD; /* Leve escurecida ao passar o mouse */
+  color: #166534;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-add-header i {
+  color: #15803D; /* Mantém o ícone do mais (+) no mesmo tom de verde escuro */
+}
+

@@ -1,6 +1,15 @@
 window.CerneApp.EvidenceCard = {
   render(evidences, onViewDetailsClick) {
     const container = document.createElement('div');
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
     
     if (evidences.length === 0) {
       container.className = 'table-container';
@@ -29,7 +38,6 @@ window.CerneApp.EvidenceCard = {
     
     let cardsHTML = '';
     evidences.forEach(evidence => {
-      // Determine file icon
       let iconName = 'file';
       let iconClass = 'file-icon-documento';
       if (evidence.tipo === 'pdf') {
@@ -48,6 +56,15 @@ window.CerneApp.EvidenceCard = {
       // Match CERNE category badge color
       const categoryClass = `badge-${evidence.categoria.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
 
+        const categoriesList = Array.isArray(evidence.categorias) && evidence.categorias.length > 0
+    ? evidence.categorias
+    : (evidence.categoria ? [evidence.categoria] : []);
+
+        const categoriesHTML = categoriesList.map(cat => {
+          const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
+          return `<span class="badge ${categoryClass}">${escapeHtml(cat)}</span>`;
+        }).join(' ');
+
       cardsHTML += `
         <div class="evidence-card" data-id="${evidence.id}">
           <div class="card-header">
@@ -58,11 +75,10 @@ window.CerneApp.EvidenceCard = {
             <span class="file-type-badge">${evidence.tipo}</span>
           </div>
 
-          <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
-            <span class="badge ${categoryClass}">
-              ${evidence.categoria}
-            </span>
-          </div>
+        
+        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+          ${categoriesHTML}
+        </div>
 
           <div class="card-body">
             <strong style="display:block; margin-bottom: 2px; color: var(--text-primary); font-size: 0.8rem;">

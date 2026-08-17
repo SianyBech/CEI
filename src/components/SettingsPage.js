@@ -28,6 +28,19 @@ window.CerneApp.SettingsPage = {
               ${mainDescription}
             </p>
           </div>
+
+          <!-- NOVO LOCAL DOS BOTÕES DE ADICIONAR (NA BARRA DE CIMA) -->
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-left: auto; margin-right: 0.5rem;">
+            <button class="btn btn-add-header" id="add-category-btn" type="button" style="${showCategories ? '' : 'display: none;'}">
+              <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+              Adicionar categoria
+            </button>
+            <button class="btn btn-add-header" id="add-tag-btn" type="button" style="${showTags ? '' : 'display: none;'}">
+              <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+              Adicionar tag
+            </button>
+          </div>
+
           <button class="modal-close" id="settings-close-btn">
             <i data-lucide="x" style="width: 20px; height: 20px;"></i>
           </button>
@@ -36,27 +49,15 @@ window.CerneApp.SettingsPage = {
         <div class="modal-body settings-modal-body">
           <div class="settings-panel">
 
-            <!-- Seção de Categorias -->
+            <!-- Seção de Categorias (Sem o botão antigo aqui dentro) -->
             <div class="settings-section" style="${showCategories ? '' : 'display: none;'}">
-              <div class="settings-section-header">
-                <div>
-                  <h3>Categoria CERNE</h3>
-                  <p>Gerencie as opções visíveis no filtro de categoria.</p>
-                </div>
-                <button class="btn btn-secondary" id="add-category-btn" type="button">Adicionar categoria</button>
-              </div>
+              
               <div id="categories-list" class="settings-list"></div>
             </div>
 
-            <!-- Seção de Tags -->
+            <!-- Seção de Tags (Sem o botão antigo aqui dentro) -->
             <div class="settings-section" style="${showTags ? '' : 'display: none;'}">
-              <div class="settings-section-header">
-                <div>
-                  <h3>Tags</h3>
-                  <p>Gerencie as opções visíveis no filtro de tags.</p>
-                </div>
-                <button class="btn btn-secondary" id="add-tag-btn" type="button">Adicionar tag</button>
-              </div>
+              
               <div id="tags-list" class="settings-list"></div>
             </div>
 
