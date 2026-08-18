@@ -31,6 +31,13 @@ window.CerneApp.Api = {
     return this.request(`/api/evidences/${encodeURIComponent(id)}`);
   },
 
+  async createEvidence(metadata) {
+  return this.request('/api/evidences', {
+    method: 'POST',
+    body: JSON.stringify(metadata)
+  });
+},
+
   async updateEvidence(id, metadata) {
     return this.request(`/api/evidences/${encodeURIComponent(id)}`, {
       method: 'PATCH',

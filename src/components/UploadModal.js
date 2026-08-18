@@ -376,10 +376,13 @@ window.CerneApp.UploadModal = {
               </div>
  
               <div class="form-group">
-                <label class="form-label" for="edit-categoria">Categoria CERNE</label>
-                <select class="form-select" id="edit-categoria">
-                  ${buildCategoryOptions(evidence.categoria)}
-                </select>
+                <label class="form-label">Categorias CERNE</label>
+                <div class="tags-selector-wrapper">
+                  <div class="selected-tags-display" id="upload-selected-categories-display"></div>
+                  <select class="form-select" id="upload-add-category-select" style="margin-top: 0.35rem;">
+                    <!-- Preenchido via JS -->
+                  </select>
+                </div>
               </div>
  
               <div class="form-group">
@@ -419,6 +422,71 @@ window.CerneApp.UploadModal = {
         nameAttr: 'data-lucide',
         node: modalBody
       });
+
+      let selectedCategories = [];
+
+function renderUploadCategoriesWidget() {
+  const displayContainer = overlay.querySelector('#upload-selected-categories-display');
+  const selectElement = overlay.querySelector('#upload-add-category-select');
+  if (!displayContainer || !selectElement) return;
+
+  displayContainer.innerHTML = '';
+  if (selectedCategories.length === 0) {
+    displayContainer.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-tertiary); font-style: italic;">Nenhuma categoria selecionada</span>';
+  } else {
+    selectedCategories.forEach(cat => {
+      const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
+      const badge = document.createElement('span');
+      badge.className = `badge ${categoryClass}`;
+      badge.style.display = 'inline-flex';
+      badge.style.alignItems = 'center';
+      badge.style.gap = '0.35rem';
+      badge.style.padding = '0.25rem 0.5rem';
+
+      badge.innerHTML = `
+        <span>${escapeHtml(cat)}</span>
+        <button type="button" class="tag-badge-remove" style="background:none; border:none; cursor:pointer; font-size: 0.9rem;" title="Remover categoria">&times;</button>
+      `;
+      badge.querySelector('.tag-badge-remove').addEventListener('click', (e) => {
+        e.preventDefault();
+        selectedCategories = selectedCategories.filter(c => c !== cat);
+        renderUploadCategoriesWidget();
+      });
+      displayContainer.appendChild(badge);
+    });
+  }
+
+  selectElement.innerHTML = '';
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.textContent = 'Adicionar categoria...';
+  defaultOpt.selected = true;
+  selectElement.appendChild(defaultOpt);
+
+  const categoriesArray = Array.isArray(categories) ? categories : [];
+  const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
+
+  availableCategories.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = cat;
+    selectElement.appendChild(opt);
+  });
+
+  selectElement.disabled = availableCategories.length === 0;
+}
+
+// Inicializa a lista
+renderUploadCategoriesWidget();
+
+// Evento ao escolher uma categoria no dropdown
+overlay.querySelector('#upload-add-category-select').addEventListener('change', (e) => {
+  const val = e.target.value;
+  if (val && !selectedCategories.includes(val)) {
+    selectedCategories.push(val);
+    renderUploadCategoriesWidget();
+  }
+});
 
       let selectedTags = [...(evidence.tags || [])];
 
@@ -499,7 +567,22 @@ window.CerneApp.UploadModal = {
       return; // Interrompe o envio se o usuário clicar em "Cancelar"
     }
   }
-  
+
+  const newEvidence = {
+  id: 'ev-' + Date.now(),
+  nome: fileInput.files[0]?.name || 'Nova Evidência',
+  titulo: titleInput.value.trim(),
+  evento: eventoInput.value.trim(),
+  // Envia a lista completa de categorias selecionadas:
+  categorias: selectedCategories,
+  categoria: selectedCategories[0] || 'Geral', // Fallback
+  responsavel: responsavelInput.value.trim(),
+  data: dataInput.value.trim() || new Date().toLocaleDateString('pt-BR'),
+  tags: selectedTags,
+  resumo: 'Processando resumo...',
+  textoExtraido: 'Conteúdo em processamento...'
+};
+
         const updatedMetadata = {
           titulo: modalBody.querySelector('#edit-titulo').value.trim() || evidence.nome,
           evento: modalBody.querySelector('#edit-evento').value.trim() || 'Sem Evento',
