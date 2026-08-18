@@ -12,6 +12,23 @@ window.CerneApp.EvidenceTable = {
         .replace(/'/g, '&#39;');
     }
 
+    function getCategoryStyle(categoryName) {
+    if (!categoryName) return '';
+
+    let hash = 0;
+    for (let i = 0; i < categoryName.length; i++) {
+      hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    const hue = Math.abs(hash % 360);
+    const backgroundColor = `hsl(${hue}, 70%, 93%)`;
+    const textColor = `hsl(${hue}, 65%, 28%)`;
+    const borderColor = `hsl(${hue}, 60%, 82%)`;
+
+    return `background-color: ${backgroundColor}; color: ${textColor}; border: 1px solid ${borderColor};`;
+  }
+
+
     if (evidences.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
@@ -60,11 +77,12 @@ const categoriesList = Array.isArray(evidence.categorias) && evidence.categorias
   ? evidence.categorias
   : (evidence.categoria ? [evidence.categoria] : []);
 
-// Onde você renderiza a lista de categorias:
+// Onde você monta as badges de categorias na tabela:
 const categoriesHTML = categoriesList.map(cat => {
-  const dynamicStyle = getCategoryStyle(cat);
-  
-  return `<span class="badge badge-dynamic" style="${dynamicStyle}">${escapeHtml(cat)}</span>`;
+  // Chama o utils com fallback seguro caso ainda não tenha carregado algo
+  const customStyle = window.getCategoryStyle ? window.getCategoryStyle(cat) : '';
+
+  return `<span class="badge" style="${customStyle}">${cat}</span>`;
 }).join(' ');
 
       rowsHTML += `
