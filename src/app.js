@@ -933,34 +933,44 @@ function updateDashboardCounters() {
 }
 
 function openEvidenceDetails(evidenceId) {
-    const evidence = state.evidences.find(item => item.id === evidenceId);
-    if (!evidence) return;
+  const evidence = state.evidences.find(item => item.id === evidenceId);
+  if (!evidence) return;
 
-    const detailsNode = window.CerneApp.EvidenceDetails.render(
-      evidence,
-      () => {
-        // Callback de fechamento
-      },
-      (updatedEvidence) => {
-        // Callback de salvar edição
-        state.evidences = state.evidences.map(item => item.id === updatedEvidence.id ? updatedEvidence : item);
-        populateFilterOptions();
-        renderList();
-        updateDashboardCounters();
-      },
-      state.appSettings.categories,
-      state.appSettings.tags,
-      // NOVO: Adicione o callback de exclusão aqui!
-      (deletedId) => {
-        state.evidences = state.evidences.filter(item => item.id !== deletedId);
-        populateFilterOptions();
-        renderList();
-        updateDashboardCounters();
-      }
-    );
-    document.body.appendChild(detailsNode);
-    lucide.createIcons();
-  }
+  const detailsNode = window.CerneApp.EvidenceDetails.render(
+    evidence,
+    () => {},
+    (updatedEvidence) => {
+      // Callback de salvar edição
+      state.evidences = state.evidences.map(item => {
+        if (item.id === updatedEvidence.id) {
+          return {
+            ...item,
+            ...updatedEvidence,
+            // Garante que a lista de categorias seja mantida no estado global
+            categorias: Array.isArray(updatedEvidence.categorias) && updatedEvidence.categorias.length > 0
+              ? updatedEvidence.categorias
+              : (updatedEvidence.categoria ? [updatedEvidence.categoria] : [])
+          };
+        }
+        return item;
+      });
+
+      populateFilterOptions();
+      renderList();
+      updateDashboardCounters();
+    },
+    state.appSettings.categories,
+    state.appSettings.tags,
+    (deletedId) => {
+      state.evidences = state.evidences.filter(item => item.id !== deletedId);
+      populateFilterOptions();
+      renderList();
+      updateDashboardCounters();
+    }
+  );
+  document.body.appendChild(detailsNode);
+  lucide.createIcons();
+}
   document.addEventListener('DOMContentLoaded', init);
   
   })();

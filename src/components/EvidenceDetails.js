@@ -371,16 +371,19 @@ overlay.querySelector('#detail-add-category-select').addEventListener('change', 
     }
   }
 
-      const updatedMetadata = {
-        titulo: titleInput.value.trim() || evidence.nome,
-        evento: eventoInput.value.trim() || 'Sem Evento',
-        categoria: selectedCategories[0] || 'Geral', // Fallback retrocompatível
-        categorias: selectedCategories,              // Novo Array de categorias
-        responsavel: responsavelInput.value.trim() || 'Não especificado',
-        data: dataInput.value.trim() || new Date().toLocaleDateString('pt-BR'),
-        resumo: resumoInput.value.trim() || 'Sem resumo disponível.',
-        tags: selectedTags
-      };
+      // Garante que enviamos a lista completa de categorias
+const updatedMetadata = {
+  titulo: titleInput.value.trim() || evidence.nome,
+  evento: eventoInput.value.trim() || 'Sem Evento',
+  // Mantemos 'categorias' como a lista principal
+  categorias: selectedCategories,
+  // Mantemos 'categoria' apenas como fallback/retrocompatibilidade
+  categoria: selectedCategories.length > 0 ? selectedCategories[0] : 'Geral',
+  responsavel: responsavelInput.value.trim() || 'Não especificado',
+  data: dataDigitada,
+  resumo: resumoInput.value.trim() || 'Sem resumo disponível.',
+  tags: selectedTags
+};
 
       setSavingState(true);
 
