@@ -113,6 +113,7 @@ async function initPostgresPool() {
       "data" text,
       "evento" text,
       "categoria" text,
+      "categorias" jsonb NOT NULL DEFAULT '[]'::jsonb,
       "responsavel" text,
       "tags" jsonb NOT NULL DEFAULT '[]'::jsonb,
       "resumo" text,
@@ -141,11 +142,11 @@ async function initPostgresPool() {
     await pool.query('UPDATE public.evidences SET "created_at" = COALESCE("created_at", NOW()) WHERE "created_at" IS NULL');
     await pool.query('UPDATE public.evidences SET "updated_at" = COALESCE("updated_at", "created_at") WHERE "updated_at" IS NULL');
 
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.app_settings (
-        key text PRIMARY KEY,
-        value jsonb NOT NULL DEFAULT '{}'::jsonb
-      )
+       await pool.query(`
+      UPDATE public.evidences 
+      SET "categorias" = jsonb_build_array("categoria") 
+      WHERE ("categorias" IS NULL OR "categorias" = '[]'::jsonb) 
+        AND "categoria" IS NOT NULL AND "categoria" != ''
     `);
 
     const defaultCategories = ['Capacitação', 'Planejamento', 'Gestão', 'Assessoria', 'Sustentabilidade', 'Qualificação'];
@@ -164,9 +165,8 @@ async function initPostgresPool() {
 
 const upload = multer({
   dest: tempDir,
-  limits: {
-    fileSize: 30 * 1024 * 1024
-  },
+  limits: { fileSize: 30 * 1024 * 1024 },
+
   fileFilter: (req, file, cb) => {
     const extension = path.extname(file.originalname || '').toLowerCase();
     const mimeType = (file.mimetype || '').toLowerCase();
@@ -254,8 +254,29 @@ function normalizeTags(value) {
   return [];
 }
 
+function normalizeCategories(value, fallbackCategory = 'Geral') {
+  if (Array.isArray(value)) {
+    const list = value
+      .filter((item) => typeof item === 'string' && item.trim())
+      .map((item) => item.trim());
+    if (list.length > 0) return list;
+  }
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return normalizeCategories(parsed, fallbackCategory);
+    } catch (e) {
+      return [value.trim()];
+    }
+    return [value.trim()];
+  }
+  return fallbackCategory ? [fallbackCategory] : ['Geral'];
+}
+
 function serializeRow(row, req) {
   if (!row) return null;
+
+   const categoriesList = normalizeCategories(row.categorias, row.categoria);
 
   return {
     id: row.id,
@@ -264,7 +285,8 @@ function serializeRow(row, req) {
     tipo: row.tipo,
     data: row.data,
     evento: row.evento,
-    categoria: row.categoria,
+    categoria: categoriesList[0] || row.categoria || 'Geral', // Mantém retrocompatibilidade
+    categorias: categoriesList,                               // Novo campo com array
     responsavel: row.responsavel,
     tags: normalizeTags(row.tags),
     resumo: row.resumo,
@@ -636,6 +658,7 @@ function buildFallbackMetadata(originalName, extension, extractedText) {
   const metadata = {
     evento: 'Registro Interno',
     categoria: 'Gestão',
+    categorias: ['Gestão'],
     responsavel: 'Equipe CEI',
     tags: ['CERNE', 'Evidência'],
     resumo: 'Documento analisado localmente com extração de texto e classificação inicial.',
@@ -644,6 +667,7 @@ function buildFallbackMetadata(originalName, extension, extractedText) {
 
   if (lowerName.includes('ata') || lowerName.includes('reuni')) {
     metadata.categoria = 'Planejamento';
+    metadata.categorias = ['Planejamento'];
     metadata.evento = 'Ata de Reunião';
     metadata.tags = ['Ata', 'Reunião', 'Planejamento'];
     metadata.resumo = 'Ata gerada a partir do arquivo com informações de planejamento e decisões.';
@@ -816,7 +840,7 @@ app.use(attachAuthContext);
 app.get('/api/evidences', requirePermission('view'), async (req, res, next) => {
   try {
     console.log('[EVIDENCES] Buscando evidências...');
-    const rows = await dbClient.many(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm" FROM public.evidences ORDER BY "criadoEm" DESC`);
+    const rows = await dbClient.many(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "categorias", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm" FROM public.evidences ORDER BY "criadoEm" DESC`);
     res.json((rows || []).map((row) => serializeRow(row, req)));
   } catch (error) {
     console.error('[EVIDENCES] Erro ao buscar evidências:', error);
@@ -826,7 +850,7 @@ app.get('/api/evidences', requirePermission('view'), async (req, res, next) => {
 
 app.get('/api/evidences/:id', requirePermission('view'), async (req, res, next) => {
   try {
-    const row = await dbClient.one(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
+    const row = await dbClient.one(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "categorias", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
     if (!row) {
       return res.status(404).json({ error: 'Evidência não encontrada.' });
     }
@@ -912,17 +936,50 @@ app.get('/api/preview/:id', requirePermission('view'), async (req, res, next) =>
 
 app.patch('/api/evidences/:id', requirePermission('edit'), async (req, res, next) => {
   try {
-    const { titulo, evento, categoria, responsavel, tags, resumo, data } = req.body;
-    if (!titulo || !evento || !categoria || !responsavel || !Array.isArray(tags) || !resumo || !data) {
+    const { titulo, evento, categorias, categoria, responsavel, tags, resumo, data } = req.body;
+
+    if (!titulo || !evento || !responsavel || !Array.isArray(tags) || !resumo || !data) {
       return res.status(400).json({ error: 'Dados incompletos para atualização de metadados.' });
     }
 
-    const result = await dbClient.run(`UPDATE public.evidences SET "titulo" = $1, "evento" = $2, "categoria" = $3, "responsavel" = $4, "tags" = $5, "resumo" = $6, "data" = $7, "updated_by" = $8, "updated_at" = $9 WHERE "id" = $10`, [titulo, evento, categoria, responsavel, JSON.stringify(tags), resumo, data, req.user?.email || null, new Date().toISOString(), req.params.id]);
+    const categoriesList = normalizeCategories(categorias, categoria);
+
+    const primaryCategory = categoriesList[0] || 'Geral';
+
+    const tagsList = normalizeTags(tags);
+
+    const result = await dbClient.run(`
+      UPDATE public.evidences 
+      SET "titulo" = $1, 
+          "evento" = $2, 
+          "categoria" = $3, 
+          "categorias" = $4::jsonb, 
+          "responsavel" = $5, 
+          "tags" = $6::jsonb, 
+          "resumo" = $7, 
+          "data" = $8 
+      WHERE "id" = $9
+    `, [
+      titulo,
+      evento,
+      primaryCategory,
+      JSON.stringify(categoriesList),
+      responsavel,
+      JSON.stringify(tagsList),
+      resumo,
+      data,
+      req.params.id
+    ]);
+
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Evidência não encontrada.' });
     }
 
-    const updatedRow = await dbClient.one(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
+    const updatedRow = await dbClient.one(`
+      SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "categorias", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm"
+      FROM public.evidences WHERE "id" = $1
+    `, [req.params.id]);
+
     res.json(serializeRow(updatedRow, req));
   } catch (error) {
     console.error('[EVIDENCES] Erro ao atualizar evidência:', error);
@@ -1012,7 +1069,7 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
         metadata.resumo = [metadata.resumo, processingNote].filter(Boolean).join(' ').slice(0, 280);
       }
 
-      console.log(`[UPLOAD] Metadados gerados para ${originalName}`);
+  console.log(`[UPLOAD] Metadados gerados para ${originalName}`);
 
       const storagePath = buildStoragePath(originalName);
       await uploadFileToSupabase(tempPath, storagePath, originalName, mimeType);
@@ -1024,10 +1081,26 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       const createdAt = new Date().toISOString();
       const tipo = extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento';
 
+      const categoriesList = normalizeCategories(metadata.categorias, metadata.categoria);
+
+
+      const primaryCategory = categoriesList[0] || 'Geral';
+
+      // 2. Query ajustada com 21 colunas e 21 placeholders com casts para ::jsonb
       const insertQuery = `
         INSERT INTO public.evidences (
-          "titulo", "nome", "tipo", "data", "evento", "categoria", "responsavel", "tags", "resumo", "textoExtraido", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm", "created_by", "created_at", "updated_by", "updated_at"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+          "titulo", "nome", "tipo", "data", "evento", 
+          "categoria", "categorias", "responsavel", "tags", "resumo", 
+          "textoExtraido", "storage_path", "storage_filename", "original_filename", "mime_type", 
+          "file_size", "criadoEm", "created_by", "created_at", "updated_by", 
+          "updated_at"
+        ) VALUES (
+          $1, $2, $3, $4, $5, 
+          $6, $7::jsonb, $8, $9::jsonb, $10, 
+          $11, $12, $13, $14, $15, 
+          $16, $17, $18, $19, $20, 
+          $21
+        )
         RETURNING "id"
       `;
 
@@ -1035,26 +1108,27 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
 
       try {
         insertResult = await dbClient.query(insertQuery, [
-          originalName,
-          originalName,
-          tipo,
-          new Date().toLocaleDateString('pt-BR'),
-          metadata.evento,
-          metadata.categoria,
-          metadata.responsavel,
-          JSON.stringify(metadata.tags || []),
-          metadata.resumo,
-          metadata.textoExtraido,
-          storagePath,
-          path.basename(storagePath),
-          originalName,
-          mimeType,
-          fileSize,
-          createdAt,
-          req.user?.email || null,
-          createdAt,
-          req.user?.email || null,
-          createdAt
+          originalName,                             // $1:  titulo
+          originalName,                             // $2:  nome
+          tipo,                                     // $3:  tipo
+          new Date().toLocaleDateString('pt-BR'),   // $4:  data
+          metadata.evento,                          // $5:  evento
+          primaryCategory,                          // $6:  categoria (fallback string)
+          JSON.stringify(categoriesList),           // $7:  categorias (JSONB array)
+          metadata.responsavel,                     // $8:  responsavel
+          JSON.stringify(metadata.tags || []),      // $9:  tags (JSONB array)
+          metadata.resumo,                          // $10: resumo
+          metadata.textoExtraido,                   // $11: textoExtraido
+          storagePath,                              // $12: storage_path
+          path.basename(storagePath),               // $13: storage_filename
+          originalName,                             // $14: original_filename
+          mimeType,                                 // $15: mime_type
+          fileSize,                                 // $16: file_size
+          createdAt,                                // $17: criadoEm
+          req.user?.email || null,                  // $18: created_by
+          createdAt,                                // $19: created_at
+          req.user?.email || null,                  // $20: updated_by
+          createdAt                                 // $21: updated_at
         ]);
       } catch (dbError) {
         await deleteFileFromSupabase(storagePath);
@@ -1064,6 +1138,7 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       const id = insertResult.rows[0]?.id;
       console.log(`[UPLOAD] Registro salvo no banco para ${id}`);
 
+      // 3. Retorna o JSON serializado com ambas as propriedades para o front-end
       res.json({
         id,
         titulo: originalName,
@@ -1071,9 +1146,10 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
         tipo,
         data: new Date().toLocaleDateString('pt-BR'),
         evento: metadata.evento,
-        categoria: metadata.categoria,
+        categoria: primaryCategory,
+        categorias: categoriesList,
         responsavel: metadata.responsavel,
-        tags: metadata.tags,
+        tags: metadata.tags || [],
         resumo: metadata.resumo,
         textoExtraido: metadata.textoExtraido,
         storagePath,
