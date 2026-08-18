@@ -1,81 +1,17 @@
 window.CerneApp.UploadModal = {
-  // Helper to generate mock intelligence metadata based on selected filename
-  generateMockAIResult(fileName) {
-    const nameLower = fileName.toLowerCase();
-    let tipo = 'documento';
-    let categoria = 'Gestão';
-    let evento = 'Reunião de Alinhamento de Metas';
-    let responsavel = 'Gabriela Mendes';
-    let tags = ['CERNE', 'Gestão', 'Incubadora'];
-    let resumo = 'Documento institucional gerado para registro de atividades da incubadora.';
-    let textoExtraido = 'CONTEÚDO EXTRAÍDO VIA OCR:\n\nEste documento contém as informações de registro e conformidade das atividades da incubadora.';
-
-    if (nameLower.endsWith('.pdf')) {
-      tipo = 'pdf';
-    } else if (nameLower.endsWith('.png') || nameLower.endsWith('.jpg') || nameLower.endsWith('.jpeg')) {
-      tipo = 'imagem';
-    }
-
-    if (nameLower.includes('ata') || nameLower.includes('reuniao') || nameLower.includes('reunião')) {
-      categoria = 'Planejamento';
-      evento = 'Reunião de Planejamento de Metas';
-      resumo = `Ata de reunião referente ao planejamento de metas e alinhamento estratégico, formalizada a partir do arquivo '${fileName}'.`;
-      tags = ['Ata', 'Reunião', 'Decisões'];
-      textoExtraido = `ATA DE REUNIÃO DE ALINHAMENTO DE METAS E PROCESSOS\nData de Execução: ${new Date().toLocaleDateString('pt-BR')}\nResponsável: ${responsavel}\nPauta: Discussão sobre o cumprimento dos processos-chave CERNE e alocação de recursos operacionais da incubadora.\nDeliberações: As metas de atendimento de startups para o corrente semestre foram revisadas e aprovadas pela gerência. Fica estabelecida a prioridade nas assessorias tecnológicas.`;
-    } else if (nameLower.includes('workshop') || nameLower.includes('curso') || nameLower.includes('capacitacao') || nameLower.includes('capacitação') || nameLower.includes('palestra')) {
-      categoria = 'Capacitação';
-      evento = 'Workshop de Inteligência Artificial Aplicada';
-      responsavel = 'Carlos Silva';
-      resumo = `Registro do evento de capacitação e formação tecnológica '${fileName}', voltado ao empreendedorismo inovador.`;
-      tags = ['Capacitação', 'Treinamento', 'Workshop', 'IA'];
-      textoExtraido = `REGISTRO DE CAPACITAÇÃO E EVENTOS DE FORMACÃO\nEvento: Workshop Prático de Inteligência Artificial Aplicada a Negócios.\nFacilitador: ${responsavel}\nParticipantes: Startups residentes, pré-incubadas e equipe executiva da incubadora.\nConteúdo Programático: Introdução a Large Language Models (LLMs), automação de processos, boas práticas de engenharia de prompt e casos de uso de IA na gestão de evidências CERNE.`;
-    } else if (nameLower.includes('contrato') || nameLower.includes('termo') || nameLower.includes('acordo') || nameLower.includes('convenio') || nameLower.includes('convênio')) {
-      categoria = 'Assessoria';
-      evento = 'Programa de Assessoria em Propriedade Intelectual';
-      responsavel = 'Marcos Venícius';
-      resumo = `Contrato de parceria e assessoria técnica/jurídica '${fileName}' analisado pelo assistente de IA.`;
-      tags = ['Acordo', 'Contrato', 'Assessoria', 'Jurídico'];
-      textoExtraido = `CONTRATO DE PRESTAÇÃO DE ASSESSORIAS E PARCERIAS\nPartes: Centro de Empreendedorismo e Incubação e startup associada.\nObjeto: Prestação de assessorias especializadas em gestão de tecnologia, modelagem financeira e proteção de propriedade intelectual (patentes e marcas).\nData de validade: Vigente a partir de 2026. Assinaturas confirmadas pelas vias eletrônicas digitais.`;
-    } else if (nameLower.includes('financeiro') || nameLower.includes('relatorio') || nameLower.includes('relatório') || nameLower.includes('contas')) {
-      categoria = 'Gestão';
-      evento = 'Relatório de Prestação de Contas Trimestral';
-      resumo = `Relatório gerencial financeiro contendo faturamento, captação de recursos e custos operacionais extraídos do arquivo '${fileName}'.`;
-      tags = ['Gestão', 'Relatório', 'Financeiro', 'Auditoria'];
-      textoExtraido = `RELATÓRIO FINANCEIRO E ORÇAMENTÁRIO ANUAL\nCompetência: Exercício 2026.\nResumo de Saldo: Apuração de receitas operacionais originadas de taxas de incubação e repasses de editais governamentais (FINEP/CNPq).\nDespesas operacionais: Custos de manutenção do espaço compartilhado (coworking), assessorias externas e serviços gerais em conformidade com as diretrizes do plano de negócios.`;
-    } else if (nameLower.includes('certificado') || nameLower.includes('diploma')) {
-      categoria = 'Qualificação';
-      evento = 'Cerimônia de Qualificação e Certificação';
-      responsavel = 'Ana Paula de Souza';
-      resumo = `Certificado de conclusão de assessoria técnica de startup, validado para comprovação de qualificação do nível CERNE.`;
-      tags = ['Certificado', 'Qualificação', 'Conclusão'];
-      textoExtraido = `CERTIFICADO DE CONFORMIDADE E QUALIFICAÇÃO DE EMPRESAS\nO Centro de Empreendedorismo certifica que a startup participante cumpriu com êxito todas as etapas estabelecidas na trilha de desenvolvimento, mentorias e qualificação tecnológica orientada pelas diretrizes CERNE.\nData de emissão: ${new Date().toLocaleDateString('pt-BR')}. Assinado eletronicamente por Ana Paula de Souza.`;
-    } else if (nameLower.includes('sustentabilidade') || nameLower.includes('ecologico') || nameLower.includes('esg') || nameLower.includes('ambiental')) {
-      categoria = 'Sustentabilidade';
-      evento = 'Implantação do Plano de Gestão Ambiental';
-      responsavel = 'Carlos Silva';
-      resumo = `Plano de práticas ecológicas e sustentabilidade da incubadora extraído do arquivo '${fileName}'.`;
-      tags = ['Sustentabilidade', 'Ecológico', 'ESG', 'Diretrizes'];
-      textoExtraido = `PLANO DE GESTÃO AMBIENTAL - INCUBADORA SUSTENTÁVEL\nElaborado por: Carlos Silva - Comitê de Sustentabilidade.\nDiretrizes Operacionais: Estabelece as metas de descarte correto de resíduos eletroeletrônicos e a redução de papel e descartáveis de plástico no ambiente de coworking da incubadora.`;
-    }
-
-    return {
-      id: "ev-" + Date.now(),
-      nome: fileName,
-      tipo: tipo,
-      data: new Date().toLocaleDateString('pt-BR'),
-      evento: evento,
-      categoria: categoria,
-      responsavel: responsavel,
-      tags: tags,
-      resumo: resumo,
-      textoExtraido: textoExtraido
-    };
-  },
-
   render(onClose, onAddEvidence, categories = [], tagsList = []) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.id = 'upload-modal-overlay';
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
     overlay.innerHTML = `
       <div class="modal-content" id="modal-content-box">
@@ -119,7 +55,6 @@ window.CerneApp.UploadModal = {
       </div>
     `;
 
-    // Modal elements
     const fileInput = overlay.querySelector('#file-input-element');
     const dropzone = overlay.querySelector('#dropzone-box');
     const fileInfoBox = overlay.querySelector('#file-selected-info-box');
@@ -132,10 +67,8 @@ window.CerneApp.UploadModal = {
 
     let selectedFile = null;
 
-    // Trigger file input click
     dropzone.addEventListener('click', () => fileInput.click());
 
-    // Drag and drop events
     dropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
       dropzone.style.borderColor = 'var(--accent)';
@@ -151,7 +84,6 @@ window.CerneApp.UploadModal = {
       e.preventDefault();
       dropzone.style.borderColor = 'var(--border-color)';
       dropzone.style.backgroundColor = '#fafafa';
-      
       if (e.dataTransfer.files.length > 0) {
         handleFileSelect(e.dataTransfer.files[0]);
       }
@@ -167,7 +99,6 @@ window.CerneApp.UploadModal = {
       selectedFile = file;
       selectedFileName.textContent = file.name;
       
-      // Update icon based on file extension
       const ext = file.name.split('.').pop().toLowerCase();
       if (['png', 'jpg', 'jpeg'].includes(ext)) {
         selectedFileIcon.setAttribute('data-lucide', 'image');
@@ -181,9 +112,7 @@ window.CerneApp.UploadModal = {
       }
       
       lucide.createIcons({
-        attrs: {
-          style: 'width: 16px; height: 16px;'
-        },
+        attrs: { style: 'width: 16px; height: 16px;' },
         nameAttr: 'data-lucide',
         node: fileInfoBox
       });
@@ -200,10 +129,9 @@ window.CerneApp.UploadModal = {
       submitBtn.setAttribute('disabled', 'true');
     });
 
-    // Close handlers
     const doClose = () => {
       overlay.remove();
-      onClose();
+      if (typeof onClose === 'function') onClose();
     };
 
     closeBtn.addEventListener('click', doClose);
@@ -212,7 +140,6 @@ window.CerneApp.UploadModal = {
       if (e.target === overlay) doClose();
     });
 
-    // Submit / Processing logic
     submitBtn.addEventListener('click', () => {
       if (!selectedFile) return;
 
@@ -241,10 +168,7 @@ window.CerneApp.UploadModal = {
         </div>
       `;
 
-      lucide.createIcons({
-        nameAttr: 'data-lucide',
-        node: modalBody
-      });
+      lucide.createIcons({ nameAttr: 'data-lucide', node: modalBody });
 
       const progressFill = modalBody.querySelector('#upload-progress-fill');
       const logConsole = modalBody.querySelector('#steps-log-console');
@@ -299,52 +223,22 @@ window.CerneApp.UploadModal = {
                 </div>
               </div>
             `;
-            lucide.createIcons({
-              nameAttr: 'data-lucide',
-              node: modalBody
-            });
+            lucide.createIcons({ nameAttr: 'data-lucide', node: modalBody });
             closeBtn.style.display = 'flex';
           });
       }, 300);
     });
 
     function showSuccessScreen(evidence) {
-      // Re-enable closing
       closeBtn.style.display = 'flex';
       
       const modalBody = overlay.querySelector('#modal-body-container');
       const footer = overlay.querySelector('#modal-footer-container');
 
-      // Update footer
       footer.innerHTML = `
         <button class="btn btn-primary" id="modal-success-done-btn">Confirmar e Salvar</button>
       `;
 
-      function escapeHtml(value) {
-        return String(value || '')
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;');
-      }
-
-      function buildCategoryOptions(selectedCategory) {
-        let html = '';
-        let hasSelected = false;
-        const cats = Array.isArray(categories) ? categories : [];
-        cats.forEach(cat => {
-          const isSel = (cat === selectedCategory);
-          if (isSel) hasSelected = true;
-          html += `<option value="${escapeHtml(cat)}" ${isSel ? 'selected' : ''}>${escapeHtml(cat)}</option>`;
-        });
-        if (!hasSelected && selectedCategory) {
-          html = `<option value="${escapeHtml(selectedCategory)}" selected>${escapeHtml(selectedCategory)}</option>` + html;
-        }
-        return html;
-      }
-
-      // Update body with a beautiful results summary and editable form
       modalBody.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 1.25rem; animation: fadeIn var(--transition-normal) forwards;">
           <div style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.5rem;">
@@ -379,9 +273,7 @@ window.CerneApp.UploadModal = {
                 <label class="form-label">Categorias CERNE</label>
                 <div class="tags-selector-wrapper">
                   <div class="selected-tags-display" id="upload-selected-categories-display"></div>
-                  <select class="form-select" id="upload-add-category-select" style="margin-top: 0.35rem;">
-                    <!-- Preenchido via JS -->
-                  </select>
+                  <select class="form-select" id="upload-add-category-select" style="margin-top: 0.35rem;"></select>
                 </div>
               </div>
  
@@ -390,21 +282,16 @@ window.CerneApp.UploadModal = {
                 <input type="text" class="form-input" id="edit-responsavel" value="${escapeHtml(evidence.responsavel)}" placeholder="Nome do responsável">
               </div>
  
-             
               <div class="form-group">
                 <label class="form-label" for="edit-data">Data de Registro</label>
-                <input type="date" class="form-input" id="edit-data" value="${escapeHtml(evidence.data)}">
+                <input type="text" class="form-input" id="edit-data" value="${escapeHtml(evidence.data)}">
               </div>
               
               <div class="form-group">
                 <label class="form-label">Tags da Evidência</label>
                 <div class="tags-selector-wrapper">
-                  <div class="selected-tags-display" id="selected-tags-display">
-                    <!-- selected tags will be dynamically generated as pills -->
-                  </div>
-                  <select class="form-select" id="add-tag-select" style="margin-top: 0.35rem;">
-                    <!-- dynamically populated option list -->
-                  </select>
+                  <div class="selected-tags-display" id="selected-tags-display"></div>
+                  <select class="form-select" id="add-tag-select" style="margin-top: 0.35rem;"></select>
                 </div>
               </div>
  
@@ -418,76 +305,75 @@ window.CerneApp.UploadModal = {
         </div>
       `;
  
-      lucide.createIcons({
-        nameAttr: 'data-lucide',
-        node: modalBody
+      lucide.createIcons({ nameAttr: 'data-lucide', node: modalBody });
+
+      // Widget de Categorias
+      let selectedCategories = Array.isArray(evidence.categorias) && evidence.categorias.length > 0
+        ? [...evidence.categorias]
+        : (evidence.categoria ? [evidence.categoria] : []);
+
+      function renderUploadCategoriesWidget() {
+        const displayContainer = modalBody.querySelector('#upload-selected-categories-display');
+        const selectElement = modalBody.querySelector('#upload-add-category-select');
+        if (!displayContainer || !selectElement) return;
+
+        displayContainer.innerHTML = '';
+        if (selectedCategories.length === 0) {
+          displayContainer.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-tertiary); font-style: italic;">Nenhuma categoria selecionada</span>';
+        } else {
+          selectedCategories.forEach(cat => {
+            const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
+            const badge = document.createElement('span');
+            badge.className = `badge ${categoryClass}`;
+            badge.style.display = 'inline-flex';
+            badge.style.alignItems = 'center';
+            badge.style.gap = '0.35rem';
+            badge.style.padding = '0.25rem 0.5rem';
+
+            badge.innerHTML = `
+              <span>${escapeHtml(cat)}</span>
+              <button type="button" class="tag-badge-remove" style="background:none; border:none; cursor:pointer; font-size: 0.9rem;" title="Remover categoria">&times;</button>
+            `;
+            badge.querySelector('.tag-badge-remove').addEventListener('click', (e) => {
+              e.preventDefault();
+              selectedCategories = selectedCategories.filter(c => c !== cat);
+              renderUploadCategoriesWidget();
+            });
+            displayContainer.appendChild(badge);
+          });
+        }
+
+        selectElement.innerHTML = '';
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = 'Adicionar categoria...';
+        defaultOpt.selected = true;
+        selectElement.appendChild(defaultOpt);
+
+        const categoriesArray = Array.isArray(categories) ? categories : [];
+        const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
+
+        availableCategories.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat;
+          opt.textContent = cat;
+          selectElement.appendChild(opt);
+        });
+
+        selectElement.disabled = availableCategories.length === 0;
+      }
+
+      renderUploadCategoriesWidget();
+
+      modalBody.querySelector('#upload-add-category-select').addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val && !selectedCategories.includes(val)) {
+          selectedCategories.push(val);
+          renderUploadCategoriesWidget();
+        }
       });
 
-      let selectedCategories = [];
-
-function renderUploadCategoriesWidget() {
-  const displayContainer = overlay.querySelector('#upload-selected-categories-display');
-  const selectElement = overlay.querySelector('#upload-add-category-select');
-  if (!displayContainer || !selectElement) return;
-
-  displayContainer.innerHTML = '';
-  if (selectedCategories.length === 0) {
-    displayContainer.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-tertiary); font-style: italic;">Nenhuma categoria selecionada</span>';
-  } else {
-    selectedCategories.forEach(cat => {
-      const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
-      const badge = document.createElement('span');
-      badge.className = `badge ${categoryClass}`;
-      badge.style.display = 'inline-flex';
-      badge.style.alignItems = 'center';
-      badge.style.gap = '0.35rem';
-      badge.style.padding = '0.25rem 0.5rem';
-
-      badge.innerHTML = `
-        <span>${escapeHtml(cat)}</span>
-        <button type="button" class="tag-badge-remove" style="background:none; border:none; cursor:pointer; font-size: 0.9rem;" title="Remover categoria">&times;</button>
-      `;
-      badge.querySelector('.tag-badge-remove').addEventListener('click', (e) => {
-        e.preventDefault();
-        selectedCategories = selectedCategories.filter(c => c !== cat);
-        renderUploadCategoriesWidget();
-      });
-      displayContainer.appendChild(badge);
-    });
-  }
-
-  selectElement.innerHTML = '';
-  const defaultOpt = document.createElement('option');
-  defaultOpt.value = '';
-  defaultOpt.textContent = 'Adicionar categoria...';
-  defaultOpt.selected = true;
-  selectElement.appendChild(defaultOpt);
-
-  const categoriesArray = Array.isArray(categories) ? categories : [];
-  const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
-
-  availableCategories.forEach(cat => {
-    const opt = document.createElement('option');
-    opt.value = cat;
-    opt.textContent = cat;
-    selectElement.appendChild(opt);
-  });
-
-  selectElement.disabled = availableCategories.length === 0;
-}
-
-// Inicializa a lista
-renderUploadCategoriesWidget();
-
-// Evento ao escolher uma categoria no dropdown
-overlay.querySelector('#upload-add-category-select').addEventListener('change', (e) => {
-  const val = e.target.value;
-  if (val && !selectedCategories.includes(val)) {
-    selectedCategories.push(val);
-    renderUploadCategoriesWidget();
-  }
-});
-
+      // Widget de Tags
       let selectedTags = [...(evidence.tags || [])];
 
       function renderTagsWidget() {
@@ -516,7 +402,6 @@ overlay.querySelector('#upload-add-category-select').addEventListener('change', 
         }
 
         selectElement.innerHTML = '';
-        
         const defaultOpt = document.createElement('option');
         defaultOpt.value = '';
         defaultOpt.textContent = 'Adicionar tag...';
@@ -533,69 +418,49 @@ overlay.querySelector('#upload-add-category-select').addEventListener('change', 
           selectElement.appendChild(opt);
         });
 
-        if (availableTags.length === 0) {
-          defaultOpt.textContent = 'Todas as tags disponíveis já foram adicionadas';
-          selectElement.disabled = true;
-        } else {
-          selectElement.disabled = false;
-        }
+        selectElement.disabled = availableTags.length === 0;
       }
 
-      // Initialize the tags widget
       renderTagsWidget();
 
       modalBody.querySelector('#add-tag-select').addEventListener('change', (e) => {
         const val = e.target.value;
-        if (val) {
-          if (!selectedTags.includes(val)) {
-            selectedTags.push(val);
-          }
+        if (val && !selectedTags.includes(val)) {
+          selectedTags.push(val);
           renderTagsWidget();
         }
       });
  
       footer.querySelector('#modal-success-done-btn').addEventListener('click', async () => {
+        const titleInput = modalBody.querySelector('#edit-titulo');
+        const eventoInput = modalBody.querySelector('#edit-evento');
+        const responsavelInput = modalBody.querySelector('#edit-responsavel');
+        const dataInput = modalBody.querySelector('#edit-data');
+        const resumoInput = modalBody.querySelector('#edit-resumo');
 
-        const dataDigitada = modalBody.querySelector('#edit-data').value.trim() || new Date().toLocaleDateString('pt-BR');
+        const dataDigitada = dataInput.value.trim() || new Date().toLocaleDateString('pt-BR');
 
-  // ⚠️ NOVO: Validação de Data Futura
-  if (window.CerneApp.Utils && window.CerneApp.Utils.isFutureDate(dataDigitada)) {
-    const confirmFuture = confirm(
-      'A data informada é uma data futura.\n\nTem certeza de que deseja cadastrar a evidência com esta data?'
-    );
-    if (!confirmFuture) {
-      return; // Interrompe o envio se o usuário clicar em "Cancelar"
-    }
-  }
-
-  const newEvidence = {
-  id: 'ev-' + Date.now(),
-  nome: fileInput.files[0]?.name || 'Nova Evidência',
-  titulo: titleInput.value.trim(),
-  evento: eventoInput.value.trim(),
-  // Envia a lista completa de categorias selecionadas:
-  categorias: selectedCategories,
-  categoria: selectedCategories[0] || 'Geral', // Fallback
-  responsavel: responsavelInput.value.trim(),
-  data: dataInput.value.trim() || new Date().toLocaleDateString('pt-BR'),
-  tags: selectedTags,
-  resumo: 'Processando resumo...',
-  textoExtraido: 'Conteúdo em processamento...'
-};
+        if (window.CerneApp.Utils?.isFutureDate?.(dataDigitada)) {
+          const confirmFuture = confirm('A data informada é uma data futura.\n\nTem certeza de que deseja cadastrar a evidência com esta data?');
+          if (!confirmFuture) return;
+        }
 
         const updatedMetadata = {
-          titulo: modalBody.querySelector('#edit-titulo').value.trim() || evidence.nome,
-          evento: modalBody.querySelector('#edit-evento').value.trim() || 'Sem Evento',
-          categoria: modalBody.querySelector('#edit-categoria').value,
-          responsavel: modalBody.querySelector('#edit-responsavel').value.trim() || 'Não especificado',
-          data: modalBody.querySelector('#edit-data').value.trim() || new Date().toLocaleDateString('pt-BR'),
-          resumo: modalBody.querySelector('#edit-resumo').value.trim() || 'Sem resumo disponível.',
+          titulo: titleInput.value.trim() || evidence.nome,
+          evento: eventoInput.value.trim() || 'Sem Evento',
+          categorias: selectedCategories,
+          categoria: selectedCategories[0] || 'Geral',
+          responsavel: responsavelInput.value.trim() || 'Não especificado',
+          data: dataDigitada,
+          resumo: resumoInput.value.trim() || 'Sem resumo disponível.',
           tags: selectedTags
         };
  
         try {
           const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
-          onAddEvidence(savedEvidence);
+          if (typeof onAddEvidence === 'function') {
+            onAddEvidence(savedEvidence || { ...evidence, ...updatedMetadata });
+          }
           doClose();
         } catch (error) {
           alert(`Não foi possível salvar a evidência: ${error.message}`);
