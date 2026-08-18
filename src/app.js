@@ -932,27 +932,6 @@ function updateDashboardCounters() {
   if (elNovasMes) elNovasMes.textContent = novasNoMes;
 }
 
-// Converte qualquer texto em uma cor consistente (fundo claro + texto escuro)
-function getCategoryStyle(categoryName) {
-  if (!categoryName) return '';
-
-  // 1. Gera um hash numérico único baseado nas letras do nome
-  let hash = 0;
-  for (let i = 0; i < categoryName.length; i++) {
-    hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  // 2. Transforma o hash em um ângulo do círculo cromático (0 a 360deg)
-  const hue = Math.abs(hash % 360);
-
-  // 3. Define Fundo Claro (Luminosidade 92%) e Texto Escuro (Luminosidade 28%)
-  const backgroundColor = `hsl(${hue}, 70%, 92%)`;
-  const textColor = `hsl(${hue}, 65%, 28%)`;
-  const borderColor = `hsl(${hue}, 60%, 82%)`;
-
-  return `background-color: ${backgroundColor}; color: ${textColor}; border: 1px solid ${borderColor};`;
-}
-
 function openEvidenceDetails(evidenceId) {
   const evidence = state.evidences.find(item => item.id === evidenceId);
   if (!evidence) return;
