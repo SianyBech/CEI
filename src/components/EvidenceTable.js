@@ -60,9 +60,11 @@ const categoriesList = Array.isArray(evidence.categorias) && evidence.categorias
   ? evidence.categorias
   : (evidence.categoria ? [evidence.categoria] : []);
 
+// Onde você renderiza a lista de categorias:
 const categoriesHTML = categoriesList.map(cat => {
-  const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
-  return `<span class="badge ${categoryClass}">${escapeHtml(cat)}</span>`;
+  const dynamicStyle = getCategoryStyle(cat);
+  
+  return `<span class="badge badge-dynamic" style="${dynamicStyle}">${escapeHtml(cat)}</span>`;
 }).join(' ');
 
       rowsHTML += `

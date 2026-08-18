@@ -2383,3 +2383,14 @@ textarea:focus-visible,
   color: #15803D; /* Mantém o ícone do mais (+) no mesmo tom de verde escuro */
 }
 
+/* Badge Genérica Dinâmica */
+.badge-dynamic {
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm, 6px);
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+

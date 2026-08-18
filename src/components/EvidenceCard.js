@@ -60,10 +60,12 @@ window.CerneApp.EvidenceCard = {
     ? evidence.categorias
     : (evidence.categoria ? [evidence.categoria] : []);
 
-        const categoriesHTML = categoriesList.map(cat => {
-          const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
-          return `<span class="badge ${categoryClass}">${escapeHtml(cat)}</span>`;
-        }).join(' ');
+       // Onde você renderiza a lista de categorias:
+const categoriesHTML = categoriesList.map(cat => {
+  const dynamicStyle = getCategoryStyle(cat);
+  
+  return `<span class="badge badge-dynamic" style="${dynamicStyle}">${escapeHtml(cat)}</span>`;
+}).join(' ');
 
       cardsHTML += `
         <div class="evidence-card" data-id="${evidence.id}">
