@@ -31,7 +31,7 @@ function hasPermission(user = {}, permission) {
   return permissions.includes(permission);
 }
 
-module.exports = {
+export {
   getUserRole,
   hasPermission
 };
