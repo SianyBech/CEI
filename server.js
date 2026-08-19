@@ -1,17 +1,20 @@
-const express = require('express');
-const path = require('path');
-const fs = require('fs');
-const multer = require('multer');
-const { Pool } = require('pg');
-const { randomUUID } = require('crypto');
-const pdfParse = require('pdf-parse');
-const Tesseract = require('tesseract.js');
-const mammoth = require('mammoth');
-const AdmZip = require('adm-zip');
-const fetch = require('node-fetch');
-const dotenv = require('dotenv');
-const { createClient } = require('@supabase/supabase-js');
-const { getUserRole, hasPermission } = require('./auth');
+import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import multer from 'multer';
+import pg from 'pg';
+import { randomUUID } from 'crypto';
+import pdfParse from 'pdf-parse';
+import Tesseract from 'tesseract.js';
+import mammoth from 'mammoth';
+import AdmZip from 'adm-zip';
+import fetch from 'node-fetch';
+import 'dotenv/config';
+import { createClient } from '@supabase/supabase-js';
+import { getUserRole, hasPermission } from './auth.js';
+
+// Extrai o Pool de dentro do pacote 'pg' em ES Modules
+const { Pool } = pg;
 
 dotenv.config();
 
