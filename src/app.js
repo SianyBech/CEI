@@ -2,6 +2,8 @@
 // CENTRAL APPLICATION DRIVER - SISTEMA DE GESTÃO DE EVIDÊNCIAS CERNE
 // ==========================================================================
 
+import 'dotenv/config'; // Garante que o Node leia o arquivo .env
+
 (function () {
   const state = {
     evidences: [],
