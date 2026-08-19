@@ -12,6 +12,10 @@ import fetch from 'node-fetch';
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { getUserRole, hasPermission } from './auth.js';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Extrai o Pool de dentro do pacote 'pg' em ES Modules
 const { Pool } = pg;
