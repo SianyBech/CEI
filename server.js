@@ -1215,7 +1215,7 @@ async function startServer() {
 
 startServer();
 
-module.exports = {
+export {
   buildStoragePath,
   getFileExtension,
   isForbiddenFile,
