@@ -42,15 +42,15 @@
     appContainer.innerHTML = '';
 
     window.addEventListener('cerne:auth:required', () => {
-      showLoginView();
+  //    showLoginView();
     });
 
     const session = await window.CerneApp.Auth.getSession();
-    if (!session?.user) {
+  /*  if (!session?.user) {
       showLoginView();
       return;
     }
-
+  */
     isAuthenticatedUser = true;
     await loadSettings();
 
@@ -327,7 +327,27 @@
       state.evidences = [];
       
       // Add mock evidence on error (for demo purposes)
+      state.evidences.push(createMockEvidence2());
       state.evidences.push(createMockEvidence());
+      state.evidences.push(createMockEvidence());
+      state.evidences.push(createMockEvidence());
+      state.evidences.push(createMockEvidence2());
+      state.evidences.push(createMockEvidence2());
+      state.evidences.push(createMockEvidence());
+      state.evidences.push(createMockEvidence());
+      state.evidences.push(createMockEvidence());
+      state.evidences.push(createMockEvidence()); //10
+      state.evidences.push(createMockEvidence2());
+      state.evidences.push(createMockEvidence());
+      state.evidences.push(createMockEvidence());
+      state.evidences.push(createMockEvidence());
+      state.evidences.push(createMockEvidence());
+      state.evidences.push(createMockEvidence2());
+      state.evidences.push(createMockEvidence());
+      state.evidences.push(createMockEvidence());
+      state.evidences.push(createMockEvidence());
+      state.evidences.push(createMockEvidence2()); //20
+
       
       populateFilterOptions();
       renderList();
@@ -807,6 +827,21 @@ function handleClearFilters() {
       tags: ['CERNE', 'Demo', 'Teste'],
       resumo: 'Este é um documento de demonstração do sistema CERNE para visualização da interface com dados.',
       textoExtraido: 'CONTEÚDO EXTRAÍDO:\n\nEste documento apresenta os processos-chave do CERNE e demonstra como as evidências são organizadas, categorizadas e disponibilizadas no sistema de gestão.'
+    };
+    return mockEvidence;
+  }
+
+    function createMockEvidence2() {
+    const mockEvidence = {
+      nome: 'Comprovante de Pitch no Demo Day UFRGS',
+      tipo: 'apresentacao',
+      data: '15/08/2026',
+      evento: 'Demo Day CEI 2026',
+      categoria: 'Mercado',
+      responsavel: 'Startup Alpha',
+      tags: ['Pitch', 'Investimento', 'DemoDay'],
+      resumo: 'Apresentação de pitch de vendas e modelo de negócios realizada para banca de investidores anjo.',
+      textoExtraido: 'CONTEÚDO EXTRAÍDO:\n\nPitch Deck v3. Estrutura: Problema, Solução, TAM/SAM/SOM, Tração de Mercado e Necessidade de Aporte ($200k).'
     };
     return mockEvidence;
   }
