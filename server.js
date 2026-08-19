@@ -16,8 +16,6 @@ import { getUserRole, hasPermission } from './auth.js';
 // Extrai o Pool de dentro do pacote 'pg' em ES Modules
 const { Pool } = pg;
 
-dotenv.config();
-
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || '0.0.0.0';
