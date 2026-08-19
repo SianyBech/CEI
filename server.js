@@ -1172,6 +1172,29 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Erro interno do servidor.' });
 });
 
+// ROTA DE DIAGNÓSTICO DA IA (Adicione temporariamente)
+import { resumirTextoSimples } from './aiService.js';
+
+app.get('/api/teste-ia', async (req, res) => {
+  try {
+    console.log('--- TESTANDO CONEXÃO COM GEMINI ---');
+    const resposta = await resumirTextoSimples("Olá Gemini! Responda em uma frase se você está ativo no servidor do CEI/UFRGS.");
+    
+    return res.json({
+      sucesso: true,
+      mensagem: "Conexão com a IA funcionando perfeitamente!",
+      respostaIA: resposta
+    });
+  } catch (error) {
+    console.error('ERRO NO TESTE DE IA:', error);
+    return res.status(500).json({
+      sucesso: false,
+      erro: error.message,
+      detalhes: "Falha ao comunicar com a API do Gemini. Verifique a GEMINI_API_KEY no painel da Hostinger."
+    });
+  }
+});
+
 async function startServer() {
   try {
     await initPostgresPool();
