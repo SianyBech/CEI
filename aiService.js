@@ -8,13 +8,16 @@ import Tesseract from 'tesseract.js';
 import PDFParser from 'pdf2json';
 import { pdf } from 'pdf-to-img';
 
-// 1. Validação da Chave no Startup
-const apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY; // Fallback caso você tenha trocado o nome
+// 1. Obtém a chave e o modelo das variáveis de ambiente
+const apiKey = process.env.GEMINI_API_KEY;
+const MODELO_PADRAO = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
+// 2. Validação antecipada
 if (!apiKey) {
-  console.error('CRÍTICO: Nenhuma chave de API de IA encontrada nas variáveis de ambiente!');
+  console.error('CRÍTICO: GEMINI_API_KEY não foi encontrada no arquivo .env ou no painel da Hostinger!');
 }
 
+// 3. Inicialização da SDK
 const ai = new GoogleGenAI({ apiKey });
 
 // 2. Modelo Oficial Correto (gemini-1.5-flash ou gemini-2.0-flash)
