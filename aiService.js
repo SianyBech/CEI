@@ -10,7 +10,7 @@ import { pdf } from 'pdf-to-img';
 
 // 1. Obtém a chave e o modelo das variáveis de ambiente
 const apiKey = process.env.GEMINI_API_KEY;
-const MODELO_PADRAO = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const MODELO_PADRAO = 'gemini-1.5-flash';
 
 // 2. Validação antecipada
 if (!apiKey) {
@@ -19,9 +19,6 @@ if (!apiKey) {
 
 // 3. Inicialização da SDK
 const ai = new GoogleGenAI({ apiKey });
-
-// 2. Modelo Oficial Correto (gemini-1.5-flash ou gemini-2.0-flash)
-const MODELO_PADRAO = 'gemini-1.5-flash';
 
 /**
  * Função Universal para ler e resumir QUALQUER arquivo.
