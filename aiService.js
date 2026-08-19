@@ -8,23 +8,18 @@ import Tesseract from 'tesseract.js';
 import PDFParser from 'pdf2json';
 import { pdf } from 'pdf-to-img';
 
-// 1. Validação da Chave no Startup
-const apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY; // Fallback caso você tenha trocado o nome
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
 
-if (!apiKey) {
-  console.error('CRÍTICO: Nenhuma chave de API de IA encontrada nas variáveis de ambiente!');
-}
-
-const ai = new GoogleGenAI({ apiKey });
-
-// 2. Modelo Oficial Correto (gemini-1.5-flash ou gemini-2.0-flash)
-const MODELO_PADRAO = 'gemini-1.5-flash';
+const MODELO_PADRAO = 'gemini-3.6-flash';
 
 /**
  * Função Universal para ler e resumir QUALQUER arquivo.
  */
 export async function resumirQualquerDocumento(caminhoArquivo) {
   try {
+    // 0. VALIDAÇÃO DE ARQUIVO
     if (!fs.existsSync(caminhoArquivo)) {
       throw new Error(`Arquivo não encontrado no caminho: ${caminhoArquivo}`);
     }
@@ -37,14 +32,14 @@ export async function resumirQualquerDocumento(caminhoArquivo) {
     const extensao = path.extname(caminhoArquivo).toLowerCase();
     let textoExtraido = '';
 
-    // 1. IMAGENS
+    // 1. IMAGENS (OCR via Tesseract.js)
     if (['.png', '.jpg', '.jpeg', '.webp'].includes(extensao)) {
       console.log('Executando OCR na imagem...');
       const resultado = await Tesseract.recognize(caminhoArquivo, 'por');
       textoExtraido = resultado.data.text;
     }
 
-    // 2. PDF
+    // 2. PDF (Leitura resiliente de texto + Fallback com conversão para imagem/OCR)
     else if (extensao === '.pdf') {
       console.log('Tentando extrair texto direto do PDF...');
       
@@ -61,6 +56,7 @@ export async function resumirQualquerDocumento(caminhoArquivo) {
         console.warn('Estrutura de texto do PDF indisponível. Convertendo páginas do PDF em imagem para OCR...');
       }
 
+      // Se não encontrou texto (PDF digitalizado ou corrompido), converte em imagens e passa no OCR
       if (!textoExtraido || textoExtraido.trim().length === 0) {
         let contadorPaginas = 1;
         const document = await pdf(caminhoArquivo, { scale: 2 });
@@ -82,20 +78,20 @@ export async function resumirQualquerDocumento(caminhoArquivo) {
 
     // 4. EXCEL (.xlsx, .xls, .csv)
     else if (['.xlsx', '.xls'].includes(extensao)) {
-      const fileBuffer = fs.readFileSync(caminhoArquivo);
-      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-      
-      let textoPlanilha = '';
-      workbook.SheetNames.forEach((sheetName) => {
-        const worksheet = workbook.Sheets[sheetName];
-        const csvData = XLSX.utils.sheet_to_csv(worksheet);
-        if (csvData.trim()) {
-          textoPlanilha += `--- Aba: ${sheetName} ---\n${csvData}\n\n`;
-        }
-      });
-
-      textoExtraido = textoPlanilha;
+  const fileBuffer = fs.readFileSync(caminhoArquivo);
+  const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+  
+  let textoPlanilha = '';
+  workbook.SheetNames.forEach((sheetName) => {
+    const worksheet = workbook.Sheets[sheetName];
+    const csvData = XLSX.utils.sheet_to_csv(worksheet);
+    if (csvData.trim()) {
+      textoPlanilha += `--- Aba: ${sheetName} ---\n${csvData}\n\n`;
     }
+  });
+
+  textoExtraido = textoPlanilha;
+}
 
     // 5. TEXTO PLANO (.txt)
     else if (extensao === '.txt') {
@@ -106,6 +102,7 @@ export async function resumirQualquerDocumento(caminhoArquivo) {
       throw new Error(`Formato de arquivo não suportado: ${extensao}`);
     }
 
+    // Valida se o texto extraído é válido
     if (!textoExtraido || textoExtraido.trim().length === 0) {
       throw new Error('Não foi possível extrair nenhum texto legível do arquivo.');
     }
@@ -123,30 +120,25 @@ export async function resumirQualquerDocumento(caminhoArquivo) {
  * Envia o texto extraído para a IA
  */
 export async function resumirTextoSimples(texto) {
-  try {
-    const response = await ai.models.generateContent({
-      model: MODELO_PADRAO,
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: `Você é um assistente especializado em análise de documentos do CEI/UFRGS. 
+  const response = await ai.models.generateContent({
+    model: MODELO_PADRAO,
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          {
+            text: `Você é um assistente especializado em análise de documentos. 
 Leia o texto extraído a seguir e gere um resumo claro, direto e estruturado com os pontos principais:
 
 Conteúdo:
 ${texto}`,
-            },
-          ],
-        },
-      ],
-    });
+          },
+        ],
+      },
+    ],
+  });
 
-    return response.text;
-  } catch (err) {
-    console.error('Erro de comunicação com a API do Gemini:', err);
-    throw new Error(`Falha ao comunicar com a IA: ${err.message}`);
-  }
+  return response.text;
 }
 
 // --- TESTE ---
