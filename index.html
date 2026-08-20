@@ -4,12 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema Inteligente de Gestão de Evidências CERNE</title>
+  
+  <!-- Evita erro 404 de favicon no console -->
+  <link rel="shortcut icon" href="#">
+
   <!-- Google Fonts: Inter and Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
   <!-- Vanilla CSS Style Sheet -->
   <link rel="stylesheet" href="src/index.css">
+  
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -22,32 +28,29 @@
     window.CerneApp = {};
   </script>
 
-  <script src="src/utils.js"></script>
-
-  <script src="src/data/date.js"></script>
-
-  <!-- Data Mock -->
-  <script src="src/data/mockData.js"></script>
+  <!-- Scripts do Front-end carregados com suporte a ES Modules -->
+  <script type="module" src="src/utils.js"></script>
+  <script type="module" src="src/data/mockData.js"></script>
 
   <!-- Components -->
-  <script src="src/components/Header.js"></script>
-  <script src="src/components/SearchBar.js"></script>
-  <script src="src/components/Pagination.js"></script>
-  <script src="src/components/EvidenceTable.js"></script>
-  <script src="src/components/EvidenceCard.js"></script>
-  <script src="src/components/UploadModal.js"></script>
-  <script src="src/components/EvidenceDetails.js"></script>
-  <script src="src/components/SettingsPage.js"></script>
-  <script src="src/components/LoginPage.js"></script>
+  <script type="module" src="src/components/Header.js"></script>
+  <script type="module" src="src/components/SearchBar.js"></script>
+  <script type="module" src="src/components/Pagination.js"></script>
+  <script type="module" src="src/components/EvidenceTable.js"></script>
+  <script type="module" src="src/components/EvidenceCard.js"></script>
+  <script type="module" src="src/components/UploadModal.js"></script>
+  <script type="module" src="src/components/EvidenceDetails.js"></script>
+  <script type="module" src="src/components/SettingsPage.js"></script>
+  <script type="module" src="src/components/LoginPage.js"></script>
 
   <!-- Authentication client -->
-  <script src="src/auth.js"></script>
+  <script type="module" src="src/auth.js"></script>
 
   <!-- API client -->
-  <script src="src/api.js"></script>
+  <script type="module" src="src/api.js"></script>
 
   <!-- Entry Point App Driver -->
-  <script src="src/app.js"></script>
+  <script type="module" src="src/app.js"></script>
 
 </body>
 </html>
