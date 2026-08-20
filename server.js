@@ -1082,12 +1082,12 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       metadata.responsavel = getResponsavel(req.user);
 
       const processingNote = ['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx'].includes(extension)
-        ? ''
-        : 'Formato não suportado para processamento automático.';
+      ? ''
+      : '\n\n(Nota: Formato não suportado para processamento automático do texto).';
 
-      if (processingNote) {
-        metadata.resumo = [metadata.resumo, processingNote].filter(Boolean).join(' ').slice(0, 280);
-      }
+    if (processingNote) {
+      metadata.resumo = `${metadata.resumo || ''}${processingNote}`;
+    }
 
   console.log(`[UPLOAD] Metadados gerados para ${originalName}`);
 
