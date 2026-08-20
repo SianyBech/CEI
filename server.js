@@ -13,8 +13,7 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { getUserRole, hasPermission } from './auth.js';
 import { fileURLToPath } from 'url';
-
-import { resumirQualquerDocumento } from './aiService.js';
+import { resumirQualquerDocumento, resumirTextoSimples } from './aiService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -767,27 +766,27 @@ async function callOpenAIForMetadata(filename, extension, extractedText) {
   }
 }
 
-async function generateMetadata(filename, extension, extractedText, tempPath) {
-  try {
-    // 1. Gera o resumo usando o texto que JÁ FOI extraído na rota
-    let resumoIA = '';
-    if (extractedText && extractedText.trim().length > 0) {
-      resumoIA = await resumirTextoSimples(extractedText);
-    }
+async function generateMetadata(filename, extension, extractedText) {
+  let resumoIA = '';
 
-    return {
-      evento: 'Registro Interno',
-      categoria: 'Gestão',
-      responsavel: 'Equipe CEI',
-      tags: ['CERNE', 'Evidência'],
-      // 2. Se por acaso a IA falhar, aí sim usamos o fallback
-      resumo: resumoIA || (extractedText ? extractedText.slice(0, 220) + '...' : 'Evidência cadastrada no sistema.'),
-      textoExtraido: extractedText || ''
-    };
-  } catch (error) {
-    console.warn('[AI] Falha ao processar com o Gemini, usando metadados padrão:', error.message);
-    return buildFallbackMetadata(filename, extension, extractedText);
+  // Tenta gerar o resumo estruturado via Gemini se houver texto extraído
+  if (extractedText && extractedText.trim().length > 0) {
+    try {
+      resumoIA = await resumirTextoSimples(extractedText);
+    } catch (err) {
+      console.warn('[GEMINI] Falha ao gerar resumo na IA, usando fallback:', err.message);
+    }
   }
+
+  // Retorna os metadados usando o resumo gerado pelo Gemini
+  return {
+    evento: 'Registro Interno',
+    categoria: 'Gestão',
+    responsavel: 'Equipe CEI',
+    tags: ['CERNE', 'Evidência'],
+    resumo: resumoIA || (extractedText ? extractedText.slice(0, 220) + '...' : 'Evidência cadastrada no sistema.'),
+    textoExtraido: extractedText || ''
+  };
 }
 
 app.post('/api/auth/login', async (req, res) => {
@@ -1082,13 +1081,9 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       const metadata = await generateMetadata(originalName, extension, extractedText);
       metadata.responsavel = getResponsavel(req.user);
 
-      const processingNote = ['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx'].includes(extension)
-      ? ''
-      : '\n\n(Nota: Formato não suportado para processamento automático do texto).';
-
-    if (processingNote) {
-      metadata.resumo = `${metadata.resumo || ''}${processingNote}`;
-    }
+      if (!['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx'].includes(extension)) {
+        metadata.resumo = `${metadata.resumo || ''}\n\n(Nota: Formato não suportado para processamento automático do texto).`;
+      }
 
   console.log(`[UPLOAD] Metadados gerados para ${originalName}`);
 
@@ -1191,29 +1186,6 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
 app.use((err, req, res, next) => {
   console.error('[SERVER] Erro interno não tratado:', err);
   res.status(500).json({ error: err.message || 'Erro interno do servidor.' });
-});
-
-// ROTA DE DIAGNÓSTICO DA IA (Adicione temporariamente)
-import { resumirTextoSimples } from './aiService.js';
-
-app.get('/api/teste-ia', async (req, res) => {
-  try {
-    console.log('--- TESTANDO CONEXÃO COM GEMINI ---');
-    const resposta = await resumirTextoSimples("Olá Gemini! Responda em uma frase se você está ativo no servidor do CEI/UFRGS.");
-    
-    return res.json({
-      sucesso: true,
-      mensagem: "Conexão com a IA funcionando perfeitamente!",
-      respostaIA: resposta
-    });
-  } catch (error) {
-    console.error('ERRO NO TESTE DE IA:', error);
-    return res.status(500).json({
-      sucesso: false,
-      erro: error.message,
-      detalhes: "Falha ao comunicar com a API do Gemini. Verifique a GEMINI_API_KEY no painel da Hostinger."
-    });
-  }
 });
 
 function startServer() {
