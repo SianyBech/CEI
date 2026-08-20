@@ -1087,6 +1087,19 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Erro interno do servidor.' });
 });
 
+
+// Adicione no final do seu server.js antes de startServer():
+app.get('/api/debug-gemini', async (req, res) => {
+  try {
+    const teste = await resumirTextoSimples("Teste de integração CEI/UFRGS.");
+    res.json({ status: "OK", resposta: teste });
+  } catch (err) {
+    res.status(500).json({ status: "ERRO", erro: err.message, stack: err.stack });
+  }
+});
+
+
+
 function startServer() {
   // 1. Abre a porta imediatamente para a Hostinger reconhecer que o app está ativo
   app.listen(port, host, () => {
