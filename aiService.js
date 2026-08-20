@@ -131,11 +131,27 @@ export async function resumirTextoSimples(texto) {
           role: 'user',
           parts: [
             {
-              text: `Você é um assistente especializado em análise de documentos do CEI/UFRGS. 
-Leia o texto extraído a seguir e gere um resumo claro, direto e estruturado com os pontos principais:
+              text: `Você é um analista de documentos e evidências do CEI/UFRGS (Centro de Empreendimentos de Informática).
 
-Conteúdo:
-${texto}`,
+Sua tarefa é ler o texto extraído de um documento de evidência e criar um resumo executivo direto, estruturado e conciso.
+
+Siga estritamente este formato de resposta:
+
+📌 **Visão Geral**: (1 frase curta resumindo do que se trata o documento)
+👤 **Autor/Responsável**: (Nome da pessoa/entidade, se identificável)
+📅 **Período/Data**: (Datas mencionadas no texto, se houver)
+🔑 **Principais Entregas e Atividades**:
+- [Tópico objetivo 1]
+- [Tópico objetivo 2]
+- [Tópico objetivo 3]
+
+Regras importantes:
+- Não repita trechos longos do texto original word-for-word.
+- Mantenha a resposta curta, focada em pontos de ação e resultados.
+- Caso o texto não contenha alguma das informações (ex: data ou autor), omita esse campo ou coloque "Não informado".
+
+Conteúdo para análise:
+${texto}`
             },
           ],
         },
