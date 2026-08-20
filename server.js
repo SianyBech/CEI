@@ -769,10 +769,10 @@ async function callOpenAIForMetadata(filename, extension, extractedText) {
 
 async function generateMetadata(filename, extension, extractedText, tempPath) {
   try {
-    // 1. Tenta gerar o resumo inteligente usando o Gemini via aiService
+    // 1. Gera o resumo usando o texto que JÁ FOI extraído na rota
     let resumoIA = '';
-    if (tempPath && fs.existsSync(tempPath)) {
-      resumoIA = await resumirQualquerDocumento(tempPath);
+    if (extractedText && extractedText.trim().length > 0) {
+      resumoIA = await resumirTextoSimples(extractedText);
     }
 
     return {
@@ -780,6 +780,7 @@ async function generateMetadata(filename, extension, extractedText, tempPath) {
       categoria: 'Gestão',
       responsavel: 'Equipe CEI',
       tags: ['CERNE', 'Evidência'],
+      // 2. Se por acaso a IA falhar, aí sim usamos o fallback
       resumo: resumoIA || (extractedText ? extractedText.slice(0, 220) + '...' : 'Evidência cadastrada no sistema.'),
       textoExtraido: extractedText || ''
     };
