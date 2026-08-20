@@ -13,7 +13,7 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { getUserRole, hasPermission } from './auth.js';
 import { fileURLToPath } from 'url';
-import { resumirQualquerDocumento, resumirTextoSimples } from './aiService.js';
+import { resumirTextoSimples } from './aiService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -666,119 +666,18 @@ async function extractText(filePath, extension) {
   return '';
 }
 
-function buildFallbackMetadata(originalName, extension, extractedText) {
-  const lowerName = originalName.toLowerCase();
-  const metadata = {
-    evento: 'Registro Interno',
-    categoria: 'Gestão',
-    categorias: ['Gestão'],
-    responsavel: 'Equipe CEI',
-    tags: ['CERNE', 'Evidência'],
-    resumo: 'Documento analisado localmente com extração de texto e classificação inicial.',
-    textoExtraido: extractedText || 'Conteúdo não pôde ser extraído automaticamente.'
-  };
-
-  if (lowerName.includes('ata') || lowerName.includes('reuni')) {
-    metadata.categoria = 'Planejamento';
-    metadata.categorias = ['Planejamento'];
-    metadata.evento = 'Ata de Reunião';
-    metadata.tags = ['Ata', 'Reunião', 'Planejamento'];
-    metadata.resumo = 'Ata gerada a partir do arquivo com informações de planejamento e decisões.';
-  } else if (lowerName.includes('workshop') || lowerName.includes('curso') || lowerName.includes('capacitacao') || lowerName.includes('capacitação') || lowerName.includes('palestra')) {
-    metadata.categoria = 'Capacitação';
-    metadata.evento = 'Evento de Capacitação';
-    metadata.tags = ['Capacitação', 'Treinamento', 'Workshop'];
-    metadata.resumo = 'Documento de evento ou capacitação identificado a partir do nome do arquivo.';
-  } else if (lowerName.includes('contrato') || lowerName.includes('termo') || lowerName.includes('acordo') || lowerName.includes('convenio') || lowerName.includes('convênio')) {
-    metadata.categoria = 'Assessoria';
-    metadata.evento = 'Contrato / Termo';
-    metadata.tags = ['Contrato', 'Assessoria', 'Jurídico'];
-    metadata.resumo = 'Documento jurídico ou de assessoria catalogado automaticamente.';
-  } else if (lowerName.includes('relatorio') || lowerName.includes('relatório') || lowerName.includes('financeiro') || lowerName.includes('contas')) {
-    metadata.categoria = 'Gestão';
-    metadata.evento = 'Relatório de Gestão';
-    metadata.tags = ['Gestão', 'Relatório', 'Financeiro'];
-    metadata.resumo = 'Relatório de gestão ou prestação de contas extraído do documento.';
-  } else if (lowerName.includes('certificado') || lowerName.includes('diploma')) {
-    metadata.categoria = 'Qualificação';
-    metadata.evento = 'Certificado';
-    metadata.tags = ['Certificado', 'Qualificação'];
-    metadata.resumo = 'Certificado ou documento de qualificação detectado a partir do nome do arquivo.';
-  } else if (lowerName.includes('sustentabilidade') || lowerName.includes('ambiental') || lowerName.includes('esg') || lowerName.includes('ecologico')) {
-    metadata.categoria = 'Sustentabilidade';
-    metadata.evento = 'Relatório de Sustentabilidade';
-    metadata.tags = ['Sustentabilidade', 'ESG'];
-    metadata.resumo = 'Documento com foco em práticas sustentáveis e ambientais.';
-  }
-
-  if (!metadata.resumo && extractedText) {
-    metadata.resumo = extractedText.slice(0, 220).replace(/\s+/g, ' ') + '...';
-  }
-
-  return metadata;
-}
-
-async function callOpenAIForMetadata(filename, extension, extractedText) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
-
-  const prompt = `Você é um assistente responsável por extrair metadados estruturados do conteúdo de um documento. Retorne apenas um JSON válido com os campos: evento, categoria, responsavel, tags, resumo. Use o texto disponível abaixo.\n\nNome do arquivo: ${filename}\nTipo de arquivo: ${extension}\nTexto extraído: ${extractedText || '[sem texto extraído]'}\n\nRegras: \n1. O campo categoria deve ser uma das: Capacitação, Planejamento, Gestão, Assessoria, Sustentabilidade, Qualificação. \n2. O campo tags deve ser uma lista de até 6 palavras ou expressões curtas. \n3. O campo resumo deve ter no máximo 280 caracteres. \n4. Retorne apenas JSON válido, sem comentários, sem explicações adicionais.\n\nJSON:`;
-
-  try {
-    const response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-        input: prompt,
-        max_output_tokens: 400
-      })
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const body = await response.json();
-    let output = '';
-    if (Array.isArray(body.output) && body.output.length > 0) {
-      const firstOutput = body.output[0];
-      if (Array.isArray(firstOutput.content)) {
-        const textPiece = firstOutput.content.find((piece) => piece.type === 'output_text');
-        if (textPiece && typeof textPiece.text === 'string') {
-          output = textPiece.text;
-        } else if (firstOutput.content.length > 0 && typeof firstOutput.content[0].text === 'string') {
-          output = firstOutput.content[0].text;
-        }
-      } else if (typeof firstOutput.content === 'string') {
-        output = firstOutput.content;
-      }
-    }
-
-    const jsonText = output.trim();
-    return JSON.parse(jsonText);
-  } catch (error) {
-    console.error('[AI] Erro ao gerar metadados com OpenAI:', error);
-    return null;
-  }
-}
-
 async function generateMetadata(filename, extension, extractedText) {
   let resumoIA = '';
 
-  // Tenta gerar o resumo estruturado via Gemini se houver texto extraído
   if (extractedText && extractedText.trim().length > 0) {
     try {
       resumoIA = await resumirTextoSimples(extractedText);
+      console.log('[GEMINI] Resumo estruturado gerado com sucesso.');
     } catch (err) {
-      console.warn('[GEMINI] Falha ao gerar resumo na IA, usando fallback:', err.message);
+      console.error('[GEMINI] Falha ao comunicar com a IA:', err.message);
     }
   }
 
-  // Retorna os metadados usando o resumo gerado pelo Gemini
   return {
     evento: 'Registro Interno',
     categoria: 'Gestão',
