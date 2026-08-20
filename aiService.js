@@ -10,7 +10,7 @@ import { pdf } from 'pdf-to-img';
 
 // 1. Obtém a chave e o modelo das variáveis de ambiente
 const apiKey = process.env.GEMINI_API_KEY;
-const MODELO_PADRAO = 'gemini-1.5-flash';
+const MODELO_PADRAO = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
 // 2. Validação antecipada
 if (!apiKey) {

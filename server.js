@@ -1200,17 +1200,23 @@ app.get('/api/teste-ia', async (req, res) => {
   }
 });
 
-async function startServer() {
-  try {
-    await initPostgresPool();
-    console.log('[SERVER] PostgreSQL inicializado.');
-  } catch (err) {
-    console.warn('[SERVER] PostgreSQL indisponível; continuando com o servidor para autenticação e rotas públicas:', err.message || err);
-  }
-
+function startServer() {
+  // 1. Abre a porta imediatamente para a Hostinger reconhecer que o app está ativo
   app.listen(port, host, () => {
     console.log(`Servidor iniciado na porta ${port}`);
   });
+
+  // 2. Conecta ao banco de dados em segundo plano sem travar a inicialização
+  initPostgresPool()
+    .then(() => {
+      console.log('[SERVER] PostgreSQL inicializado.');
+    })
+    .catch((err) => {
+      console.warn(
+        '[SERVER] PostgreSQL indisponível; continuando com o servidor para autenticação e rotas públicas:',
+        err.message || err
+      );
+    });
 }
 
 startServer();
