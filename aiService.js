@@ -131,24 +131,23 @@ export async function resumirTextoSimples(texto) {
           role: 'user',
           parts: [
             {
-              text: `Você é um analista de documentos e evidências do CEI/UFRGS (Centro de Empreendimentos de Informática).
+              text: `Você é um analista sênior de documentação do CEI/UFRGS (Centro de Empreendimentos de Informática).
 
-Sua tarefa é ler o texto extraído de um documento de evidência e criar um resumo executivo direto, estruturado e conciso.
+Sua tarefa é analisar o texto extraído de uma evidência documental e gerar um resumo executivo direto e objetivo, dividido em EXATAMENTE DOIS PARÁGRAFOS.
 
-Siga estritamente este formato de resposta:
+Siga estritamente esta estrutura e formato:
 
-📌 **Visão Geral**: (1 frase curta resumindo do que se trata o documento)
-👤 **Autor/Responsável**: (Nome da pessoa/entidade, se identificável)
-📅 **Período/Data**: (Datas mencionadas no texto, se houver)
-🔑 **Principais Entregas e Atividades**:
-- [Tópico objetivo 1]
-- [Tópico objetivo 2]
-- [Tópico objetivo 3]
+Parágrafo 1 (Identificação e Contexto):
+Comece identificando o tipo de documento/mídia e do que se trata, a quem ou o que se refere e o período ou data de ocorrência/elaboração.
 
-Regras importantes:
-- Não repita trechos longos do texto original word-for-word.
-- Mantenha a resposta curta, focada em pontos de ação e resultados.
-- Caso o texto não contenha alguma das informações (ex: data ou autor), omita esse campo ou coloque "Não informado".
+Parágrafo 2 (Síntese do Conteúdo e Entregas):
+Resuma em poucas frases diretas o conteúdo principal, detalhando o que foi discutido, executado ou entregue de mais relevante.
+
+Regras importantes de formatação:
+- NÃO use emojis nem marcadores em tópicos (bullet points).
+- NÃO use asteriscos (**). Para aplicar negrito em termos-chave, use estritamente tags HTML <b> e </b>.
+- Responda apenas com os dois parágrafos, sem títulos como "Parágrafo 1:" ou introduções.
+- Seja extremamente conciso, direto e vá direto ao ponto.
 
 Conteúdo para análise:
 ${texto}`
