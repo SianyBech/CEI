@@ -14,6 +14,8 @@ import { createClient } from '@supabase/supabase-js';
 import { getUserRole, hasPermission } from './auth.js';
 import { fileURLToPath } from 'url';
 
+import { resumirQualquerDocumento } from './aiService.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -190,8 +192,15 @@ app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store');
   next();
 });
-app.use('/static', express.static(path.join(rootPath, 'src')));
+
+// 1. Serve arquivos estáticos da raiz e da pasta 'src' (se houver scripts lá)
 app.use(express.static(rootPath));
+app.use('/src', express.static(path.join(rootPath, 'src')));
+
+// 2. Rota explícita para entregar a página inicial (index.html) do CEI/UFRGS
+app.get('/', (req, res) => {
+  res.sendFile(path.join(rootPath, 'index.html'));
+});
 
 function buildDownloadUrl(req, evidenceId) {
   return `/api/file/${encodeURIComponent(evidenceId)}`;
@@ -758,20 +767,26 @@ async function callOpenAIForMetadata(filename, extension, extractedText) {
   }
 }
 
-async function generateMetadata(filename, extension, extractedText) {
-  const aiResult = await callOpenAIForMetadata(filename, extension, extractedText).catch(() => null);
-  if (aiResult && typeof aiResult === 'object') {
+async function generateMetadata(filename, extension, extractedText, tempPath) {
+  try {
+    // 1. Tenta gerar o resumo inteligente usando o Gemini via aiService
+    let resumoIA = '';
+    if (tempPath && fs.existsSync(tempPath)) {
+      resumoIA = await resumirQualquerDocumento(tempPath);
+    }
+
     return {
-      evento: String(aiResult.evento || 'Registro Interno').trim(),
-      categoria: String(aiResult.categoria || 'Gestão').trim(),
-      responsavel: String(aiResult.responsavel || 'Equipe CEI').trim(),
-      tags: Array.isArray(aiResult.tags) ? aiResult.tags.map((tag) => String(tag).trim()).filter(Boolean) : [],
-      resumo: String(aiResult.resumo || '').trim(),
+      evento: 'Registro Interno',
+      categoria: 'Gestão',
+      responsavel: 'Equipe CEI',
+      tags: ['CERNE', 'Evidência'],
+      resumo: resumoIA || (extractedText ? extractedText.slice(0, 220) + '...' : 'Evidência cadastrada no sistema.'),
       textoExtraido: extractedText || ''
     };
+  } catch (error) {
+    console.warn('[AI] Falha ao processar com o Gemini, usando metadados padrão:', error.message);
+    return buildFallbackMetadata(filename, extension, extractedText);
   }
-
-  return buildFallbackMetadata(filename, extension, extractedText);
 }
 
 app.post('/api/auth/login', async (req, res) => {
