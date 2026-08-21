@@ -691,8 +691,21 @@ function setupSidebarEvents() {
       break;
 
       case 'responsaveis':
-        alert('Seção de Responsáveis em desenvolvimento');
+        const responsaveisUnicos = [...new Set(state.evidences.map(e => e.responsavel).filter(Boolean))];
+        const responsaveisNode = window.CerneApp.ResponsaveisPage.render(
+          responsaveisUnicos,
+          () => {
+            const defaultItem = document.querySelector('.sidebar-item[data-nav="evidences"]');
+            if (defaultItem) {
+              document.querySelectorAll('.sidebar-item[data-nav]').forEach(i => i.classList.remove('active'));
+              defaultItem.classList.add('active');
+            }
+          }
+        );
+        document.body.appendChild(responsaveisNode);
+        lucide.createIcons();
         break;
+        
       case 'calendario':
         alert('Seção de Calendário em desenvolvimento');
         break;

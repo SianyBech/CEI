@@ -32,11 +32,11 @@ window.CerneApp.Api = {
   },
 
   async createEvidence(metadata) {
-  return this.request('/api/evidences', {
-    method: 'POST',
-    body: JSON.stringify(metadata)
-  });
-},
+    return this.request('/api/evidences', {
+      method: 'POST',
+      body: JSON.stringify(metadata)
+    });
+  },
 
   async updateEvidence(id, metadata) {
     return this.request(`/api/evidences/${encodeURIComponent(id)}`, {
@@ -60,6 +60,21 @@ window.CerneApp.Api = {
       method: 'PATCH',
       body: JSON.stringify(settings)
     });
+  },
+
+  // 🔹 NOVO MÉTODO: Busca e extrai os responsáveis cadastrados no sistema
+  async fetchResponsaveis() {
+    try {
+      const evidences = await this.fetchEvidences();
+      if (Array.isArray(evidences) && evidences.length > 0) {
+        const nomesUnicos = [...new Set(evidences.map(e => e.responsavel).filter(Boolean))].sort();
+        if (nomesUnicos.length > 0) return nomesUnicos;
+      }
+      return ['Siany', 'Eduardo', 'Cláudia', 'André', 'Equipe CEI'];
+    } catch (error) {
+      console.error('[API] Erro em fetchResponsaveis:', error);
+      return ['Siany', 'Eduardo', 'Cláudia', 'André', 'Equipe CEI'];
+    }
   },
 
   uploadEvidence(file, onProgress) {
@@ -105,5 +120,3 @@ window.CerneApp.Api = {
     });
   }
 };
-
-// teste de git
