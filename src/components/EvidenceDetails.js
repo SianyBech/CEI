@@ -133,45 +133,53 @@ window.CerneApp.EvidenceDetails = {
             </div>
 
             <!-- Right Panel: Summary and Extracted OCR Text -->
-            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-              
-              <div style="background-color: #fafafa; border-radius: var(--radius-md); padding: 1.25rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.5rem;">
-                <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--accent); margin-bottom: 0.25rem;">
-                  <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
-                  <strong style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Resumo da Inteligência Artificial</strong>
-                </div>
-                <!-- Modo Leitura (Exibe com negrito e parágrafos) -->
-<div id="resumo-display-container">
-  <div 
-    class="form-textarea-view" 
-    style="min-height: 100px; line-height: 1.6; font-size: 0.9rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px;"
-  >
-    ${(evidence.resumo || '').replace(/\n/g, '<br>')}
+<div style="display: flex; flex-direction: column; gap: 1rem; height: 100%; min-height: 480px;">
+  
+  <!-- Bloco 1: Resumo da IA (Ocupa 50% da altura) -->
+  <div style="flex: 1; min-height: 0; background-color: #fafafa; border-radius: var(--radius-md); padding: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column;">
+    
+    <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--accent); margin-bottom: 0.5rem; flex-shrink: 0;">
+      <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
+      <strong style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Resumo da Inteligência Artificial</strong>
+    </div>
+
+    <!-- Modo Leitura (Exibe com negrito e parágrafos com rolagem) -->
+    <div id="resumo-display-container" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+      <div 
+        class="form-textarea-view" 
+        style="flex: 1; overflow-y: auto; line-height: 1.6; font-size: 0.9rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff;"
+      >
+        ${(evidence.resumo || 'Nenhum resumo gerado.').replace(/\n/g, '<br>')}
+      </div>
+    </div>
+
+    <!-- Modo Edição (Oculto por padrão, usável para alteração manual) -->
+    <textarea 
+      id="detail-resumo-input" 
+      class="form-textarea" 
+      style="display: none; width: 100%; flex: 1; min-height: 0; line-height: 1.5; font-size: 0.9rem; color: var(--text-secondary); border-color: var(--border-color); resize: none; padding: 0.6rem;"
+    >${evidence.resumo || ''}</textarea>
+
   </div>
+
+  <!-- Bloco 2: Conteúdo Extraído OCR (Ocupa 50% da altura) -->
+  <div class="extracted-text-container" style="flex: 1; min-height: 0; background-color: #fafafa; border-radius: var(--radius-md); padding: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column;">
+    
+    <div class="extracted-text-header" style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; flex-shrink: 0;">
+      <i data-lucide="file-digit" style="width: 16px; height: 16px; color: var(--text-secondary);"></i>
+      <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; color: var(--text-secondary);">Conteúdo Textual Extraído (Simulação OCR)</span>
+    </div>
+
+    <div 
+      class="extracted-text-box" 
+      style="flex: 1; overflow-y: auto; line-height: 1.5; font-size: 0.85rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff; white-space: pre-wrap;"
+    >
+      ${evidence.textoExtraido || 'Nenhum texto extraído do arquivo.'}
+    </div>
+
+  </div>
+
 </div>
-
-<!-- Modo Edição (Oculto por padrão, aparece só ao clicar no botão "Editar") -->
-<textarea 
-  id="detail-resumo-input" 
-  class="form-textarea" 
-  style="display: none; width: 100%; min-height: 100px; line-height: 1.5; font-size: 0.9rem; color: var(--text-secondary); border-color: var(--border-color); resize: vertical; padding: 0.6rem;"
->${evidence.resumo || ''}</textarea>
-              </div>
-
-              <div class="extracted-text-container">
-                <div class="extracted-text-header">
-                  <i data-lucide="file-digit" style="width: 16px; height: 16px; color: var(--text-secondary);"></i>
-                  <span>Conteúdo Textual Extraído (Simulação OCR)</span>
-                </div>
-                <div class="extracted-text-box">
-                  ${evidence.textoExtraido}
-                </div>
-              </div>
-
-            </div>
-
-          </div>
-        </div>
 
         <div class="modal-footer">
           <button class="modal-close" id="details-delete-btn" style="background-color: #ff4757; color: white; border: none; border-radius: var(--radius-sm); padding: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; transition: background-color 0.2s; margin-right: auto;" title="Excluir evidência">
