@@ -1,238 +1,176 @@
-window.CerneApp.SettingsPage = {
-  render(settings, onSave, activeTab = 'all') {
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
+// ==========================================================================
+// COMPONENTE: PÁGINA DE CONFIGURAÇÕES GERAIS DO SISTEMA CEI/UFRGS
+// ==========================================================================
 
-    // 1. Define dinamicamente o título e subtítulo da janela
-    let mainTitle = 'Configurações de Filtros';
-    let mainDescription = 'Adicione ou remova as categorias CERNE e as tags que estarão disponíveis nos filtros da tabela.';
+(function () {
+  function render(onCloseCallback) {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
 
-    if (activeTab === 'categories') {
-      mainTitle = 'Gerenciamento de Categorias';
-      mainDescription = 'Adicione, edite ou remova as categorias CERNE disponíveis no sistema.';
-    } else if (activeTab === 'tags') {
-      mainTitle = 'Gerenciamento de Tags';
-      mainDescription = 'Adicione, edite ou remova as tags de classificação disponíveis no sistema.';
-    }
+    backdrop.style.cssText = `
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background-color: rgba(0, 0, 0, 0.5) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      z-index: 99999 !important;
+    `;
 
-    // 2. Define quais seções devem ser visíveis no HTML
-    const showCategories = activeTab === 'all' || activeTab === 'categories';
-    const showTags = activeTab === 'all' || activeTab === 'tags';
+    // Carrega preferências salvas do usuário ou define padrões
+    const settings = JSON.parse(localStorage.getItem('cerne:settings') || '{}');
+    const theme = settings.theme || 'light';
+    const defaultView = settings.defaultView || 'table';
+    const itemsPerPage = settings.itemsPerPage || '10';
+    const notifyUpload = settings.notifyUpload !== false;
 
-   overlay.innerHTML = `
-      <div class="modal-content settings-modal-width">
-        <div class="modal-header">
-          <div>
-            <h2 class="modal-title">${mainTitle}</h2>
-            <p style="margin-top: 0.35rem; color: var(--text-secondary); font-size: 0.9rem; max-width: 520px;">
-              ${mainDescription}
-            </p>
+    backdrop.innerHTML = `
+      <div class="modal-content" style="max-width: 650px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; background-color: var(--bg-primary, #ffffff); border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+        
+        <!-- Cabeçalho -->
+        <div class="modal-header" style="flex-shrink: 0; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <div style="background-color: var(--bg-tertiary); padding: 0.5rem; border-radius: 8px; color: var(--primary, #0066cc); display: flex;">
+              <i data-lucide="settings" style="width: 20px; height: 20px;"></i>
+            </div>
+            <div>
+              <h2 class="modal-title" style="font-size: 1.1rem; margin: 0; font-weight: 600;">Configurações do Sistema</h2>
+              <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Personalize a interface e preferências de uso do CEI</p>
+            </div>
           </div>
-
-          <!-- NOVO LOCAL DOS BOTÕES DE ADICIONAR (NA BARRA DE CIMA) -->
-          <div style="display: flex; align-items: center; gap: 0.75rem; margin-left: auto; margin-right: 0.5rem;">
-            <button class="btn btn-add-header" id="add-category-btn" type="button" style="${showCategories ? '' : 'display: none;'}">
-              <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-              Adicionar categoria
-            </button>
-            <button class="btn btn-add-header" id="add-tag-btn" type="button" style="${showTags ? '' : 'display: none;'}">
-              <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-              Adicionar tag
-            </button>
-          </div>
-
-          <button class="modal-close" id="settings-close-btn">
+          <button class="modal-close" id="set-close-btn" style="background: none; border: none; cursor: pointer; color: var(--text-secondary);">
             <i data-lucide="x" style="width: 20px; height: 20px;"></i>
           </button>
         </div>
 
-        <div class="modal-body settings-modal-body">
-          <div class="settings-panel">
+        <!-- Corpo da Modal -->
+        <div class="modal-body" style="padding: 1.5rem; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1.5rem;">
+          
+          <!-- Seção 1: Aparência e Tema -->
+          <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; background-color: var(--bg-secondary, #f9fafb);">
+            <h3 style="font-size: 0.9rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+              <i data-lucide="palette" style="width: 16px; height: 16px; color: var(--primary, #0066cc);"></i>
+              Aparência do Sistema
+            </h3>
 
-            <!-- Seção de Categorias (Sem o botão antigo aqui dentro) -->
-            <div class="settings-section" style="${showCategories ? '' : 'display: none;'}">
-              
-              <div id="categories-list" class="settings-list"></div>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <strong style="font-size: 0.85rem; color: var(--text-primary); display: block;">Tema de Cores</strong>
+                  <span style="font-size: 0.75rem; color: var(--text-secondary);">Escolha a aparência visual da plataforma</span>
+                </div>
+                <select id="set-theme-select" class="form-select" style="padding: 0.4rem 0.6rem; font-size: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                  <option value="light" ${theme === 'light' ? 'selected' : ''}>Claro (Padrão)</option>
+                  <option value="dark" ${theme === 'dark' ? 'selected' : ''}>Escuro</option>
+                  <option value="system" ${theme === 'system' ? 'selected' : ''}>Seguir Sistema</option>
+                </select>
+              </div>
             </div>
-
-            <!-- Seção de Tags (Sem o botão antigo aqui dentro) -->
-            <div class="settings-section" style="${showTags ? '' : 'display: none;'}">
-              
-              <div id="tags-list" class="settings-list"></div>
-            </div>
-
           </div>
+
+          <!-- Seção 2: Preferências de Exibição de Evidências -->
+          <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; background-color: var(--bg-secondary, #f9fafb);">
+            <h3 style="font-size: 0.9rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+              <i data-lucide="layout-grid" style="width: 16px; height: 16px; color: var(--primary, #0066cc);"></i>
+              Preferências da Listagem
+            </h3>
+
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <strong style="font-size: 0.85rem; color: var(--text-primary); display: block;">Modo de Visualização Padrão</strong>
+                  <span style="font-size: 0.75rem; color: var(--text-secondary);">Como as evidências aparecem ao carregar o app</span>
+                </div>
+                <select id="set-view-select" class="form-select" style="padding: 0.4rem 0.6rem; font-size: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                  <option value="table" ${defaultView === 'table' ? 'selected' : ''}>Tabela Detalhada</option>
+                  <option value="grid" ${defaultView === 'grid' ? 'selected' : ''}>Grid de Cards</option>
+                </select>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+                <div>
+                  <strong style="font-size: 0.85rem; color: var(--text-primary); display: block;">Itens por Página</strong>
+                  <span style="font-size: 0.75rem; color: var(--text-secondary);">Quantidade de registros exibidos na paginação</span>
+                </div>
+                <select id="set-per-page-select" class="form-select" style="padding: 0.4rem 0.6rem; font-size: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                  <option value="5" ${itemsPerPage === '5' ? 'selected' : ''}>5 por página</option>
+                  <option value="10" ${itemsPerPage === '10' ? 'selected' : ''}>10 por página</option>
+                  <option value="20" ${itemsPerPage === '20' ? 'selected' : ''}>20 por página</option>
+                  <option value="50" ${itemsPerPage === '50' ? 'selected' : ''}>50 por página</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Seção 3: Notificações e Comportamento -->
+          <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; background-color: var(--bg-secondary, #f9fafb);">
+            <h3 style="font-size: 0.9rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+              <i data-lucide="bell" style="width: 16px; height: 16px; color: var(--primary, #0066cc);"></i>
+              Notificações e Avisos
+            </h3>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong style="font-size: 0.85rem; color: var(--text-primary); display: block;">Aviso de Upload Concluído</strong>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">Exibir confirmação visual após processamento do OCR/IA</span>
+              </div>
+              <input type="checkbox" id="set-notify-check" ${notifyUpload ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary, #0066cc);" />
+            </div>
+          </div>
+
         </div>
 
-        <div class="modal-footer">
-          <button class="btn btn-secondary" id="settings-cancel-btn">Cancelar</button>
-          <button class="btn btn-primary" id="settings-save-btn">Salvar configurações</button>
+        <!-- Rodapé -->
+        <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.5rem; flex-shrink: 0;">
+          <button class="btn btn-secondary" id="set-close-bottom-btn" style="padding: 0.5rem 1.25rem;">Cancelar</button>
+          <button class="btn btn-primary" id="set-save-btn" style="padding: 0.5rem 1.5rem;">Salvar Preferências</button>
         </div>
+
       </div>
     `;
 
-    const categoriesList = overlay.querySelector('#categories-list');
-    const tagsList = overlay.querySelector('#tags-list');
-    const saveBtn = overlay.querySelector('#settings-save-btn');
-    const cancelBtn = overlay.querySelector('#settings-cancel-btn');
-    const closeBtn = overlay.querySelector('#settings-close-btn');
-    const addCategoryBtn = overlay.querySelector('#add-category-btn');
-    const addTagBtn = overlay.querySelector('#add-tag-btn');
-    const footer = overlay.querySelector('.modal-footer');
+    // Função para Salvar as Configurações
+    function saveSettings() {
+      const newSettings = {
+        theme: backdrop.querySelector('#set-theme-select').value,
+        defaultView: backdrop.querySelector('#set-view-select').value,
+        itemsPerPage: backdrop.querySelector('#set-per-page-select').value,
+        notifyUpload: backdrop.querySelector('#set-notify-check').checked
+      };
 
-    const feedbackEl = document.createElement('div');
-    feedbackEl.className = 'settings-feedback';
-    feedbackEl.setAttribute('role', 'status');
-    feedbackEl.setAttribute('aria-live', 'polite');
-    footer.prepend(feedbackEl);
-
-    let currentCategories = Array.isArray(settings.categories) ? [...settings.categories] : [];
-    let currentTags = Array.isArray(settings.tags) ? [...settings.tags] : [];
-    let isSaving = false;
-
-    function escapeHtml(value) {
-      return String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    function renderList(listElement, values, itemType) {
-      listElement.innerHTML = '';
-      values.forEach((value, index) => {
-        const item = document.createElement('div');
-        item.className = 'settings-list-item';
-
-        item.innerHTML = `
-          <input type="text" class="form-input settings-item-input" value="${escapeHtml(value)}" data-index="${index}" />
-          <button class="btn btn-secondary settings-item-remove" type="button" data-index="${index}">
-            <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
-          </button>
-        `;
-
-        const input = item.querySelector('input');
-        const removeButton = item.querySelector('.settings-item-remove');
-
-        input.addEventListener('input', (e) => {
-          values[index] = e.target.value;
-        });
-
-        removeButton.addEventListener('click', () => {
-          values.splice(index, 1);
-          renderList(listElement, values, itemType);
-        });
-
-        listElement.appendChild(item);
-      });
-
-      const emptyState = document.createElement('p');
-      emptyState.className = 'settings-empty-state';
-      if (values.length === 0) {
-        emptyState.textContent = itemType === 'category' ? 'Nenhuma categoria configurada ainda.' : 'Nenhuma tag configurada ainda.';
-        listElement.appendChild(emptyState);
+      localStorage.setItem('cerne:settings', JSON.stringify(newSettings));
+      
+      // Aplica o tema na tag <html> se necessário
+      if (newSettings.theme === 'dark') {
+        document.documentElement.classList.add('dark-theme');
+      } else {
+        document.documentElement.classList.remove('dark-theme');
       }
 
-      lucide.createIcons();
+      closeModal();
     }
 
-    function refreshLists() {
-      renderList(categoriesList, currentCategories, 'category');
-      renderList(tagsList, currentTags, 'tag');
+    function closeModal() {
+      backdrop.remove();
+      if (typeof onCloseCallback === 'function') onCloseCallback();
     }
 
-    addCategoryBtn.addEventListener('click', () => {
-      if (isSaving) return;
-      currentCategories.push('');
-      refreshLists();
-    });
+    backdrop.querySelector('#set-close-btn').addEventListener('click', closeModal);
+    backdrop.querySelector('#set-close-bottom-btn').addEventListener('click', closeModal);
+    backdrop.querySelector('#set-save-btn').addEventListener('click', saveSettings);
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
 
-    addTagBtn.addEventListener('click', () => {
-      if (isSaving) return;
-      currentTags.push('');
-      refreshLists();
-    });
+    setTimeout(() => {
+      if (window.lucide) lucide.createIcons();
+    }, 0);
 
-    function setSavingState(saving) {
-      isSaving = saving;
-      saveBtn.disabled = saving;
-      saveBtn.classList.toggle('is-loading', saving);
-      saveBtn.innerHTML = saving
-        ? '<span class="btn-loading-spinner" aria-hidden="true"></span> Salvando...'
-        : 'Salvar configurações';
-      cancelBtn.disabled = saving;
-      closeBtn.disabled = saving;
-    }
-
-    function clearFeedback() {
-      feedbackEl.textContent = '';
-      feedbackEl.className = 'settings-feedback';
-    }
-
-    function showFeedback(type, message) {
-      feedbackEl.textContent = message;
-      feedbackEl.className = `settings-feedback visible ${type}`;
-    }
-
-    function showToast(message, type = 'success') {
-      const toast = document.createElement('div');
-      toast.className = `app-toast ${type}`;
-      toast.textContent = message;
-      document.body.appendChild(toast);
-
-      requestAnimationFrame(() => {
-        toast.classList.add('show');
-      });
-
-      window.setTimeout(() => {
-        toast.classList.remove('show');
-        window.setTimeout(() => toast.remove(), 220);
-      }, 2600);
-    }
-
-    saveBtn.addEventListener('click', async () => {
-      if (isSaving) return;
-
-      const normalizedCategories = currentCategories
-        .map((value) => String(value || '').trim())
-        .filter((value) => value.length > 0);
-
-      const normalizedTags = currentTags
-        .map((value) => String(value || '').trim())
-        .filter((value) => value.length > 0);
-
-      setSavingState(true);
-      clearFeedback();
-
-      try {
-        await onSave({ categories: normalizedCategories, tags: normalizedTags });
-        setSavingState(false);
-        showToast('Configurações salvas com sucesso.', 'success');
-        doClose(true);
-      } catch (error) {
-        const message = error?.message || 'Não foi possível salvar as configurações.';
-        showFeedback('error', message);
-        setSavingState(false);
-      }
-    });
-
-    function doClose(force = false) {
-      if (isSaving && !force) return;
-      overlay.remove();
-      if (typeof onClose === 'function') {
-        onClose();
-      }
-    }
-
-    cancelBtn.addEventListener('click', doClose);
-    closeBtn.addEventListener('click', doClose);
-    overlay.addEventListener('click', (event) => {
-      if (event.target === overlay) doClose();
-    });
-
-    refreshLists();
-
-    return overlay;
+    return backdrop;
   }
-};
+
+  // Registra no namespace global
+  window.CerneApp = window.CerneApp || {};
+  window.CerneApp.SettingsPage = { render };
+})();

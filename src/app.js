@@ -732,9 +732,15 @@ function setupSidebarEvents() {
         }
         break;
 
-      case 'settings':
-        openSettings();
-        break;
+      function openSettings() {
+  if (window.CerneApp && window.CerneApp.SettingsPage) {
+    const settingsNode = window.CerneApp.SettingsPage.render(() => {
+      restoreSidebarActive('evidences');
+    });
+    document.body.appendChild(settingsNode);
+    lucide.createIcons();
+  }
+}
     }
   }
 
