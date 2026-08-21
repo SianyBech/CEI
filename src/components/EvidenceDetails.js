@@ -50,146 +50,157 @@ window.CerneApp.EvidenceDetails = {
     }
 
     overlay.innerHTML = `
-      <div class="modal-content detail-modal-width">
-        <div class="modal-header">
-          <div style="display: flex; align-items: center; gap: 0.65rem;">
-            <i data-lucide="${iconName}" class="file-icon ${iconClass}"></i>
-            <h2 class="modal-title" style="font-size: 1.1rem; max-width: 500px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(titleText)}">
-              ${escapeHtml(titleText)}
-            </h2>
-          </div>
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
-            
-            <button class="modal-close" id="details-close-btn">
-              <i data-lucide="x" style="width: 20px; height: 20px;"></i>
-            </button>
+      <div class="modal-content detail-modal-width" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;">
+  
+  <!-- Header da Modal (Altura fixa no topo) -->
+  <div class="modal-header" style="flex-shrink: 0;">
+    <div style="display: flex; align-items: center; gap: 0.65rem;">
+      <i data-lucide="${iconName}" class="file-icon ${iconClass}"></i>
+      <h2 class="modal-title" style="font-size: 1.1rem; max-width: 500px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(titleText)}">
+        ${escapeHtml(titleText)}
+      </h2>
+    </div>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <button class="modal-close" id="details-close-btn">
+        <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Body da Modal (Preenche o restante da altura sem criar scroll global) -->
+  <div class="modal-body" style="padding: 1.5rem; flex: 1; min-height: 0; display: flex; overflow: hidden;">
+    
+    <!-- Grid Principal (Esq + Direita) -->
+    <div class="details-grid" style="flex: 1; min-height: 0; height: 100%; display: flex; gap: 1.5rem; overflow: hidden; width: 100%;">
+      
+      <!-- Left Panel: Metadados Editáveis (Rolagem própria na esquerda) -->
+      <div class="details-sidebar" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding-right: 0.5rem;">
+        
+        <div class="detail-item">
+          <label class="detail-label" for="detail-title-input">Título da Evidência</label>
+          <input id="detail-title-input" class="form-input" value="${escapeHtml(titleText)}" />
+        </div>
+
+        <div class="detail-item">
+          <label class="detail-label" for="detail-file-name">Arquivo Original</label>
+          <input id="detail-file-name" class="form-input" value="${escapeHtml(evidence.nome)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;" />
+        </div>
+
+        <div class="detail-item">
+          <label class="detail-label" for="detail-evento-input">Evento de Origem</label>
+          <input id="detail-evento-input" class="form-input" value="${escapeHtml(evidence.evento)}" />
+        </div>
+
+        <div class="detail-item">
+          <label class="detail-label">Categorias CERNE</label>
+          <div class="tags-selector-wrapper">
+            <div class="selected-tags-display" id="detail-selected-categories-display">
+              <!-- As badges das categorias selecionadas são inseridas aqui dinamicamente -->
+            </div>
+            <select class="form-select" id="detail-add-category-select" style="margin-top: 0.35rem;">
+              <!-- Dropdown para escolher e adicionar mais uma categoria -->
+            </select>
           </div>
         </div>
 
-        <div class="modal-body" style="padding: 1.5rem;">
-          <div class="details-grid">
-            
-            <!-- Left Panel: Editable Metadata -->
-            <div class="details-sidebar">
-              <div class="detail-item">
-                <label class="detail-label" for="detail-title-input">Título da Evidência</label>
-                <input id="detail-title-input" class="form-input" value="${escapeHtml(titleText)}" />
-              </div>
+        <div class="detail-item">
+          <label class="detail-label" for="detail-responsavel-input">Responsável pelo Envio</label>
+          <input id="detail-responsavel-input" class="form-input" value="${escapeHtml(evidence.responsavel)}" />
+        </div>
 
-              <div class="detail-item">
-                <label class="detail-label" for="detail-file-name">Arquivo Original</label>
-                <input id="detail-file-name" class="form-input" value="${escapeHtml(evidence.nome)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;" />
-              </div>
+        <div class="detail-item">
+          <label class="detail-label" for="detail-data-input">Data do Registro</label>
+          <input id="detail-data-input" class="form-input" value="${escapeHtml(evidence.data)}" />
+        </div>
 
-              <div class="detail-item">
-                <label class="detail-label" for="detail-evento-input">Evento de Origem</label>
-                <input id="detail-evento-input" class="form-input" value="${escapeHtml(evidence.evento)}" />
-              </div>
-
-              <div class="detail-item">
-                <label class="detail-label">Categorias CERNE</label>
-                <div class="tags-selector-wrapper">
-                  <div class="selected-tags-display" id="detail-selected-categories-display">
-                    <!-- As badges das categorias selecionadas são inseridas aqui dinamicamente -->
-                  </div>
-                  <select class="form-select" id="detail-add-category-select" style="margin-top: 0.35rem;">
-                    <!-- Dropdown para escolher e adicionar mais uma categoria -->
-                  </select>
-                </div>
-              </div>
-
-              <div class="detail-item">
-                <label class="detail-label" for="detail-responsavel-input">Responsável pelo Envio</label>
-                <input id="detail-responsavel-input" class="form-input" value="${escapeHtml(evidence.responsavel)}" />
-              </div>
-
-              <div class="detail-item">
-                <label class="detail-label" for="detail-data-input">Data do Registro</label>
-                <input id="detail-data-input" class="form-input" value="${escapeHtml(evidence.data)}" />
-              </div>
-
-              <div class="detail-item">
-                <label class="detail-label">Tags da Evidência</label>
-                <div class="tags-selector-wrapper">
-                  <div class="selected-tags-display" id="detail-selected-tags-display">
-                    <!-- selected tags will be dynamically generated as pills -->
-                  </div>
-                  <select class="form-select" id="detail-add-tag-select" style="margin-top: 0.35rem;">
-                    <!-- dynamically populated option list -->
-                  </select>
-                </div>
-              </div>
-
-              <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.5rem;">
-                <a href="#" class="btn btn-secondary" id="btn-download-original" style="width: 100%; text-decoration: none;">
-                  <i data-lucide="download" style="width: 15px; height: 15px;"></i>
-                  Baixar Arquivo
-                </a>
-                <button class="btn btn-secondary" id="btn-preview-original" style="width: 100%;">
-                  <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
-                  Visualizar Original
-                </button>
-              </div>
+        <div class="detail-item">
+          <label class="detail-label">Tags da Evidência</label>
+          <div class="tags-selector-wrapper">
+            <div class="selected-tags-display" id="detail-selected-tags-display">
+              <!-- selected tags will be dynamically generated as pills -->
             </div>
+            <select class="form-select" id="detail-add-tag-select" style="margin-top: 0.35rem;">
+              <!-- dynamically populated option list -->
+            </select>
+          </div>
+        </div>
 
-            <!-- Right Panel: Summary and Extracted OCR Text -->
-<div style="display: flex; flex-direction: column; gap: 1rem; height: 100%; min-height: 480px;">
-  
-  <!-- Bloco 1: Resumo da IA (Ocupa 50% da altura) -->
-  <div style="flex: 1; min-height: 0; background-color: #fafafa; border-radius: var(--radius-md); padding: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column;">
-    
-    <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--accent); margin-bottom: 0.5rem; flex-shrink: 0;">
-      <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
-      <strong style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Resumo da Inteligência Artificial</strong>
-    </div>
+        <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.5rem;">
+          <a href="#" class="btn btn-secondary" id="btn-download-original" style="width: 100%; text-decoration: none;">
+            <i data-lucide="download" style="width: 15px; height: 15px;"></i>
+            Baixar Arquivo
+          </a>
+          <button class="btn btn-secondary" id="btn-preview-original" style="width: 100%;">
+            <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
+            Visualizar Original
+          </button>
+        </div>
 
-    <!-- Modo Leitura (Exibe com negrito e parágrafos com rolagem) -->
-    <div id="resumo-display-container" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
-      <div 
-        class="form-textarea-view" 
-        style="flex: 1; overflow-y: auto; line-height: 1.6; font-size: 0.9rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff;"
-      >
-        ${(evidence.resumo || 'Nenhum resumo gerado.').replace(/\n/g, '<br>')}
       </div>
+
+      <!-- Right Panel: Resumo IA e OCR Divididos em 50%/50% -->
+      <div style="flex: 1.2; min-height: 0; height: 100%; display: flex; flex-direction: column; gap: 1rem; overflow: hidden;">
+        
+        <!-- Bloco 1: Resumo da IA (50% da altura) -->
+        <div style="flex: 1; min-height: 0; background-color: #fafafa; border-radius: var(--radius-md); padding: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden;">
+          
+          <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--accent); margin-bottom: 0.5rem; flex-shrink: 0;">
+            <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
+            <strong style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Resumo da Inteligência Artificial</strong>
+          </div>
+
+          <!-- Modo Leitura (Renderiza HTML/Negritos e Parágrafos com Scroll Isolado) -->
+          <div id="resumo-display-container" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">
+            <div 
+              class="form-textarea-view" 
+              style="flex: 1; min-height: 0; overflow-y: auto; line-height: 1.6; font-size: 0.9rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff;"
+            >
+              ${(evidence.resumo || 'Nenhum resumo gerado.').replace(/\n/g, '<br>')}
+            </div>
+          </div>
+
+          <!-- Modo Edição (Oculto por padrão para uso em edição) -->
+          <textarea 
+            id="detail-resumo-input" 
+            class="form-textarea" 
+            style="display: none; width: 100%; flex: 1; min-height: 0; line-height: 1.5; font-size: 0.9rem; color: var(--text-secondary); border-color: var(--border-color); resize: none; padding: 0.6rem;"
+          >${evidence.resumo || ''}</textarea>
+
+        </div>
+
+        <!-- Bloco 2: Conteúdo Extraído OCR (50% da altura) -->
+        <div class="extracted-text-container" style="flex: 1; min-height: 0; background-color: #fafafa; border-radius: var(--radius-md); padding: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden;">
+          
+          <div class="extracted-text-header" style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; flex-shrink: 0;">
+            <i data-lucide="file-digit" style="width: 16px; height: 16px; color: var(--text-secondary);"></i>
+            <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; color: var(--text-secondary);">Conteúdo Textual Extraído (Simulação OCR)</span>
+          </div>
+
+          <div 
+            class="extracted-text-box" 
+            style="flex: 1; min-height: 0; overflow-y: auto; line-height: 1.5; font-size: 0.85rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff; white-space: pre-wrap;"
+          >
+            ${evidence.textoExtraido || 'Nenhum texto extraído do arquivo.'}
+          </div>
+
+        </div>
+
+      </div>
+
     </div>
-
-    <!-- Modo Edição (Oculto por padrão, usável para alteração manual) -->
-    <textarea 
-      id="detail-resumo-input" 
-      class="form-textarea" 
-      style="display: none; width: 100%; flex: 1; min-height: 0; line-height: 1.5; font-size: 0.9rem; color: var(--text-secondary); border-color: var(--border-color); resize: none; padding: 0.6rem;"
-    >${evidence.resumo || ''}</textarea>
-
   </div>
 
-  <!-- Bloco 2: Conteúdo Extraído OCR (Ocupa 50% da altura) -->
-  <div class="extracted-text-container" style="flex: 1; min-height: 0; background-color: #fafafa; border-radius: var(--radius-md); padding: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column;">
-    
-    <div class="extracted-text-header" style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; flex-shrink: 0;">
-      <i data-lucide="file-digit" style="width: 16px; height: 16px; color: var(--text-secondary);"></i>
-      <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; color: var(--text-secondary);">Conteúdo Textual Extraído (Simulação OCR)</span>
-    </div>
-
-    <div 
-      class="extracted-text-box" 
-      style="flex: 1; overflow-y: auto; line-height: 1.5; font-size: 0.85rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff; white-space: pre-wrap;"
-    >
-      ${evidence.textoExtraido || 'Nenhum texto extraído do arquivo.'}
-    </div>
-
+  <!-- Footer da Modal (Fixo na parte inferior) -->
+  <div class="modal-footer" style="flex-shrink: 0; display: flex; align-items: center; padding: 1rem 1.5rem; border-top: 1px solid var(--border-color);">
+    <button class="modal-close" id="details-delete-btn" style="background-color: #ff4757; color: white; border: none; border-radius: var(--radius-sm); padding: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; transition: background-color 0.2s; margin-right: auto;" title="Excluir evidência">
+      <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
+    </button>
+      
+    <button class="btn btn-secondary" id="details-close-bottom-btn" style="padding-left: 1.5rem; padding-right: 1.5rem;">Cancelar</button>
+    <button class="btn btn-primary" id="details-save-btn" style="padding-left: 1.5rem; padding-right: 1.5rem; margin-left: 0.5rem;">Salvar alterações</button>
   </div>
 
 </div>
-
-        <div class="modal-footer">
-          <button class="modal-close" id="details-delete-btn" style="background-color: #ff4757; color: white; border: none; border-radius: var(--radius-sm); padding: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; transition: background-color 0.2s; margin-right: auto;" title="Excluir evidência">
-            <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
-          </button>
-            
-          <button class="btn btn-secondary" id="details-close-bottom-btn" style="padding-left: 1.5rem; padding-right: 1.5rem;">Cancelar</button>
-          <button class="btn btn-primary" id="details-save-btn" style="padding-left: 1.5rem; padding-right: 1.5rem;">Salvar alterações</button>
-        </div>
-      </div>
     `;
 
     const closeBtn = overlay.querySelector('#details-close-btn');
