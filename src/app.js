@@ -705,10 +705,16 @@ function setupSidebarEvents() {
         document.body.appendChild(responsaveisNode);
         lucide.createIcons();
         break;
-        
-      case 'calendario':
-        alert('Seção de Calendário em desenvolvimento');
+
+     case 'calendario':
+        const calendarioNode = window.CerneApp.CalendarioPage.render(
+          state.evidences, // Passa as evidências atuais do estado global
+          () => restoreSidebarActive('evidences')
+        );
+        document.body.appendChild(calendarioNode);
+        lucide.createIcons();
         break;
+        
       case 'relatorios':
         alert('Seção de Relatórios em desenvolvimento');
         break;
