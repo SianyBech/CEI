@@ -707,17 +707,31 @@ function setupSidebarEvents() {
         break;
 
      case 'calendario':
-        const calendarioNode = window.CerneApp.CalendarioPage.render(
-          state.evidences, // Passa as evidências atuais do estado global
-          () => restoreSidebarActive('evidences')
-        );
-        document.body.appendChild(calendarioNode);
-        lucide.createIcons();
-        break;
-        
+  if (window.CerneApp && window.CerneApp.CalendarioPage) {
+    const calendarioNode = window.CerneApp.CalendarioPage.render(
+      state.evidences,
+      () => restoreSidebarActive('evidences')
+    );
+    document.body.appendChild(calendarioNode);
+    lucide.createIcons();
+  } else {
+    console.error('[ERRO] CalendarioPage não está carregado no window.CerneApp.');
+    alert('Não foi possível carregar o Calendário. Verifique o console.');
+  }
+  break;
+
+      // 🔹 CONECTANDO OS RELATÓRIOS AQUI:
       case 'relatorios':
-        alert('Seção de Relatórios em desenvolvimento');
+        if (window.CerneApp.RelatoriosPage) {
+          const relatoriosNode = window.CerneApp.RelatoriosPage.render(
+            state.evidences, // Passa as evidências do estado para calcular os gráficos
+            () => restoreSidebarActive('evidences')
+          );
+          document.body.appendChild(relatoriosNode);
+          lucide.createIcons();
+        }
         break;
+
       case 'settings':
         openSettings();
         break;

@@ -87,3 +87,7 @@
   window.CerneApp = window.CerneApp || {};
   window.CerneApp.ResponsaveisPage = { render };
 })();
+
+// No final de ResponsaveisPage.js
+window.CerneApp = window.CerneApp || {};
+window.CerneApp.ResponsaveisPage = { render };

@@ -205,3 +205,13 @@
   window.CerneApp = window.CerneApp || {};
   window.CerneApp.CalendarioPage = { render };
 })();
+
+// No final do arquivo src/components/CalendarioPage.js
+
+// Garante que a namespace exista no escopo global
+window.CerneApp = window.CerneApp || {};
+
+// Registra explicitamente a página no namespace
+window.CerneApp.CalendarioPage = {
+  render: render
+};
