@@ -7,7 +7,7 @@
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
 
-    // ESTILOS DE SEGURANÇA: Trava o fundo escuro na tela inteira e centraliza a modal
+    // ESTILOS DE SEGURANÇA: Centraliza a modal na tela sobre o overlay escuro
     backdrop.style.cssText = `
       position: fixed !important;
       top: 0 !important;
@@ -22,6 +22,10 @@
     `;
 
     let currentDate = new Date();
+    const monthNames = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
 
     // Mapeia evidências por data no formato DD/MM/YYYY
     function getEvidencesByDateMap() {
@@ -35,6 +39,16 @@
       return map;
     }
 
+    // Gera lista de anos (de 2016 até o ano atual + 5)
+    const currentYear = new Date().getFullYear();
+    const startYear = 2016;
+    const endYear = currentYear + 5;
+    let yearOptionsHTML = '';
+    for (let y = startYear; y <= endYear; y++) {
+      yearOptionsHTML += `<option value="${y}">${y}</option>`;
+    }
+
+    // Estrutura HTML da Modal
     backdrop.innerHTML = `
       <div class="modal-content" style="max-width: 700px; width: 90%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; background-color: var(--bg-primary, #ffffff); border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
         
@@ -54,15 +68,26 @@
           </button>
         </div>
 
-        <!-- Corpo com Calendário e Painel de Eventos -->
+        <!-- Corpo da Modal -->
         <div class="modal-body" style="padding: 1.5rem; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1.25rem;">
           
-          <!-- Controles de Navegação do Mês -->
+          <!-- Controles do Mês e Seletores Rápidos de Mês/Ano -->
           <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary, #f9fafb); padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
             <button id="cal-prev-month" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem;">
               <i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i> Anterior
             </button>
-            <strong id="cal-month-title" style="font-size: 1rem; color: var(--text-primary); text-transform: capitalize;"></strong>
+
+            <!-- Dropdowns interativos para Mês e Ano -->
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <select id="cal-month-select" class="form-select" style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary); padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-primary, #ffffff); cursor: pointer;">
+                ${monthNames.map((m, idx) => `<option value="${idx}">${m}</option>`).join('')}
+              </select>
+
+              <select id="cal-year-select" class="form-select" style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary); padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-primary, #ffffff); cursor: pointer;">
+                ${yearOptionsHTML}
+              </select>
+            </div>
+
             <button id="cal-next-month" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem;">
               Próximo <i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i>
             </button>
@@ -73,7 +98,7 @@
             <!-- Renderizado dinamicamente via JS -->
           </div>
 
-          <!-- Painel de Evidências do Dia Selecionado -->
+          <!-- Painel de Detalhes do Dia Selecionado -->
           <div id="cal-selected-day-details" style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 0.5rem;">
             <h4 style="margin: 0 0 0.75rem 0; font-size: 0.9rem; color: var(--text-secondary); font-weight: 600;" id="cal-selected-date-label">
               Clique em um dia para ver as evidências
@@ -93,19 +118,23 @@
       </div>
     `;
 
-    // Lógica de Renderização das Células do Calendário
+    const monthSelect = backdrop.querySelector('#cal-month-select');
+    const yearSelect = backdrop.querySelector('#cal-year-select');
+
+    // Função Principal de Renderização dos Dias
     function renderCalendar() {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       const evidencesMap = getEvidencesByDateMap();
 
-      const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-      backdrop.querySelector('#cal-month-title').textContent = `${monthNames[month]} de ${year}`;
+      // Sincroniza os dropdowns com a data atual do estado
+      monthSelect.value = month;
+      yearSelect.value = year;
 
       const grid = backdrop.querySelector('#cal-grid-container');
       grid.innerHTML = '';
 
-      // Dias da semana
+      // Cabeçalho dos dias da semana
       const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
       weekDays.forEach(day => {
         const headerCell = document.createElement('div');
@@ -117,10 +146,9 @@
       const firstDay = new Date(year, month, 1).getDay();
       const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-      // Espaços em branco antes do 1º dia
+      // Células vazias antes do 1º dia
       for (let i = 0; i < firstDay; i++) {
-        const emptyCell = document.createElement('div');
-        grid.appendChild(emptyCell);
+        grid.appendChild(document.createElement('div'));
       }
 
       // Preenche os dias do mês
@@ -139,7 +167,6 @@
           display: flex;
           flex-direction: column;
           align-items: center;
-          position: relative;
         `;
 
         dayCell.innerHTML = `
@@ -159,7 +186,7 @@
       if (window.lucide) lucide.createIcons();
     }
 
-    // Exibe a lista de evidências do dia clicado
+    // Exibe lista de evidências do dia selecionado
     function showDayEvidences(dateStr, list) {
       const label = backdrop.querySelector('#cal-selected-date-label');
       const container = backdrop.querySelector('#cal-evidence-list');
@@ -186,7 +213,7 @@
       });
     }
 
-    // Eventos de navegação do mês
+    // Eventos dos botões "Anterior" e "Próximo"
     backdrop.querySelector('#cal-prev-month').addEventListener('click', () => {
       currentDate.setMonth(currentDate.getMonth() - 1);
       renderCalendar();
@@ -194,6 +221,17 @@
 
     backdrop.querySelector('#cal-next-month').addEventListener('click', () => {
       currentDate.setMonth(currentDate.getMonth() + 1);
+      renderCalendar();
+    });
+
+    // Eventos de troca direta nos Dropdowns de Mês e Ano
+    monthSelect.addEventListener('change', (e) => {
+      currentDate.setMonth(parseInt(e.target.value, 10));
+      renderCalendar();
+    });
+
+    yearSelect.addEventListener('change', (e) => {
+      currentDate.setFullYear(parseInt(e.target.value, 10));
       renderCalendar();
     });
 
@@ -207,13 +245,13 @@
     backdrop.querySelector('#cal-close-bottom-btn').addEventListener('click', closeModal);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
 
-    // Renderiza inicialmente
+    // Renderização inicial
     setTimeout(() => renderCalendar(), 0);
 
     return backdrop;
   }
 
-  // Garantia do namespace no escopo global
+  // Registra no namespace global
   window.CerneApp = window.CerneApp || {};
   window.CerneApp.CalendarioPage = { render };
 })();
