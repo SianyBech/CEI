@@ -140,7 +140,22 @@ window.CerneApp.EvidenceDetails = {
                   <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
                   <strong style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Resumo da Inteligência Artificial</strong>
                 </div>
-                <textarea id="detail-resumo-input" class="form-textarea" style="min-height: 100px; line-height: 1.5; font-size: 0.9rem; color: var(--text-secondary); border-color: var(--border-color); resize: vertical; padding: 0.6rem; font-style: italic;">${escapeHtml(evidence.resumo)}</textarea>
+                <!-- Modo Leitura (Exibe com negrito e parágrafos) -->
+<div id="resumo-display-container">
+  <div 
+    class="form-textarea-view" 
+    style="min-height: 100px; line-height: 1.6; font-size: 0.9rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px;"
+  >
+    ${(evidence.resumo || '').replace(/\n/g, '<br>')}
+  </div>
+</div>
+
+<!-- Modo Edição (Oculto por padrão, aparece só ao clicar no botão "Editar") -->
+<textarea 
+  id="detail-resumo-input" 
+  class="form-textarea" 
+  style="display: none; width: 100%; min-height: 100px; line-height: 1.5; font-size: 0.9rem; color: var(--text-secondary); border-color: var(--border-color); resize: vertical; padding: 0.6rem;"
+>${evidence.resumo || ''}</textarea>
               </div>
 
               <div class="extracted-text-container">
