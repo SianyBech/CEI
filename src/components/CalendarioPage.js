@@ -1,12 +1,25 @@
 // ==========================================================================
-// COMPONENTE: ABA / PÁGINA DE CALENDÁRIO DE EVIDÊNCIAS CERNE
+// COMPONENTE: ABA / PÁGINA DE CALENDÁRIO DE EVIDÊNCIAS CERNE (CEI/UFRGS)
 // ==========================================================================
 
 (function () {
   function render(evidences = [], onCloseCallback) {
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
-    backdrop.style.zIndex = '1100';
+
+    // ESTILOS DE SEGURANÇA: Trava o fundo escuro na tela inteira e centraliza a modal
+    backdrop.style.cssText = `
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background-color: rgba(0, 0, 0, 0.5) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      z-index: 99999 !important;
+    `;
 
     let currentDate = new Date();
 
@@ -15,8 +28,7 @@
       const map = {};
       evidences.forEach(ev => {
         if (!ev.data) return;
-        // Normaliza a data no formato DD/MM/YYYY
-        const cleanData = ev.data.trim();
+        const cleanData = String(ev.data).trim();
         if (!map[cleanData]) map[cleanData] = [];
         map[cleanData].push(ev);
       });
@@ -24,7 +36,7 @@
     }
 
     backdrop.innerHTML = `
-      <div class="modal-content" style="max-width: 750px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;">
+      <div class="modal-content" style="max-width: 700px; width: 90%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; background-color: var(--bg-primary, #ffffff); border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
         
         <!-- Cabeçalho -->
         <div class="modal-header" style="flex-shrink: 0; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
@@ -136,7 +148,6 @@
         `;
 
         dayCell.addEventListener('click', () => {
-          // Destaca célula selecionada
           grid.querySelectorAll('div').forEach(c => c.style.outline = 'none');
           dayCell.style.outline = '2px solid var(--primary, #0066cc)';
           showDayEvidences(dateStr, dayEvidences);
@@ -175,7 +186,7 @@
       });
     }
 
-    // Eventos dos botões do mês
+    // Eventos de navegação do mês
     backdrop.querySelector('#cal-prev-month').addEventListener('click', () => {
       currentDate.setMonth(currentDate.getMonth() - 1);
       renderCalendar();
@@ -202,16 +213,7 @@
     return backdrop;
   }
 
+  // Garantia do namespace no escopo global
   window.CerneApp = window.CerneApp || {};
   window.CerneApp.CalendarioPage = { render };
 })();
-
-// No final do arquivo src/components/CalendarioPage.js
-
-// Garante que a namespace exista no escopo global
-window.CerneApp = window.CerneApp || {};
-
-// Registra explicitamente a página no namespace
-window.CerneApp.CalendarioPage = {
-  render: render
-};
