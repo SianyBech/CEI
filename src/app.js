@@ -620,46 +620,47 @@ function handleClearFilters() {
   renderList();
 }
 
-
-  // Sidebar navigation setup
-  function setupSidebarEvents() {
-    // Close sidebar card
-    const closeCardBtn = document.getElementById('sidebar-card-close-btn');
-    if (closeCardBtn) {
-      closeCardBtn.addEventListener('click', () => {
-        localStorage.setItem('cerne:sidebar-card-closed', 'true');
-        state.showSidebarCard = false;
-        const card = document.getElementById('sidebar-info-card');
-        if (card) {
-          card.style.animation = 'fadeOut 0.3s ease-in-out';
-          setTimeout(() => card.remove(), 300);
-        }
-      });
+function setupSidebarEvents() {
+  // Delegação de eventos: escuta o clique no nível do documento
+  document.addEventListener('click', (event) => {
+    // 1. Verifica se o clique foi em um botão de fechar o card da sidebar
+    const closeBtn = event.target.closest('#sidebar-card-close-btn');
+    if (closeBtn) {
+      localStorage.setItem('cerne:sidebar-card-closed', 'true');
+      state.showSidebarCard = false;
+      const card = document.getElementById('sidebar-info-card');
+      if (card) {
+        card.style.animation = 'fadeOut 0.3s ease-in-out';
+        setTimeout(() => card.remove(), 300);
+      }
+      return;
     }
 
-    // Sidebar navigation items
-    const sidebarItems = document.querySelectorAll('.sidebar-item[data-nav]');
-    sidebarItems.forEach(item => {
-      item.addEventListener('click', () => {
-        const navTarget = item.getAttribute('data-nav');
-        handleSidebarNavigation(navTarget);
-        
-        // Update active state
-        sidebarItems.forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
-      });
-    });
+    // 2. Verifica se o clique foi em algum item do menu lateral (.sidebar-item[data-nav])
+    const navItem = event.target.closest('.sidebar-item[data-nav]');
+    if (navItem) {
+      const navTarget = navItem.getAttribute('data-nav');
+      handleSidebarNavigation(navTarget);
 
-    // Settings button from header
-    const headerSettingsBtn = document.querySelector('#btn-settings');
+      // Atualiza a classe 'active' do menu visualmente
+      document.querySelectorAll('.sidebar-item[data-nav]').forEach(i => i.classList.remove('active'));
+      navItem.classList.add('active');
+      return;
+    }
+
+    // 3. Verifica se o clique foi no botão de configurações do Header
+    const headerSettingsBtn = event.target.closest('#btn-settings');
     if (headerSettingsBtn) {
-      headerSettingsBtn.addEventListener('click', () => {
-        const settingsItem = document.querySelector('.sidebar-item[data-nav="settings"]');
-        if (settingsItem) settingsItem.classList.add('active');
-        openSettings();
-      });
+      const settingsItem = document.querySelector('.sidebar-item[data-nav="settings"]');
+      if (settingsItem) {
+        document.querySelectorAll('.sidebar-item[data-nav]').forEach(i => i.classList.remove('active'));
+        settingsItem.classList.add('active');
+      }
+      openSettings();
+      return;
     }
-  }
+  });
+}
 
   // Handle sidebar navigation
   function handleSidebarNavigation(target) {
