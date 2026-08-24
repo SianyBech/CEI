@@ -350,17 +350,17 @@ window.CerneApp.UploadModal = {
         defaultOpt.selected = true;
         selectElement.appendChild(defaultOpt);
 
-        // Busca do estado global atualizado em memória
-const currentSettings = window.CerneApp.state?.settings || {};
+// Busca direto da chave appSettings do estado
+const appSettings = window.CerneApp?.state?.appSettings || {};
 
-// Para Categorias:
-const categoriesArray = Array.isArray(currentSettings.categories) 
-  ? currentSettings.categories 
+// Categorias [linha 250 do UploadModal.js]:
+const categoriesArray = Array.isArray(appSettings.categories) && appSettings.categories.length > 0
+  ? appSettings.categories
   : (Array.isArray(categories) ? categories : []);
 
-// Para Tags:
-const tagsListArray = Array.isArray(currentSettings.tags) 
-  ? currentSettings.tags 
+// Tags [linha 292 do UploadModal.js]:
+const tagsListArray = Array.isArray(appSettings.tags) && appSettings.tags.length > 0
+  ? appSettings.tags
   : (Array.isArray(tagsList) ? tagsList : []);
 
         const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));

@@ -161,15 +161,15 @@
       }
     });
 
- async function saveToDatabase() {
+async function saveToDatabase() {
   const filtered = tags.map(t => t.trim()).filter(Boolean);
   try {
     if (window.CerneApp?.Api?.updateSettings) {
       const updatedSettings = await window.CerneApp.Api.updateSettings({ ...settingsData, tags: filtered });
       
-      // 🚀 Atualiza o estado global em memória imediatamente
-      if (window.CerneApp.state) {
-        window.CerneApp.state.settings = updatedSettings || { ...settingsData, tags: filtered };
+      // 🚀 Atualiza no estado com o nome exato da sua chave: appSettings
+      if (window.CerneApp?.state) {
+        window.CerneApp.state.appSettings = updatedSettings || { ...settingsData, tags: filtered };
       }
     }
     closeModal();
