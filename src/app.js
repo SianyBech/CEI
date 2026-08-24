@@ -733,15 +733,22 @@ async function openSettings() {
         }
         break;
 
-      case 'responsaveis':
-        const responsaveisUnicos = [...new Set(state.evidences.map(e => e.responsavel).filter(Boolean))];
-        if (window.CerneApp && window.CerneApp.ResponsaveisPage) {
-          const responsaveisNode = await window.CerneApp.ResponsaveisPage.render(
-            responsaveisUnicos,
-            () => restoreSidebarActive('evidences')
-          );
-          document.body.appendChild(responsaveisNode);
-          if (window.lucide) lucide.createIcons();
+     case 'responsaveis':
+        try {
+          // Busca o perfil para verificar o papel (role) do usuário
+          const userProfile = await window.CerneApp.Api.fetchUserProfile();
+          const isAdmin = userProfile?.role === 'admin';
+
+          if (window.CerneApp && window.CerneApp.ResponsaveisPage) {
+            const responsaveisNode = await window.CerneApp.ResponsaveisPage.render(
+              isAdmin, // Passa a flag se é admin ou não
+              () => restoreSidebarActive('evidences')
+            );
+            document.body.appendChild(responsaveisNode);
+            if (window.lucide) lucide.createIcons();
+          }
+        } catch (err) {
+          console.error('[NAV] Erro ao abrir Responsáveis:', err);
         }
         break;
 

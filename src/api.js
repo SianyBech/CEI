@@ -23,7 +23,25 @@ window.CerneApp.Api = {
     return response.json().catch(() => null);
   },
 
-  // Adicione dentro de window.CerneApp.Api no seu api.js:
+
+async createUserByAdmin(userData) {
+  return this.request('/api/admin/users', {
+    method: 'POST',
+    body: JSON.stringify(userData)
+  });
+},
+
+// Métodos de administração de usuários
+  async fetchAllUsers() {
+    return this.request('/api/admin/users');
+  },
+
+  async createNewUser(userData) {
+    return this.request('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(userData)
+    });
+  },
 
   async fetchUserProfile() {
     return this.request('/api/user/profile');

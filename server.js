@@ -688,6 +688,66 @@ async function generateMetadata(filename, extension, extractedText) {
   };
 }
 
+// ==========================================================================
+// ROTAS DE GERENCIAMENTO DE MEMBROS DA EQUIPE CEI
+// ==========================================================================
+
+// 1. GET: Busca e lista todos os membros cadastrados no banco de dados
+app.get('/api/admin/users', requirePermission('view'), async (req, res) => {
+  try {
+    const rows = await dbClient.many(`
+      SELECT "id", "nome", "email", "cargo", "role", "created_at"
+      FROM public.usuarios 
+      ORDER BY "nome" ASC
+    `);
+    res.json(rows || []);
+  } catch (error) {
+    console.error('[ADMIN] Erro ao listar usuários:', error);
+    res.status(500).json({ error: 'Erro ao listar membros da equipe.' });
+  }
+});
+
+// 2. POST: Cadastra um novo membro via Supabase Admin SDK e atualiza perfil
+app.post('/api/admin/users', requirePermission('settings'), async (req, res) => {
+  try {
+    const { email, password, nome, cargo, role } = req.body;
+
+    if (!email || !password || !nome) {
+      return res.status(400).json({ error: 'Preencha nome, e-mail e senha.' });
+    }
+
+    const client = getSupabaseClient(); // Usa a service_role key
+    if (!client) {
+      return res.status(500).json({ error: 'Cliente Supabase Admin indisponível.' });
+    }
+
+    // Cria o usuário na Auth do Supabase
+    const { data: authUser, error: authError } = await client.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true, // Já confirma o e-mail automaticamente
+      user_metadata: { nome, cargo }
+    });
+
+    if (authError) {
+      return res.status(400).json({ error: authError.message });
+    }
+
+    // Atualiza/Garante o registro na tabela public.usuarios
+    await dbClient.run(`
+      INSERT INTO public.usuarios ("id", "email", "nome", "cargo", "role")
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT ("id") DO UPDATE 
+      SET "nome" = EXCLUDED."nome", "cargo" = EXCLUDED."cargo", "role" = EXCLUDED."role"
+    `, [authUser.user.id, email, nome, cargo || 'Analista CEI', role || 'membro']);
+
+    res.json({ success: true, user: authUser.user });
+  } catch (error) {
+    console.error('[ADMIN] Erro ao criar usuário:', error);
+    res.status(500).json({ error: error.message || 'Erro ao cadastrar usuário.' });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body || {};
