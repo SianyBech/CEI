@@ -167,6 +167,18 @@
     lucide.createIcons();
   }
 
+  // Exemplo prático de como aplicar na renderização da lista no app.js:
+function getPaginatedEvidences(filteredEvidences, currentPage = 1) {
+  const settings = JSON.parse(localStorage.getItem('cerne:settings') || '{}');
+  const itemsPerPage = parseInt(settings.itemsPerPage, 10) || 10;
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+
+  // Retorna apenas a fatia referente à página atual
+  return filteredEvidences.slice(startIndex, endIndex);
+}
+
   function renderAppShell() {
     appContainer.innerHTML = '';
     const headerNode = window.CerneApp.Header.render(openUploadModal, openSettings, handleLogout);
