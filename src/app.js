@@ -679,12 +679,28 @@ function setupSidebarEvents() {
    //     break;
 
    case 'categories':
-      openSettings('categories'); // Abre focado APENAS em Categorias
-      break;
+  if (window.CerneApp && window.CerneApp.CategoriesPage) {
+    const categoriesNode = window.CerneApp.CategoriesPage.render(() => restoreSidebarActive('evidences'));
+    document.body.appendChild(categoriesNode);
+    lucide.createIcons();
+  } else {
+    // Caso você use filtros diretamente na tabela ao clicar em categorias:
+    state.filters.categoria = 'todas'; // ou acione seu modal/filtro específico
+    renderList();
+  }
+  break;
 
-    case 'tags':
-      openSettings('tags'); // Abre focado APENAS em Tags
-      break;
+case 'tags':
+  if (window.CerneApp && window.CerneApp.TagsPage) {
+    const tagsNode = window.CerneApp.TagsPage.render(() => restoreSidebarActive('evidences'));
+    document.body.appendChild(tagsNode);
+    lucide.createIcons();
+  } else {
+    // Caso use o filtro de tags diretamente:
+    state.filters.tag = 'todas';
+    renderList();
+  }
+  break;
 
     case 'settings':
       openSettings('all'); // Abre a tela completa de configurações
