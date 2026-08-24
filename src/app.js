@@ -50,6 +50,17 @@
       showLoginView();
       return;
     }
+
+    // 💡 ADICIONE AQUI: Carrega as preferências personalizadas do usuário
+try {
+  const profile = await window.CerneApp.Api.fetchUserProfile();
+  if (profile?.configuracoes) {
+    state.viewMode = profile.configuracoes.defaultView || 'table';
+    state.itemsPerPage = profile.configuracoes.itemsPerPage || 10;
+  }
+} catch (e) {
+  console.warn('Não foi possível carregar as preferências do usuário:', e);
+}
   
     isAuthenticatedUser = true;
     await loadSettings();

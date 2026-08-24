@@ -23,6 +23,19 @@ window.CerneApp.Api = {
     return response.json().catch(() => null);
   },
 
+  // Adicione dentro de window.CerneApp.Api no seu api.js:
+
+  async fetchUserProfile() {
+    return this.request('/api/user/profile');
+  },
+
+  async updateUserProfile(profileData) {
+    return this.request('/api/user/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(profileData)
+    });
+  },
+
   async fetchEvidences() {
     return this.request('/api/evidences');
   },

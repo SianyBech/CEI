@@ -792,6 +792,92 @@ app.get('/api/settings', requirePermission('settings'), async (req, res, next) =
   }
 });
 
+// ==========================================================================
+// ROTAS DE PERFIL E CONFIGURAÇÕES DO USUÁRIO CEI (ADICIONAR AQUI)
+// ==========================================================================
+
+// GET: Busca os dados do usuário autenticado no Supabase
+app.get('/api/user/profile', requirePermission('view'), async (req, res) => {
+  try {
+    // req.user é preenchido pelo seu middleware requirePermission/attachAuthContext
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Usuário não autenticado.' });
+    }
+
+    let user = await dbClient.one(
+      `SELECT "id", "nome", "email", "cargo", "role", "configuracoes" FROM public.usuarios WHERE "id" = $1`,
+      [userId]
+    );
+
+    // Fallback: Se por algum motivo o usuário não estiver na tabela public.usuarios, cria o registro inicial
+    if (!user) {
+      const email = req.user.email || '';
+      const nome = req.user.user_metadata?.nome || email.split('@')[0] || 'Usuário CEI';
+      const cargo = req.user.user_metadata?.cargo || 'Analista CEI';
+
+      await dbClient.run(
+        `INSERT INTO public.usuarios ("id", "email", "nome", "cargo") VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
+        [userId, email, nome, cargo]
+      );
+
+      user = await dbClient.one(
+        `SELECT "id", "nome", "email", "cargo", "role", "configuracoes" FROM public.usuarios WHERE "id" = $1`,
+        [userId]
+      );
+    }
+
+    res.json({
+      id: user.id,
+      nome: user.nome,
+      email: user.email,
+      cargo: user.cargo || 'Analista CEI',
+      role: user.role || 'membro',
+      configuracoes: user.configuracoes || { defaultView: 'table', itemsPerPage: 10 }
+    });
+  } catch (error) {
+    console.error('[PROFILE] Erro ao buscar perfil:', error);
+    res.status(500).json({ error: 'Erro ao carregar perfil do usuário.' });
+  }
+});
+
+// PATCH: Atualiza o nome, cargo e configurações visuais do usuário
+app.patch('/api/user/profile', requirePermission('view'), async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { nome, cargo, configuracoes } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Usuário não autenticado.' });
+    }
+
+    await dbClient.run(
+      `UPDATE public.usuarios 
+       SET "nome" = COALESCE($1, "nome"),
+           "cargo" = COALESCE($2, "cargo"),
+           "configuracoes" = COALESCE($3::jsonb, "configuracoes")
+       WHERE "id" = $4`,
+      [
+        nome || null,
+        cargo || null,
+        configuracoes ? JSON.stringify(configuracoes) : null,
+        userId
+      ]
+    );
+
+    const updatedUser = await dbClient.one(
+      `SELECT "id", "nome", "email", "cargo", "role", "configuracoes" FROM public.usuarios WHERE "id" = $1`,
+      [userId]
+    );
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('[PROFILE] Erro ao atualizar perfil:', error);
+    res.status(500).json({ error: 'Erro ao salvar configurações do usuário.' });
+  }
+});
+
 app.patch('/api/settings', requirePermission('settings'), async (req, res, next) => {
   try {
     const { categories, tags } = req.body;
