@@ -946,39 +946,25 @@ case 'settings':
     lucide.createIcons();
   }
 
-  function openSettings(activeTab = 'all') {
-  const settingsNode = window.CerneApp.SettingsPage.render(
-    state.appSettings,
-    async (updatedSettings) => {
-      const savedSettings = await window.CerneApp.Api.updateSettings(updatedSettings);
-      state.appSettings = {
-        categories: Array.isArray(savedSettings.categories) ? savedSettings.categories : [],
-        tags: Array.isArray(savedSettings.tags) ? savedSettings.tags : []
-      };
-
-      const newSearchBar = window.CerneApp.SearchBar.render(
-        state.searchQuery,
-        state.viewMode,
-        state.appSettings.categories,
-        state.appSettings.tags,
-        handleSearchChange,
-        handleFilterChange,
-        handleViewModeChange
+  // ✅ Versão Assíncrona e Limpa de openSettings
+  async function openSettings() {
+    if (window.CerneApp && window.CerneApp.SettingsPage) {
+      const settingsNode = await window.CerneApp.SettingsPage.render(
+        () => restoreSidebarActive('evidences'),
+        async (updatedUser) => {
+          // Callback executado ao salvar o perfil do usuário
+          if (updatedUser?.configuracoes) {
+            state.viewMode = updatedUser.configuracoes.defaultView || 'table';
+            state.itemsPerPage = updatedUser.configuracoes.itemsPerPage || 10;
+            renderList();
+          }
+        }
       );
 
-      mainContent.replaceChild(newSearchBar, searchBarElement);
-      searchBarElement = newSearchBar;
-      populateFilterOptions();
-      renderList();
-
-      return savedSettings;
-    },
-    activeTab // <-- Passamos qual aba/seção queremos exibir!
-  );
-
-  document.body.appendChild(settingsNode);
-  lucide.createIcons();
-}
+      document.body.appendChild(settingsNode);
+      if (window.lucide) lucide.createIcons();
+    }
+  }
 
 function updateDashboardCounters() {
   const evidences = state.evidences || [];
