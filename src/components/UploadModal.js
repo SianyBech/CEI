@@ -350,7 +350,19 @@ window.CerneApp.UploadModal = {
         defaultOpt.selected = true;
         selectElement.appendChild(defaultOpt);
 
-        const categoriesArray = Array.isArray(categories) ? categories : [];
+        // Busca do estado global atualizado em memória
+const currentSettings = window.CerneApp.state?.settings || {};
+
+// Para Categorias:
+const categoriesArray = Array.isArray(currentSettings.categories) 
+  ? currentSettings.categories 
+  : (Array.isArray(categories) ? categories : []);
+
+// Para Tags:
+const tagsListArray = Array.isArray(currentSettings.tags) 
+  ? currentSettings.tags 
+  : (Array.isArray(tagsList) ? tagsList : []);
+
         const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
 
         availableCategories.forEach(cat => {
@@ -408,7 +420,7 @@ window.CerneApp.UploadModal = {
         defaultOpt.selected = true;
         selectElement.appendChild(defaultOpt);
 
-        const tagsListArray = Array.isArray(tagsList) ? tagsList : [];
+    
         const availableTags = tagsListArray.filter(tag => !selectedTags.includes(tag));
         
         availableTags.forEach(tag => {

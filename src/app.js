@@ -692,9 +692,9 @@ function setupSidebarEvents() {
         renderList();
         break;
 
-      case 'categories':
+    case 'categories':
         if (window.CerneApp && window.CerneApp.CategoriesPage) {
-          const categoriesNode = await window.CerneApp.CategoriesPage.render(() => restoreSidebarActive('evidences'));
+          const categoriesNode = window.CerneApp.CategoriesPage.render(() => restoreSidebarActive('evidences'));
           document.body.appendChild(categoriesNode);
           if (window.lucide) lucide.createIcons();
         }
@@ -702,7 +702,7 @@ function setupSidebarEvents() {
 
       case 'tags':
         if (window.CerneApp && window.CerneApp.TagsPage) {
-          const tagsNode = await window.CerneApp.TagsPage.render(() => restoreSidebarActive('evidences'));
+          const tagsNode = window.CerneApp.TagsPage.render(() => restoreSidebarActive('evidences'));
           document.body.appendChild(tagsNode);
           if (window.lucide) lucide.createIcons();
         }
@@ -750,7 +750,7 @@ function setupSidebarEvents() {
         break;
     }
   }
-  
+
   // Função responsável por calcular e renderizar os cards laterais à direita
   function renderRightSidebarStats() {
     const rightSidebar = document.getElementById('right-sidebar-stats');

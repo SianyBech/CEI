@@ -257,7 +257,11 @@ function renderCategoriesWidget() {
   defaultOpt.selected = true;
   selectElement.appendChild(defaultOpt);
 
-  const categoriesArray = Array.isArray(categories) ? categories : [];
+const currentCategories = window.CerneApp.state?.settings?.categories;
+const categoriesArray = Array.isArray(currentCategories) 
+  ? currentCategories 
+  : (Array.isArray(categories) ? categories : []);
+
   const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
 
   availableCategories.forEach(cat => {
@@ -316,7 +320,11 @@ overlay.querySelector('#detail-add-category-select').addEventListener('change', 
       defaultOpt.selected = true;
       selectElement.appendChild(defaultOpt);
 
-      const tagsListArray = Array.isArray(tagsList) ? tagsList : [];
+const currentTags = window.CerneApp.state?.settings?.tags;
+const tagsListArray = Array.isArray(currentTags) 
+  ? currentTags 
+  : (Array.isArray(tagsList) ? tagsList : []);
+  
       const availableTags = tagsListArray.filter(tag => !selectedTags.includes(tag));
       
       availableTags.forEach(tag => {

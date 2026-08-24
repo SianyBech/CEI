@@ -3,7 +3,7 @@
 // ==========================================================================
 
 (function () {
-  async function render(onCloseCallback) {
+  function render(onCloseCallback) {
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
     backdrop.style.cssText = `
@@ -12,40 +12,32 @@
       left: 0 !important;
       width: 100vw !important;
       height: 100vh !important;
-      background-color: rgba(0, 0, 0, 0.5) !important;
+      background-color: rgba(15, 23, 42, 0.55) !important;
+      backdrop-filter: blur(4px) !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       z-index: 99999 !important;
     `;
 
-    // 1. Carrega as configurações e a lista de tags do banco
     let settingsData = {};
     let tags = [];
-    try {
-      if (window.CerneApp?.Api?.fetchSettings) {
-        settingsData = (await window.CerneApp.Api.fetchSettings()) || {};
-        tags = Array.isArray(settingsData.tags) ? [...settingsData.tags] : [];
-      }
-    } catch (err) {
-      console.error('[TagsPage] Erro ao buscar tags:', err);
-    }
 
     backdrop.innerHTML = `
-      <div class="modal-content" style="max-width: 600px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; background-color: var(--bg-primary, #ffffff); border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+      <div class="modal-content" style="max-width: 560px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; background-color: var(--bg-primary, #ffffff); border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);">
         
         <!-- Cabeçalho -->
         <div class="modal-header" style="flex-shrink: 0; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; align-items: center; gap: 0.65rem;">
-            <div style="background-color: var(--bg-tertiary); padding: 0.5rem; border-radius: 8px; color: var(--primary, #0066cc); display: flex;">
+            <div style="background-color: rgba(0, 102, 204, 0.08); padding: 0.55rem; border-radius: 8px; color: var(--primary, #0066cc); display: flex;">
               <i data-lucide="tag" style="width: 20px; height: 20px;"></i>
             </div>
             <div>
-              <h2 class="modal-title" style="font-size: 1.1rem; margin: 0; font-weight: 600;">Gestão de Tags de Evidências</h2>
-              <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Gerencie os marcadores rápidos salvos no banco do CEI</p>
+              <h2 class="modal-title" style="font-size: 1.05rem; margin: 0; font-weight: 600; color: var(--text-primary);">Gestão de Tags</h2>
+              <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Etiquetas para classificação rápida salvas no banco</p>
             </div>
           </div>
-          <button class="modal-close" id="tag-close-btn" style="background: none; border: none; cursor: pointer; color: var(--text-secondary);">
+          <button class="modal-close" id="tag-close-btn" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 0.25rem; border-radius: 6px; display: flex;">
             <i data-lucide="x" style="width: 20px; height: 20px;"></i>
           </button>
         </div>
@@ -53,25 +45,27 @@
         <!-- Corpo da Modal -->
         <div class="modal-body" style="padding: 1.5rem; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1.25rem;">
           
-          <!-- Input para Adicionar Tag -->
+          <!-- Input -->
           <div style="display: flex; gap: 0.5rem;">
-            <input type="text" id="tag-add-input" class="form-input" placeholder="Nova tag (pressione Enter para adicionar)..." style="flex: 1; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem;" />
-            <button class="btn btn-primary" id="tag-add-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem; white-space: nowrap;">
+            <input type="text" id="tag-add-input" class="form-input" placeholder="Nova tag (ex: Auditoria)..." style="flex: 1; padding: 0.6rem 0.85rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.875rem;" />
+            <button class="btn btn-primary" id="tag-add-btn" style="padding: 0.6rem 1.1rem; font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; border-radius: 8px;">
               <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Adicionar
             </button>
           </div>
 
-          <!-- Nuvem de Tags Editável -->
-          <div id="tag-cloud-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 1.25rem; background-color: var(--bg-secondary, #f9fafb); border: 1px solid var(--border-color); border-radius: 8px; min-height: 120px; align-content: flex-start;">
-            <!-- Renderizado dinamicamente -->
+          <!-- Nuvem de Tags -->
+          <div id="tag-cloud-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 1.25rem; background-color: var(--bg-secondary, #f8fafc); border: 1px solid var(--border-color); border-radius: 8px; min-height: 120px; align-content: flex-start;">
+            <div style="text-align: center; width: 100%; padding: 1.5rem; color: var(--text-secondary); font-size: 0.875rem;">
+              Carregando tags do banco...
+            </div>
           </div>
 
         </div>
 
         <!-- Rodapé -->
-        <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.5rem; flex-shrink: 0;">
-          <button class="btn btn-secondary" id="tag-cancel-btn" style="padding: 0.5rem 1.25rem;">Cancelar</button>
-          <button class="btn btn-primary" id="tag-save-btn" style="padding: 0.5rem 1.5rem;">Salvar Alterações</button>
+        <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.5rem; flex-shrink: 0; background-color: var(--bg-secondary, #fafafa);">
+          <button class="btn btn-secondary" id="tag-cancel-btn" style="padding: 0.5rem 1.25rem; border-radius: 8px;">Cancelar</button>
+          <button class="btn btn-primary" id="tag-save-btn" style="padding: 0.5rem 1.5rem; border-radius: 8px;">Salvar Alterações</button>
         </div>
 
       </div>
@@ -80,7 +74,6 @@
     const cloudContainer = backdrop.querySelector('#tag-cloud-container');
     const input = backdrop.querySelector('#tag-add-input');
 
-    // Renderização dos Badges de Tags
     function renderTags() {
       cloudContainer.innerHTML = '';
 
@@ -91,15 +84,42 @@
 
       tags.forEach((tag, index) => {
         const badge = document.createElement('span');
-        badge.className = 'badge';
-        badge.style.cssText = 'display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.75rem; background-color: rgba(0, 102, 204, 0.1); color: var(--primary, #0066cc); font-size: 0.85rem; border-radius: 16px; font-weight: 500;';
-
-        badge.innerHTML = `
-          # ${tag}
-          <i data-lucide="x" class="tag-remove-icon" data-index="${index}" style="width: 14px; height: 14px; cursor: pointer;" title="Remover tag"></i>
+        badge.style.cssText = `
+          display: inline-flex; 
+          align-items: center; 
+          gap: 0.4rem; 
+          padding: 0.35rem 0.75rem; 
+          background-color: rgba(0, 102, 204, 0.08); 
+          color: var(--primary, #0066cc); 
+          font-size: 0.825rem; 
+          border-radius: 20px; 
+          font-weight: 500;
+          border: 1px solid rgba(0, 102, 204, 0.15);
         `;
 
-        badge.querySelector('.tag-remove-icon').addEventListener('click', () => {
+        badge.innerHTML = `
+          <span># ${tag}</span>
+          <button 
+            class="tag-del-btn" 
+            data-index="${index}" 
+            style="
+              background: none; 
+              border: none; 
+              padding: 0; 
+              cursor: pointer; 
+              display: flex; 
+              align-items: center; 
+              color: var(--primary, #0066cc); 
+              opacity: 0.7;
+            " 
+            title="Remover tag"
+          >
+            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+          </button>
+        `;
+
+        badge.querySelector('.tag-del-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
           tags.splice(index, 1);
           renderTags();
         });
@@ -110,7 +130,20 @@
       if (window.lucide) lucide.createIcons();
     }
 
-    // Adiciona nova Tag
+    // Carga de Dados Assíncrona
+    (async function loadData() {
+      try {
+        if (window.CerneApp?.Api?.fetchSettings) {
+          settingsData = (await window.CerneApp.Api.fetchSettings()) || {};
+          tags = Array.isArray(settingsData.tags) ? [...settingsData.tags] : [];
+        }
+      } catch (err) {
+        console.error('[TagsPage] Erro ao buscar tags:', err);
+      } finally {
+        renderTags();
+      }
+    })();
+
     function addTag() {
       const val = input.value.trim();
       if (val && !tags.includes(val)) {
@@ -128,19 +161,23 @@
       }
     });
 
-    // Salva no Banco via API
-    async function saveToDatabase() {
-      const filtered = tags.map(t => t.trim()).filter(Boolean);
-      try {
-        if (window.CerneApp?.Api?.updateSettings) {
-          await window.CerneApp.Api.updateSettings({ ...settingsData, tags: filtered });
-        }
-        closeModal();
-      } catch (err) {
-        console.error('Erro ao salvar tags:', err);
-        alert('Erro ao salvar alterações no banco de dados.');
+ async function saveToDatabase() {
+  const filtered = tags.map(t => t.trim()).filter(Boolean);
+  try {
+    if (window.CerneApp?.Api?.updateSettings) {
+      const updatedSettings = await window.CerneApp.Api.updateSettings({ ...settingsData, tags: filtered });
+      
+      // 🚀 Atualiza o estado global em memória imediatamente
+      if (window.CerneApp.state) {
+        window.CerneApp.state.settings = updatedSettings || { ...settingsData, tags: filtered };
       }
     }
+    closeModal();
+  } catch (err) {
+    console.error('Erro ao salvar tags:', err);
+    alert('Erro ao salvar alterações no banco de dados.');
+  }
+}
 
     function closeModal() {
       backdrop.remove();
@@ -152,11 +189,9 @@
     backdrop.querySelector('#tag-save-btn').addEventListener('click', saveToDatabase);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
 
-    renderTags();
-
     return backdrop;
   }
 
   window.CerneApp = window.CerneApp || {};
-  window.CerneApp.TagsPage = { render: render };
+  window.CerneApp.TagsPage = { render };
 })();
