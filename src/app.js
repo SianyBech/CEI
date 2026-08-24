@@ -694,16 +694,18 @@ function setupSidebarEvents() {
     }
   }
 
-  // Função para abrir o modal de Configurações Gerais
-  function openSettings() {
-    if (window.CerneApp && window.CerneApp.SettingsPage) {
-      const settingsNode = window.CerneApp.SettingsPage.render(() => {
-        restoreSidebarActive('evidences');
-      });
-      document.body.appendChild(settingsNode);
-      if (window.lucide) lucide.createIcons();
-    }
+ // ✅ 1. Torne a função openSettings assíncrona (async)
+async function openSettings() {
+  if (window.CerneApp && window.CerneApp.SettingsPage) {
+    // 💡 Usa o 'await' antes do render
+    const settingsNode = await window.CerneApp.SettingsPage.render(() => {
+      restoreSidebarActive('evidences');
+    });
+    
+    document.body.appendChild(settingsNode);
+    if (window.lucide) lucide.createIcons();
   }
+}
 
   // Navegação da Barra Lateral (SPA)
   async function handleSidebarNavigation(target) {
@@ -767,10 +769,10 @@ function setupSidebarEvents() {
           if (window.lucide) lucide.createIcons();
         }
         break;
-
-      case 'settings':
-        openSettings();
-        break;
+// ✅ 2. No switch/case do handleSidebarNavigation:
+case 'settings':
+  await openSettings(); // 💡 Adicione o await aqui também
+  break;
     }
   }
 
