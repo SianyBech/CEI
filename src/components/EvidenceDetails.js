@@ -257,14 +257,7 @@ function renderCategoriesWidget() {
   defaultOpt.selected = true;
   selectElement.appendChild(defaultOpt);
 
-// Busca direto da chave appSettings do estado
-const appSettings = window.CerneApp?.state?.appSettings || {};
-
-// Categorias [linha 261 do EvidenceDetails.js]:
-const categoriesArray = Array.isArray(appSettings.categories) && appSettings.categories.length > 0
-  ? appSettings.categories
-  : (Array.isArray(categories) ? categories : []);
-
+  const categoriesArray = Array.isArray(categories) ? categories : [];
   const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
 
   availableCategories.forEach(cat => {
@@ -323,12 +316,7 @@ overlay.querySelector('#detail-add-category-select').addEventListener('change', 
       defaultOpt.selected = true;
       selectElement.appendChild(defaultOpt);
 
-const currentTags = window.CerneApp.state?.settings?.tags;
-// Tags [linha 298 do EvidenceDetails.js]:
-const tagsListArray = Array.isArray(appSettings.tags) && appSettings.tags.length > 0
-  ? appSettings.tags
-  : (Array.isArray(tagsList) ? tagsList : []);
-
+      const tagsListArray = Array.isArray(tagsList) ? tagsList : [];
       const availableTags = tagsListArray.filter(tag => !selectedTags.includes(tag));
       
       availableTags.forEach(tag => {
