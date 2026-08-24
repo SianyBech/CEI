@@ -62,6 +62,28 @@ window.CerneApp.Api = {
     });
   },
 
+  // Adicione dentro de window.CerneApp.Api no src/api.js
+
+async fetchCategories() {
+  try {
+    const settings = await this.fetchSettings();
+    return settings?.categories || [];
+  } catch (error) {
+    console.error('[API] Erro ao buscar categorias:', error);
+    return [];
+  }
+},
+
+async fetchTags() {
+  try {
+    const settings = await this.fetchSettings();
+    return settings?.tags || [];
+  } catch (error) {
+    console.error('[API] Erro ao buscar tags:', error);
+    return [];
+  }
+},
+
   // 🔹 NOVO MÉTODO: Busca e extrai os responsáveis cadastrados no sistema
   async fetchResponsaveis() {
     try {
