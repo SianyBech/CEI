@@ -3,11 +3,10 @@
 // ==========================================================================
 
 (function () {
-  function render(evidences = [], onCloseCallback) {
+  async function render(evidences = [], onCloseCallback) {
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
     
-    // Garantia de posicionamento e z-index
     backdrop.style.cssText = `
       position: fixed !important;
       top: 0 !important;
@@ -21,10 +20,8 @@
       z-index: 99999 !important;
     `;
 
-    // CÁLCULO DAS ESTATÍSTICAS
     const totalEvidencias = evidences.length;
 
-    // Contagem por Categoria
     const categoriasCount = {};
     evidences.forEach(e => {
       const cats = Array.isArray(e.categorias) && e.categorias.length > 0 
@@ -35,7 +32,6 @@
       });
     });
 
-    // Contagem por Tipo
     const tiposCount = { pdf: 0, imagem: 0, documento: 0, outros: 0 };
     evidences.forEach(e => {
       const tipo = (e.tipo || '').toLowerCase();
@@ -46,13 +42,11 @@
       }
     });
 
-    // Responsáveis Únicos
     const totalResponsaveis = new Set(evidences.map(e => e.responsavel).filter(Boolean)).size;
 
     backdrop.innerHTML = `
       <div class="modal-content" style="max-width: 750px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; background-color: var(--bg-primary, #ffffff); border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
         
-        <!-- Cabeçalho -->
         <div class="modal-header" style="flex-shrink: 0; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; align-items: center; gap: 0.65rem;">
             <div style="background-color: var(--bg-tertiary); padding: 0.5rem; border-radius: 8px; color: var(--success); display: flex;">
@@ -68,10 +62,8 @@
           </button>
         </div>
 
-        <!-- Corpo do Relatório -->
         <div class="modal-body" style="padding: 1.5rem; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1.5rem;">
           
-          <!-- Cards de Resumo Superior -->
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
             <div style="padding: 1rem; background-color: var(--bg-secondary, #f9fafb); border: 1px solid var(--border-color); border-radius: 8px; text-align: center;">
               <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Total de Evidências</span>
@@ -89,7 +81,6 @@
             </div>
           </div>
 
-          <!-- Seção 1: Distribuição por Categoria CERNE -->
           <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; background-color: #ffffff;">
             <h3 style="font-size: 0.9rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
               <i data-lucide="grid" style="width: 16px; height: 16px; color: var(--primary, #0066cc);"></i>
@@ -116,7 +107,6 @@
             </div>
           </div>
 
-          <!-- Seção 2: Distribuição por Tipo de Arquivo -->
           <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; background-color: #ffffff;">
             <h3 style="font-size: 0.9rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
               <i data-lucide="file-text" style="width: 16px; height: 16px; color: var(--primary, #0066cc);"></i>
@@ -141,7 +131,6 @@
 
         </div>
 
-        <!-- Rodapé -->
         <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; flex-shrink: 0;">
           <button class="btn btn-secondary" id="rel-close-bottom-btn" style="padding: 0.5rem 1.5rem;">Fechar</button>
         </div>
@@ -164,9 +153,5 @@
   }
 
   window.CerneApp = window.CerneApp || {};
-  window.CerneApp.RelatoriosPage = { render };
+  window.CerneApp.RelatoriosPage = { render: render };
 })();
-
-// No final de RelatoriosPage.js
-window.CerneApp = window.CerneApp || {};
-window.CerneApp.RelatoriosPage = { render };

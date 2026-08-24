@@ -1,9 +1,12 @@
+// ==========================================================================
+// COMPONENTE: ABA / PÁGINA DE RESPONSÁVEIS DA EQUIPE CEI
+// ==========================================================================
+
 (function () {
-  function render(responsaveisList = [], onCloseCallback) {
+  async function render(responsaveisList = [], onCloseCallback) {
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
     
-    // ESTILOS DE SEGURANÇA: Força o modal a ficar centralizado e por cima de TUDO
     backdrop.style.cssText = `
       position: fixed !important;
       top: 0 !important;
@@ -22,7 +25,7 @@
       : ['Siany', 'Eduardo', 'Cláudia', 'André', 'Equipe CEI'];
 
     backdrop.innerHTML = `
-      <div class="modal-content" style="max-width: 550px; width: 90%; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; background-color: var(--bg-primary, #ffffff); border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+      <div class="modal-content" style="max-width: 550px; width: 90%; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; background-color: var(--bg-primary, #ffffff); border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
         
         <!-- Cabeçalho -->
         <div class="modal-header" style="flex-shrink: 0; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
@@ -85,9 +88,5 @@
   }
 
   window.CerneApp = window.CerneApp || {};
-  window.CerneApp.ResponsaveisPage = { render };
+  window.CerneApp.ResponsaveisPage = { render: render };
 })();
-
-// No final de ResponsaveisPage.js
-window.CerneApp = window.CerneApp || {};
-window.CerneApp.ResponsaveisPage = { render };

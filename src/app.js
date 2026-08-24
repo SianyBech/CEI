@@ -662,96 +662,95 @@ function setupSidebarEvents() {
   });
 }
 
-  // Handle sidebar navigation
-  function handleSidebarNavigation(target) {
+  // Função auxiliar para restaurar o item ativo visualmente na barra lateral
+  function restoreSidebarActive(targetNav = 'evidences') {
+    const defaultItem = document.querySelector(`.sidebar-item[data-nav="${targetNav}"]`);
+    if (defaultItem) {
+      document.querySelectorAll('.sidebar-item[data-nav]').forEach(i => i.classList.remove('active'));
+      defaultItem.classList.add('active');
+    }
+  }
+
+  // Função para abrir o modal de Configurações Gerais
+  function openSettings() {
+    if (window.CerneApp && window.CerneApp.SettingsPage) {
+      const settingsNode = window.CerneApp.SettingsPage.render(() => {
+        restoreSidebarActive('evidences');
+      });
+      document.body.appendChild(settingsNode);
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+
+  // Navegação da Barra Lateral (SPA)
+  async function handleSidebarNavigation(target) {
     switch (target) {
       case 'evidences':
-        // Reset filters and show all evidences
+        // Reseta os filtros e exibe a listagem completa
         state.filters = { tipo: 'todos', categoria: 'todos', responsavel: 'todos', tag: 'todos' };
         state.dateFilters = { dayFrom: '', monthFrom: '', yearFrom: '', dayTo: '', monthTo: '', yearTo: '' };
         renderList();
         break;
-   //   case 'categories':
-   //     alert('Seção de Categorias em desenvolvimento');
-   //     break;
-   //   case 'tags':
-   //     alert('Seção de Tags em desenvolvimento');
-   //     break;
 
-  case 'categories':
-  if (window.CerneApp && window.CerneApp.CategoriesPage) {
-    const categoriesNode = await window.CerneApp.CategoriesPage.render(() => restoreSidebarActive('evidences'));
-    document.body.appendChild(categoriesNode);
-    lucide.createIcons();
-  }
-  break;
-
-case 'tags':
-  if (window.CerneApp && window.CerneApp.TagsPage) {
-    const tagsNode = await window.CerneApp.TagsPage.render(() => restoreSidebarActive('evidences'));
-    document.body.appendChild(tagsNode);
-    lucide.createIcons();
-  }
-  break;
-
-    case 'settings':
-      openSettings('all'); // Abre a tela completa de configurações
-      break;
-
-      case 'responsaveis':
-        const responsaveisUnicos = [...new Set(state.evidences.map(e => e.responsavel).filter(Boolean))];
-        const responsaveisNode = window.CerneApp.ResponsaveisPage.render(
-          responsaveisUnicos,
-          () => {
-            const defaultItem = document.querySelector('.sidebar-item[data-nav="evidences"]');
-            if (defaultItem) {
-              document.querySelectorAll('.sidebar-item[data-nav]').forEach(i => i.classList.remove('active'));
-              defaultItem.classList.add('active');
-            }
-          }
-        );
-        document.body.appendChild(responsaveisNode);
-        lucide.createIcons();
-        break;
-
-     case 'calendario':
-  if (window.CerneApp && window.CerneApp.CalendarioPage) {
-    const calendarioNode = window.CerneApp.CalendarioPage.render(
-      state.evidences,
-      () => restoreSidebarActive('evidences')
-    );
-    document.body.appendChild(calendarioNode);
-    lucide.createIcons();
-  } else {
-    console.error('[ERRO] CalendarioPage não está carregado no window.CerneApp.');
-    alert('Não foi possível carregar o Calendário. Verifique o console.');
-  }
-  break;
-
-      // 🔹 CONECTANDO OS RELATÓRIOS AQUI:
-      case 'relatorios':
-        if (window.CerneApp.RelatoriosPage) {
-          const relatoriosNode = window.CerneApp.RelatoriosPage.render(
-            state.evidences, // Passa as evidências do estado para calcular os gráficos
-            () => restoreSidebarActive('evidences')
-          );
-          document.body.appendChild(relatoriosNode);
-          lucide.createIcons();
+      case 'categories':
+        if (window.CerneApp && window.CerneApp.CategoriesPage) {
+          const categoriesNode = await window.CerneApp.CategoriesPage.render(() => restoreSidebarActive('evidences'));
+          document.body.appendChild(categoriesNode);
+          if (window.lucide) lucide.createIcons();
         }
         break;
 
-      function openSettings() {
-  if (window.CerneApp && window.CerneApp.SettingsPage) {
-    const settingsNode = window.CerneApp.SettingsPage.render(() => {
-      restoreSidebarActive('evidences');
-    });
-    document.body.appendChild(settingsNode);
-    lucide.createIcons();
-  }
-}
+      case 'tags':
+        if (window.CerneApp && window.CerneApp.TagsPage) {
+          const tagsNode = await window.CerneApp.TagsPage.render(() => restoreSidebarActive('evidences'));
+          document.body.appendChild(tagsNode);
+          if (window.lucide) lucide.createIcons();
+        }
+        break;
+
+      case 'responsaveis':
+        const responsaveisUnicos = [...new Set(state.evidences.map(e => e.responsavel).filter(Boolean))];
+        if (window.CerneApp && window.CerneApp.ResponsaveisPage) {
+          const responsaveisNode = await window.CerneApp.ResponsaveisPage.render(
+            responsaveisUnicos,
+            () => restoreSidebarActive('evidences')
+          );
+          document.body.appendChild(responsaveisNode);
+          if (window.lucide) lucide.createIcons();
+        }
+        break;
+
+      case 'calendario':
+        if (window.CerneApp && window.CerneApp.CalendarioPage) {
+          const calendarioNode = await window.CerneApp.CalendarioPage.render(
+            state.evidences,
+            () => restoreSidebarActive('evidences')
+          );
+          document.body.appendChild(calendarioNode);
+          if (window.lucide) lucide.createIcons();
+        } else {
+          console.error('[ERRO] CalendarioPage não está carregado no window.CerneApp.');
+          alert('Não foi possível carregar o Calendário. Verifique o console.');
+        }
+        break;
+
+      case 'relatorios':
+        if (window.CerneApp && window.CerneApp.RelatoriosPage) {
+          const relatoriosNode = await window.CerneApp.RelatoriosPage.render(
+            state.evidences,
+            () => restoreSidebarActive('evidences')
+          );
+          document.body.appendChild(relatoriosNode);
+          if (window.lucide) lucide.createIcons();
+        }
+        break;
+
+      case 'settings':
+        openSettings();
+        break;
     }
   }
-
+  
   // Função responsável por calcular e renderizar os cards laterais à direita
   function renderRightSidebarStats() {
     const rightSidebar = document.getElementById('right-sidebar-stats');
