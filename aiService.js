@@ -23,7 +23,7 @@ const ai = new GoogleGenAI({ apiKey });
 /**
  * Função Universal para ler e resumir QUALQUER arquivo.
  */
-export async function resumirQualquerDocumento(caminhoArquivo) {
+export async function resumirQualquerDocumento(caminhoArquivo, categoriasDoBanco = [], tagsDoBanco = []) {
   try {
     if (!fs.existsSync(caminhoArquivo)) {
       throw new Error(`Arquivo não encontrado no caminho: ${caminhoArquivo}`);
@@ -128,7 +128,7 @@ export async function resumirQualquerDocumento(caminhoArquivo) {
     }
 
     console.log('Texto extraído com sucesso. Enviando para o Gemini...');
-    return await resumirTextoSimples(textoExtraido);
+    return await resumirTextoSimples(textoExtraido, categoriasDoBanco, tagsDoBanco);
 
   } catch (error) {
     console.error(`Erro ao processar o arquivo ${caminhoArquivo}:`, error.message);
@@ -137,44 +137,46 @@ export async function resumirQualquerDocumento(caminhoArquivo) {
 }
 
 /**
- * Envia o texto extraído para a IA
+ * Envia o texto extraído para a IA selecionando de 1 a 3 categorias e tags cadastradas no banco
  */
-export async function resumirTextoSimples(texto) {
+export async function resumirTextoSimples(texto, categoriasDoBanco = [], tagsDoBanco = []) {
   try {
-    const response = await ai.models.generateContent({
-      model: MODELO_PADRAO,
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: `Você é um analista sênior de documentação do CEI/UFRGS (Centro de Empreendimentos de Informática).
+    const listaCategorias = categoriasDoBanco.length > 0 
+      ? categoriasDoBanco.join(', ') 
+      : 'Capacitação, Planejamento, Gestão, Assessoria, Sustentabilidade, Qualificação';
 
-Sua tarefa é analisar o texto extraído de uma evidência documental e gerar um resumo executivo direto e objetivo, dividido em EXATAMENTE DOIS PARÁGRAFOS.
+    const listaTags = tagsDoBanco.length > 0 
+      ? tagsDoBanco.join(', ') 
+      : 'CERNE, Gestão, Capacitação, Assessoria, Sustentabilidade, Qualificação';
 
-Siga estritamente esta estrutura e formato:
+    const prompt = `Você é um analista sênior de documentação do CEI/UFRGS (Centro de Empreendimentos de Informática).
 
-Parágrafo 1 (Identificação e Contexto):
-Comece identificando o tipo de documento/mídia e do que se trata, a quem ou o que se refere e o período ou data de ocorrência/elaboração.
+Sua tarefa é analisar o texto extraído de uma evidência documental e retornar EXATAMENTE um objeto JSON válido (sem blocos de código markdown, apenas o JSON puro).
 
-Parágrafo 2 (Síntese do Conteúdo e Entregas):
-Resuma em poucas frases diretas o conteúdo principal, detalhando o que foi discutido, executado ou entregue de mais relevante.
+A estrutura do JSON deve ser obrigatoriamente:
+{
+  "resumo": "Dois parágrafos em texto plano contendo a identificação do documento e a síntese das entregas principais. Use estritamente tags HTML <b> e </b> para destacar termos-chave.",
+  "categoriasSugeridas": ["Array com NO MÍNIMO 1 e NO MÁXIMO 3 categorias escolhidas EXCLUSIVAMENTE da lista permitida"],
+  "tagsSugeridas": ["Array com NO MÍNIMO 1 e NO MÁXIMO 3 tags escolhidas EXCLUSIVAMENTE da lista permitida"]
+}
 
-Regras importantes de formatação:
-- NÃO use emojis nem marcadores em tópicos (bullet points).
-- NÃO use asteriscos (**). Para aplicar negrito em termos-chave, use estritamente tags HTML <b> e </b>.
-- Responda apenas com os dois parágrafos, sem títulos como "Parágrafo 1:" ou introduções.
-- Seja extremamente conciso, direto e vá direto ao ponto.
+REGRAS DE SELEÇÃO:
+1. Categorias permitidas: [${listaCategorias}]
+2. Tags permitidas: [${listaTags}]
+3. Escolha obrigatoriamente entre 1 a 3 categorias e de 1 a 3 tags da lista fornecida que melhor representam o documento. Não invente termos fora das listas fornecidas.
 
 Conteúdo para análise:
-${texto}`
-            },
-          ],
-        },
-      ],
+${texto}`;
+
+    const response = await ai.models.generateContent({
+      model: MODELO_PADRAO,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
-    return response.text;
+    // Limpa possíveis marcações de bloco de código JSON
+    const jsonText = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    return JSON.parse(jsonText);
   } catch (err) {
     console.error('Erro de comunicação com a API do Gemini:', err);
     throw new Error(`Falha ao comunicar com a IA: ${err.message}`);

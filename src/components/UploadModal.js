@@ -423,72 +423,76 @@ window.CerneApp.UploadModal = {
         node: modalBody
       });
 
-      let selectedCategories = [];
+      // Carrega as categorias sugeridas pela IA (1 a 3) ou inicia vazio []
+      let selectedCategories = Array.isArray(evidence.categorias) && evidence.categorias.length > 0
+        ? [...evidence.categorias]
+        : (evidence.categoria ? [evidence.categoria] : []);
 
-function renderUploadCategoriesWidget() {
-  const displayContainer = overlay.querySelector('#upload-selected-categories-display');
-  const selectElement = overlay.querySelector('#upload-add-category-select');
-  if (!displayContainer || !selectElement) return;
+      function renderUploadCategoriesWidget() {
+        const displayContainer = overlay.querySelector('#upload-selected-categories-display');
+        const selectElement = overlay.querySelector('#upload-add-category-select');
+        if (!displayContainer || !selectElement) return;
 
-  displayContainer.innerHTML = '';
-  if (selectedCategories.length === 0) {
-    displayContainer.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-tertiary); font-style: italic;">Nenhuma categoria selecionada</span>';
-  } else {
-    selectedCategories.forEach(cat => {
-      const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
-      const badge = document.createElement('span');
-      badge.className = `badge ${categoryClass}`;
-      badge.style.display = 'inline-flex';
-      badge.style.alignItems = 'center';
-      badge.style.gap = '0.35rem';
-      badge.style.padding = '0.25rem 0.5rem';
+        displayContainer.innerHTML = '';
+        if (selectedCategories.length === 0) {
+          displayContainer.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-tertiary); font-style: italic;">Nenhuma categoria selecionada</span>';
+        } else {
+          selectedCategories.forEach(cat => {
+            const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
+            const badge = document.createElement('span');
+            badge.className = `badge ${categoryClass}`;
+            badge.style.display = 'inline-flex';
+            badge.style.alignItems = 'center';
+            badge.style.gap = '0.35rem';
+            badge.style.padding = '0.25rem 0.5rem';
 
-      badge.innerHTML = `
-        <span>${escapeHtml(cat)}</span>
-        <button type="button" class="tag-badge-remove" style="background:none; border:none; cursor:pointer; font-size: 0.9rem;" title="Remover categoria">&times;</button>
-      `;
-      badge.querySelector('.tag-badge-remove').addEventListener('click', (e) => {
-        e.preventDefault();
-        selectedCategories = selectedCategories.filter(c => c !== cat);
-        renderUploadCategoriesWidget();
+            badge.innerHTML = `
+              <span>${escapeHtml(cat)}</span>
+              <button type="button" class="tag-badge-remove" style="background:none; border:none; cursor:pointer; font-size: 0.9rem;" title="Remover categoria">&times;</button>
+            `;
+            badge.querySelector('.tag-badge-remove').addEventListener('click', (e) => {
+              e.preventDefault();
+              selectedCategories = selectedCategories.filter(c => c !== cat);
+              renderUploadCategoriesWidget();
+            });
+            displayContainer.appendChild(badge);
+          });
+        }
+
+        selectElement.innerHTML = '';
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = 'Adicionar categoria...';
+        defaultOpt.selected = true;
+        selectElement.appendChild(defaultOpt);
+
+        const categoriesArray = Array.isArray(categories) ? categories : [];
+        const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
+
+        availableCategories.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat;
+          opt.textContent = cat;
+          selectElement.appendChild(opt);
+        });
+
+        selectElement.disabled = availableCategories.length === 0;
+      }
+
+      // Inicializa a lista
+      renderUploadCategoriesWidget();
+
+      // Evento ao escolher uma categoria no dropdown
+      overlay.querySelector('#upload-add-category-select').addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val && !selectedCategories.includes(val)) {
+          selectedCategories.push(val);
+          renderUploadCategoriesWidget();
+        }
       });
-      displayContainer.appendChild(badge);
-    });
-  }
 
-  selectElement.innerHTML = '';
-  const defaultOpt = document.createElement('option');
-  defaultOpt.value = '';
-  defaultOpt.textContent = 'Adicionar categoria...';
-  defaultOpt.selected = true;
-  selectElement.appendChild(defaultOpt);
-
-  const categoriesArray = Array.isArray(categories) ? categories : [];
-  const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
-
-  availableCategories.forEach(cat => {
-    const opt = document.createElement('option');
-    opt.value = cat;
-    opt.textContent = cat;
-    selectElement.appendChild(opt);
-  });
-
-  selectElement.disabled = availableCategories.length === 0;
-}
-
-// Inicializa a lista
-renderUploadCategoriesWidget();
-
-// Evento ao escolher uma categoria no dropdown
-overlay.querySelector('#upload-add-category-select').addEventListener('change', (e) => {
-  const val = e.target.value;
-  if (val && !selectedCategories.includes(val)) {
-    selectedCategories.push(val);
-    renderUploadCategoriesWidget();
-  }
-});
-
-      let selectedTags = [...(evidence.tags || [])];
+      // Carrega as tags sugeridas pela IA (1 a 3) ou inicia vazio []
+      let selectedTags = Array.isArray(evidence.tags) ? [...evidence.tags] : [];
 
       function renderTagsWidget() {
         const displayContainer = modalBody.querySelector('#selected-tags-display');
@@ -553,56 +557,72 @@ overlay.querySelector('#upload-add-category-select').addEventListener('change', 
           renderTagsWidget();
         }
       });
- 
-      footer.querySelector('#modal-success-done-btn').addEventListener('click', async () => {
 
+      // Função auxiliar para exibir a notificação no topo da tela (Toast)
+      function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `app-toast ${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        requestAnimationFrame(() => {
+          toast.classList.add('show');
+        });
+
+        window.setTimeout(() => {
+          toast.classList.remove('show');
+          window.setTimeout(() => toast.remove(), 220);
+        }, 2600);
+      }
+
+      const saveDoneBtn = footer.querySelector('#modal-success-done-btn');
+
+      saveDoneBtn.addEventListener('click', async () => {
         const dataDigitada = modalBody.querySelector('#edit-data').value.trim() || new Date().toLocaleDateString('pt-BR');
 
-  // ⚠️ NOVO: Validação de Data Futura
-  if (window.CerneApp.Utils && window.CerneApp.Utils.isFutureDate(dataDigitada)) {
-    const confirmFuture = confirm(
-      'A data informada é uma data futura.\n\nTem certeza de que deseja cadastrar a evidência com esta data?'
-    );
-    if (!confirmFuture) {
-      return; // Interrompe o envio se o usuário clicar em "Cancelar"
-    }
-  }
-
-  const newEvidence = {
-  id: 'ev-' + Date.now(),
-  nome: fileInput.files[0]?.name || 'Nova Evidência',
-  titulo: titleInput.value.trim(),
-  evento: eventoInput.value.trim(),
-  // Envia a lista completa de categorias selecionadas:
-  categorias: selectedCategories,
-  categoria: selectedCategories[0] || 'Geral', // Fallback
-  responsavel: responsavelInput.value.trim(),
-  data: dataInput.value.trim() || new Date().toLocaleDateString('pt-BR'),
-  tags: selectedTags,
-  resumo: 'Processando resumo...',
-  textoExtraido: 'Conteúdo em processamento...'
-};
+        // ⚠️ Validação de Data Futura
+        if (window.CerneApp.Utils && window.CerneApp.Utils.isFutureDate(dataDigitada)) {
+          const confirmFuture = confirm(
+            'A data informada é uma data futura.\n\nTem certeza de que deseja cadastrar a evidência com esta data?'
+          );
+          if (!confirmFuture) {
+            return; // Interrompe o envio se o usuário clicar em "Cancelar"
+          }
+        }
 
         const updatedMetadata = {
           titulo: modalBody.querySelector('#edit-titulo').value.trim() || evidence.nome,
           evento: modalBody.querySelector('#edit-evento').value.trim() || 'Sem Evento',
-          categoria: modalBody.querySelector('#edit-categoria').value,
+          categorias: selectedCategories,
+          categoria: selectedCategories.length > 0 ? selectedCategories[0] : '', // Não força 'Geral'
           responsavel: modalBody.querySelector('#edit-responsavel').value.trim() || 'Não especificado',
-          data: modalBody.querySelector('#edit-data').value.trim() || new Date().toLocaleDateString('pt-BR'),
+          data: dataDigitada,
           resumo: modalBody.querySelector('#edit-resumo').value.trim() || 'Sem resumo disponível.',
           tags: selectedTags
         };
- 
+
+        // 💡 1. MUDANÇA VISUAL DE UX: Bloqueia botões e exibe "Salvando..."
+        saveDoneBtn.disabled = true;
+        saveDoneBtn.innerHTML = '<span class="btn-loading-spinner" aria-hidden="true"></span> Salvando...';
+        closeBtn.disabled = true;
+
         try {
           const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
+          
+          // 💡 2. DISPARA O TOAST DE CONFIRMAÇÃO
+          showToast('Evidência salva com sucesso.', 'success');
+
           onAddEvidence(savedEvidence);
           doClose();
         } catch (error) {
+          // Em caso de falha, destrava o botão e alerta o erro
+          saveDoneBtn.disabled = false;
+          saveDoneBtn.textContent = 'Confirmar e Salvar';
+          closeBtn.disabled = false;
           alert(`Não foi possível salvar a evidência: ${error.message}`);
         }
       });
     }
-
     return overlay;
   }
 };

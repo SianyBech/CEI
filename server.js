@@ -1118,20 +1118,36 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       console.log(`[UPLOAD] Iniciando upload de ${originalName}`);
       console.log(`[UPLOAD] Arquivo recebido: ${originalName} (${fileSize} bytes, ${mimeType})`);
 
+      // 1. Busca as categorias e tags reais cadastradas no banco para o vocabulário da IA
+      let dbCategories = [];
+      let dbTags = [];
+      try {
+        const settingsRes = await dbClient.query('SELECT categories, tags FROM public.settings LIMIT 1');
+        if (settingsRes.rows.length > 0) {
+          dbCategories = settingsRes.rows[0].categories || [];
+          dbTags = settingsRes.rows[0].tags || [];
+        }
+      } catch (settingsErr) {
+        console.warn('[UPLOAD] Não foi possível buscar configurações de tags/categorias do banco, usando fallback local:', settingsErr.message);
+      }
+
+      // 2. Extrai o texto do arquivo
       const extractedText = ['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx'].includes(extension)
         ? await extractText(tempPath, extension)
         : '';
       console.log(`[UPLOAD] Texto extraído (${extractedText.length} caracteres)`);
 
-      const metadata = await generateMetadata(originalName, extension, extractedText);
+      // 3. Gera metadados pela IA informando o vocabulário do banco (1 a 3 opções)
+      const metadata = await generateMetadata(originalName, extension, extractedText, dbCategories, dbTags);
       metadata.responsavel = getResponsavel(req.user);
 
       if (!['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx'].includes(extension)) {
         metadata.resumo = `${metadata.resumo || ''}\n\n(Nota: Formato não suportado para processamento automático do texto).`;
       }
 
-  console.log(`[UPLOAD] Metadados gerados para ${originalName}`);
+      console.log(`[UPLOAD] Metadados gerados para ${originalName}`);
 
+      // 4. Envia para o Supabase Storage
       const storagePath = buildStoragePath(originalName);
       await uploadFileToSupabase(tempPath, storagePath, originalName, mimeType);
       console.log(`[UPLOAD] Upload realizado para o Supabase Storage: ${storagePath}`);
@@ -1142,12 +1158,12 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       const createdAt = new Date().toISOString();
       const tipo = extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento';
 
-      const categoriesList = normalizeCategories(metadata.categorias, metadata.categoria);
+      // 5. Trata lista de categorias (aceita array vazio caso a IA ou banco não possuam dados)
+      const categoriesList = Array.isArray(metadata.categorias) ? metadata.categorias : (metadata.categoria ? [metadata.categoria] : []);
+      const primaryCategory = categoriesList.length > 0 ? categoriesList[0] : ''; // Fica vazio '' em vez de forçar 'Geral'
+      const tagsList = Array.isArray(metadata.tags) ? metadata.tags : [];
 
-
-      const primaryCategory = categoriesList[0] || 'Geral';
-
-      // 2. Query ajustada com 21 colunas e 21 placeholders com casts para ::jsonb
+      // Query de inserção no banco
       const insertQuery = `
         INSERT INTO public.evidences (
           "titulo", "nome", "tipo", "data", "evento", 
@@ -1173,13 +1189,13 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
           originalName,                             // $2:  nome
           tipo,                                     // $3:  tipo
           new Date().toLocaleDateString('pt-BR'),   // $4:  data
-          metadata.evento,                          // $5:  evento
-          primaryCategory,                          // $6:  categoria (fallback string)
-          JSON.stringify(categoriesList),           // $7:  categorias (JSONB array)
+          metadata.evento || 'Sem Evento',          // $5:  evento
+          primaryCategory,                          // $6:  categoria (vazia ou 1ª categoria)
+          JSON.stringify(categoriesList),           // $7:  categorias (JSONB array, aceita [])
           metadata.responsavel,                     // $8:  responsavel
-          JSON.stringify(metadata.tags || []),      // $9:  tags (JSONB array)
-          metadata.resumo,                          // $10: resumo
-          metadata.textoExtraido,                   // $11: textoExtraido
+          JSON.stringify(tagsList),                 // $9:  tags (JSONB array, aceita [])
+          metadata.resumo || '',                    // $10: resumo
+          extractedText || '',                      // $11: textoExtraido
           storagePath,                              // $12: storage_path
           path.basename(storagePath),               // $13: storage_filename
           originalName,                             // $14: original_filename
@@ -1199,20 +1215,20 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       const id = insertResult.rows[0]?.id;
       console.log(`[UPLOAD] Registro salvo no banco para ${id}`);
 
-      // 3. Retorna o JSON serializado com ambas as propriedades para o front-end
+      // 6. Retorna para o front-end
       res.json({
         id,
         titulo: originalName,
         nome: originalName,
         tipo,
         data: new Date().toLocaleDateString('pt-BR'),
-        evento: metadata.evento,
+        evento: metadata.evento || 'Sem Evento',
         categoria: primaryCategory,
         categorias: categoriesList,
         responsavel: metadata.responsavel,
-        tags: metadata.tags || [],
+        tags: tagsList,
         resumo: metadata.resumo,
-        textoExtraido: metadata.textoExtraido,
+        textoExtraido: extractedText,
         storagePath,
         storageFilename: path.basename(storagePath),
         originalFilename: originalName,
