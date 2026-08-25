@@ -680,12 +680,13 @@ async function generateMetadata(tempPath, originalName, extension, dbCategories,
     };
   }
 
-  try {
-    const resultado = await resumirQualquerDocumento(tempPath, dbCategories, dbTags);
+try {
+    // AQUI ESTÁ A CORREÇÃO: Passando o "extension" como segundo argumento!
+    const resultado = await resumirQualquerDocumento(tempPath, extension, dbCategories, dbTags);
     return resultado;
   } catch (err) {
-    // Exibe o erro real no console do servidor para facilitar o diagnóstico
-    console.error('[GEMINI ERROR] Detalhe da falha no upload:', err);
+    // Agora, se der erro, você vai ver o motivo real no terminal do servidor!
+    console.error('[ERRO IA] Falha ao processar arquivo:', err.message);
 
     return {
       titulo: originalName,

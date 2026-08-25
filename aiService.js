@@ -23,7 +23,10 @@ const ai = new GoogleGenAI({ apiKey });
 /**
  * Função Universal para ler e resumir QUALQUER arquivo.
  */
-export async function resumirQualquerDocumento(caminhoArquivo, categoriasDoBanco = [], tagsDoBanco = []) {
+// Importante: Caso não tenha o AdmZip neste arquivo, adicione a linha abaixo no topo do aiService.js
+// import AdmZip from 'adm-zip';
+
+export async function resumirQualquerDocumento(caminhoArquivo, extensaoArquivo, categoriasDoBanco = [], tagsDoBanco = []) {
   try {
     if (!fs.existsSync(caminhoArquivo)) {
       throw new Error(`Arquivo não encontrado no caminho: ${caminhoArquivo}`);
@@ -34,7 +37,12 @@ export async function resumirQualquerDocumento(caminhoArquivo, categoriasDoBanco
       throw new Error('O arquivo fornecido está vazio (0 bytes).');
     }
 
-    const extensao = path.extname(caminhoArquivo).toLowerCase();
+    // 💡 A MÁGICA ACONTECE AQUI: Usamos a extensão passada pelo server.js!
+    // Garantimos que a extensão sempre comece com um ponto e seja minúscula.
+    const extensao = extensaoArquivo.startsWith('.') 
+      ? extensaoArquivo.toLowerCase() 
+      : `.${extensaoArquivo.toLowerCase()}`;
+      
     let textoExtraido = '';
 
     // 1. IMAGENS
@@ -95,8 +103,21 @@ export async function resumirQualquerDocumento(caminhoArquivo, categoriasDoBanco
       textoExtraido = resultado.value;
     }
 
-    // 4. EXCEL (.xlsx, .xls, .csv)
-    else if (['.xlsx', '.xls'].includes(extensao)) {
+    // 4. POWERPOINT (.pptx)
+    else if (extensao === '.pptx') {
+      console.log('Extraindo texto de apresentação PPTX...');
+      const zip = new AdmZip(caminhoArquivo);
+      const slides = zip.getEntries().filter((entry) => entry.entryName.startsWith('ppt/slides/slide') && entry.entryName.endsWith('.xml'));
+      textoExtraido = slides
+        .map((entry) => entry.getData().toString('utf8'))
+        .join('\n')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    // 5. EXCEL (.xlsx, .xls, .csv)
+    else if (['.xlsx', '.xls', '.csv'].includes(extensao)) {
       const fileBuffer = fs.readFileSync(caminhoArquivo);
       const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
       
@@ -112,7 +133,7 @@ export async function resumirQualquerDocumento(caminhoArquivo, categoriasDoBanco
       textoExtraido = textoPlanilha;
     }
 
-    // 5. TEXTO PLANO (.txt)
+    // 6. TEXTO PLANO (.txt)
     else if (extensao === '.txt') {
       textoExtraido = fs.readFileSync(caminhoArquivo, 'utf-8');
     }
@@ -135,7 +156,8 @@ export async function resumirQualquerDocumento(caminhoArquivo, categoriasDoBanco
     };
 
   } catch (error) {
-    console.error(`Erro ao processar o arquivo ${caminhoArquivo}:`, error.message);
+    // Melhoria no log para mostrar exatamente a extensão que falhou
+    console.error(`[AI SERVICE] Erro ao processar o arquivo (Extensão: ${extensaoArquivo}):`, error.message);
     throw error;
   }
 }
