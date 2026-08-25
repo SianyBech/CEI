@@ -1217,6 +1217,7 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       console.log(`[UPLOAD] Registro salvo no banco para ${id}`);
 
       // 5. Retorna a resposta completa com os dados dinâmicos da IA para o UploadModal.js
+// 💡 Ajuste no retorno do res.json no server.js
       res.json({
         id,
         titulo: tituloFinal,
@@ -1225,9 +1226,11 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
         data: new Date().toLocaleDateString('pt-BR'),
         evento: eventoFinal,
         categoria: primaryCategory,
-        categorias: categoriesList,
+        // Garante que se categoriesList falhar, usa as categoriasSugeridas da IA
+        categorias: categoriesList.length > 0 ? categoriesList : (metadata.categoriasSugeridas || []),
         responsavel: responsavel,
-        tags: tagsList,
+        // Garante que se tagsList falhar, usa as tagsSugeridas da IA
+        tags: tagsList.length > 0 ? tagsList : (metadata.tagsSugeridas || []),
         resumo: metadata.resumo,
         textoExtraido: metadata.textoExtraido,
         storagePath,

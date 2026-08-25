@@ -311,6 +311,27 @@ window.CerneApp.UploadModal = {
     function showSuccessScreen(evidence) {
       // Re-enable closing
       closeBtn.style.display = 'flex';
+
+      // Helper para converter "DD/MM/YYYY" -> "YYYY-MM-DD" que o <input type="date"> exige
+function formatDateForInput(dateString) {
+  if (!dateString) {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // Se a data já vier no formato brasileiro "25/08/2026", converte para "2026-08-25"
+  if (dateString.includes('/')) {
+    const [dd, mm, yyyy] = dateString.split('/');
+    if (dd && mm && yyyy) {
+      return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+    }
+  }
+
+  return dateString;
+}
       
       const modalBody = overlay.querySelector('#modal-body-container');
       const footer = overlay.querySelector('#modal-footer-container');
@@ -391,10 +412,10 @@ window.CerneApp.UploadModal = {
               </div>
  
              
-              <div class="form-group">
-                <label class="form-label" for="edit-data">Data de Registro</label>
-                <input type="date" class="form-input" id="edit-data" value="${escapeHtml(evidence.data)}">
-              </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-data">Data de Registro</label>
+              <input type="date" class="form-input" id="edit-data" value="${formatDateForInput(evidence.data)}">
+            </div>
               
               <div class="form-group">
                 <label class="form-label">Tags da Evidência</label>
