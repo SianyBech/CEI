@@ -1157,7 +1157,7 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       const createdAt = new Date().toISOString();
       const tipo = extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento';
 
-      // 4. Trata as categorias e tags sugeridas pela IA (1 a 3 opções) ou vazias
+// 4. Mapeamento correto das chaves retornadas pelo aiService
       const categoriesList = Array.isArray(metadata.categoriasSugeridas) ? metadata.categoriasSugeridas : [];
       const primaryCategory = categoriesList.length > 0 ? categoriesList[0] : '';
       const tagsList = Array.isArray(metadata.tagsSugeridas) ? metadata.tagsSugeridas : [];
@@ -1218,6 +1218,7 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
 
       // 5. Retorna a resposta completa com os dados dinâmicos da IA para o UploadModal.js
 // 💡 Ajuste no retorno do res.json no server.js
+      // 💡 Retorno limpo e direto para o UploadModal.js do CEI
       res.json({
         id,
         titulo: tituloFinal,
@@ -1226,13 +1227,11 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
         data: new Date().toLocaleDateString('pt-BR'),
         evento: eventoFinal,
         categoria: primaryCategory,
-        // Garante que se categoriesList falhar, usa as categoriasSugeridas da IA
-        categorias: categoriesList.length > 0 ? categoriesList : (metadata.categoriasSugeridas || []),
+        categorias: Array.isArray(metadata.categoriasSugeridas) ? metadata.categoriasSugeridas : categoriesList,
         responsavel: responsavel,
-        // Garante que se tagsList falhar, usa as tagsSugeridas da IA
-        tags: tagsList.length > 0 ? tagsList : (metadata.tagsSugeridas || []),
-        resumo: metadata.resumo,
-        textoExtraido: metadata.textoExtraido,
+        tags: Array.isArray(metadata.tagsSugeridas) ? metadata.tagsSugeridas : tagsList,
+        resumo: metadata.resumo || '',
+        textoExtraido: metadata.textoExtraido || '',
         storagePath,
         storageFilename: path.basename(storagePath),
         originalFilename: originalName,
