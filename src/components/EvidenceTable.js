@@ -10,7 +10,13 @@ window.CerneApp.EvidenceTable = {
     this.currentPage = 1;
   },
 
-  render(evidences, onViewDetailsClick) {
+  // 💡 Adicionado o parâmetro customItemsPerPage
+  render(evidences, onViewDetailsClick, customItemsPerPage) {
+    // Se for passado um valor customizado via configurações, atualiza a propriedade do módulo
+    if (customItemsPerPage && typeof customItemsPerPage === 'number') {
+      this.itemsPerPage = customItemsPerPage;
+    }
+
     const container = document.createElement('div');
     container.className = 'table-container';
 
@@ -152,35 +158,37 @@ window.CerneApp.EvidenceTable = {
       row.style.cursor = 'pointer';
     });
 
-    // --- INJEÇÃO DO COMPONENTE DE PAGINAÇÃO ---
-    if (window.CerneApp.Pagination) {
-      const self = this;
-      const paginationElement = window.CerneApp.Pagination.render({
-        currentPage: self.currentPage,
-        totalPages: totalPages,
-        totalItems: totalItems,
-        itemsPerPage: self.itemsPerPage,
-        onPageChange(newPage) {
-          self.currentPage = newPage;
-          // Re-renderiza a tabela no container pai
-          const parent = container.parentElement;
-          if (parent) {
-            const newTable = self.render(evidences, onViewDetailsClick);
-            parent.replaceChild(newTable, container);
-            if (window.lucide) window.lucide.createIcons();
-          }
-        },
-        onItemsPerPageChange(newItemsPerPage) {
-          self.itemsPerPage = newItemsPerPage;
-          self.currentPage = 1; // Reseta para a página 1 ao mudar a quantidade
-          const parent = container.parentElement;
-          if (parent) {
-            const newTable = self.render(evidences, onViewDetailsClick);
-            parent.replaceChild(newTable, container);
-            if (window.lucide) window.lucide.createIcons();
-          }
-        }
-      });
+// --- INJEÇÃO DO COMPONENTE DE PAGINAÇÃO ---
+if (window.CerneApp.Pagination) {
+  const self = this;
+  const paginationElement = window.CerneApp.Pagination.render({
+    currentPage: self.currentPage,
+    totalPages: totalPages,
+    totalItems: totalItems,
+    itemsPerPage: self.itemsPerPage,
+    onPageChange(newPage) {
+      self.currentPage = newPage;
+      
+      // Re-renderiza a tabela no container pai
+      const parent = container.parentElement;
+      if (parent) {
+        const newTable = self.render(evidences, onViewDetailsClick, self.itemsPerPage);
+        parent.replaceChild(newTable, container);
+        if (window.lucide) window.lucide.createIcons();
+      }
+    },
+    onItemsPerPageChange(newItemsPerPage) {
+      self.itemsPerPage = newItemsPerPage;
+      self.currentPage = 1; // Reseta para a página 1 ao mudar a quantidade
+      
+      const parent = container.parentElement;
+      if (parent) {
+        const newTable = self.render(evidences, onViewDetailsClick, self.itemsPerPage);
+        parent.replaceChild(newTable, container);
+        if (window.lucide) window.lucide.createIcons();
+      }
+    }
+  });
 
       container.appendChild(paginationElement);
     }

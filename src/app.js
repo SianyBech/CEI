@@ -560,7 +560,8 @@ function getPaginatedEvidences(filteredEvidences, currentPage = 1) {
     if (state.viewMode === 'table') {
       renderedComponent = window.CerneApp.EvidenceTable.render(
         filteredEvidences,
-        openEvidenceDetails
+        openEvidenceDetails,
+        state.itemsPerPage
       );
     } else {
       renderedComponent = window.CerneApp.EvidenceCard.render(
@@ -697,11 +698,23 @@ function setupSidebarEvents() {
  // ✅ 1. Torne a função openSettings assíncrona (async)
 async function openSettings() {
   if (window.CerneApp && window.CerneApp.SettingsPage) {
-    // 💡 Usa o 'await' antes do render
-    const settingsNode = await window.CerneApp.SettingsPage.render(() => {
-      restoreSidebarActive('evidences');
-    });
-    
+    const settingsNode = await window.CerneApp.SettingsPage.render(
+      () => restoreSidebarActive('evidences'),
+      async (updatedUser) => {
+        if (updatedUser?.configuracoes) {
+          state.viewMode = updatedUser.configuracoes.defaultView || 'table';
+          state.itemsPerPage = updatedUser.configuracoes.itemsPerPage || 10;
+          
+          // 💡 Reseta para a primeira página para evitar cair em página inexistente
+          if (window.CerneApp.EvidenceTable) {
+            window.CerneApp.EvidenceTable.resetPage();
+          }
+
+          renderList(); // Re-renderiza a lista aplicando as novas preferências
+        }
+      }
+    );
+
     document.body.appendChild(settingsNode);
     if (window.lucide) lucide.createIcons();
   }
