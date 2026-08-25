@@ -44,7 +44,7 @@ export async function resumirQualquerDocumento(caminhoArquivo) {
       textoExtraido = resultado.data.text;
     }
 
-    // 2. PDF
+  // 2. PDF
     else if (extensao === '.pdf') {
       console.log('Tentando extrair texto direto do PDF...');
       
@@ -53,20 +53,37 @@ export async function resumirQualquerDocumento(caminhoArquivo) {
           const pdfParser = new PDFParser(null, 1);
           pdfParser.on('pdfParser_dataError', errData => reject(new Error(errData.parserError)));
           pdfParser.on('pdfParser_dataReady', () => {
-            resolve(pdfParser.getRawTextContent());
+            // pdf2json gera dados por página. Limitamos o texto bruto
+            const rawText = pdfParser.getRawTextContent();
+            resolve(rawText);
           });
           pdfParser.loadPDF(caminhoArquivo);
         });
+
+        // Se o PDF for muito extenso, limitamos a string aos primeiros 15.000 caracteres (~5 páginas de texto)
+        if (textoExtraido && textoExtraido.length > 15000) {
+          console.log('PDF longo detectado. Limitando o texto extraído para as primeiras páginas...');
+          textoExtraido = textoExtraido.substring(0, 15000);
+        }
+
       } catch (pdfErr) {
         console.warn('Estrutura de texto do PDF indisponível. Convertendo páginas do PDF em imagem para OCR...');
       }
 
+      // Fallback para PDF escaneado (OCR via Tesseract)
       if (!textoExtraido || textoExtraido.trim().length === 0) {
         let contadorPaginas = 1;
+        const LIMITE_PAGINAS_OCR = 5; // 👈 TRAVA DE SEGURANÇA CONTRA TIMEOUT 504
+
         const document = await pdf(caminhoArquivo, { scale: 2 });
 
         for await (const image of document) {
-          console.log(`Lendo página ${contadorPaginas} via OCR...`);
+          if (contadorPaginas > LIMITE_PAGINAS_OCR) {
+            console.log(`Limite de ${LIMITE_PAGINAS_OCR} páginas atingido para o OCR. Interrompendo para evitar timeout.`);
+            break; // Sai do loop imediatamente ao atingir 5 páginas
+          }
+
+          console.log(`Lendo página ${contadorPaginas} de ${LIMITE_PAGINAS_OCR} via OCR...`);
           const resultadoOcr = await Tesseract.recognize(image, 'por');
           textoExtraido += `\n--- PÁGINA ${contadorPaginas} ---\n` + resultadoOcr.data.text;
           contadorPaginas++;
