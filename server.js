@@ -666,7 +666,6 @@ async function extractText(filePath, extension) {
   return '';
 }
 
-// Substitua o seu generateMetadata no server.js por esta versão ultra-segura:
 async function generateMetadata(tempPath, originalName, extension, dbCategories, dbTags) {
   const extensoesSuportadas = ['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx', 'xlsx', 'xls', 'txt'];
 
@@ -682,13 +681,12 @@ async function generateMetadata(tempPath, originalName, extension, dbCategories,
   }
 
   try {
-    // Chama a IA e garante o retorno das propriedades corretas
     const resultado = await resumirQualquerDocumento(tempPath, dbCategories, dbTags);
     return resultado;
   } catch (err) {
-    console.warn('[GEMINI] Falha ao processar texto do arquivo com a IA:', err.message);
-    
-    // Retorno de fallback seguro mantendo a estrutura exata de chaves
+    // Exibe o erro real no console do servidor para facilitar o diagnóstico
+    console.error('[GEMINI ERROR] Detalhe da falha no upload:', err);
+
     return {
       titulo: originalName,
       evento: 'Sem Evento',

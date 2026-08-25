@@ -155,7 +155,7 @@ export async function resumirTextoSimples(texto, categoriasDoBanco = [], tagsDoB
 
     const prompt = `Você é um analista sênior de documentação do CEI/UFRGS (Centro de Empreendimentos de Informática).
 
-Sua tarefa é analisar o texto extraído de uma evidência documental e retornar EXATAMENTE um objeto JSON válido (sem blocos de código markdown, apenas o JSON puro).
+Sua tarefa é analisar o texto extraído de uma evidência documental e retornar EXATAMENTE um objeto JSON válido.
 
 A estrutura do JSON deve ser obrigatoriamente:
 {
@@ -169,7 +169,7 @@ A estrutura do JSON deve ser obrigatoriamente:
 REGRAS DE SELEÇÃO DE CATEGORIAS E TAGS:
 1. Categorias permitidas: [${listaCategorias}]
 2. Tags permitidas: [${listaTags}]
-3. Escolha obrigatoriamente entre 1 a 3 categorias e de 1 a 3 tags da lista fornecida que melhor representam o documento. Se nenhuma se encaixar com clareza, retorne um array vazio [].
+3. Escolha entre 1 a 3 categorias e de 1 a 3 tags da lista fornecida.
 
 Conteúdo para análise:
 ${texto}`;
@@ -179,12 +179,17 @@ ${texto}`;
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
-    // Limpa possíveis marcações de bloco de código JSON (```json ... ```)
-    const jsonText = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const rawText = response.text || '';
     
-    return JSON.parse(jsonText);
+    // Captura estritamente o bloco JSON entre chaves para evitar erros de sintaxe
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error(`A IA não retornou uma estrutura JSON válida. Resposta: ${rawText}`);
+    }
+
+    return JSON.parse(jsonMatch[0]);
   } catch (err) {
-    console.error('Erro de comunicação com a API do Gemini:', err);
+    console.error('[GEMINI] Erro ao processar ou converter resposta da IA:', err);
     throw new Error(`Falha ao comunicar com a IA: ${err.message}`);
   }
 }
