@@ -444,10 +444,12 @@ function formatDateForInput(dateString) {
         node: modalBody
       });
 
-      // Carrega as categorias sugeridas pela IA (1 a 3) ou inicia vazio []
+// 💡 Inicialização das Categorias com fallback duplo
       let selectedCategories = Array.isArray(evidence.categorias) && evidence.categorias.length > 0
         ? [...evidence.categorias]
-        : (evidence.categoria ? [evidence.categoria] : []);
+        : (Array.isArray(evidence.categoriasSugeridas) && evidence.categoriasSugeridas.length > 0 
+            ? [...evidence.categoriasSugeridas] 
+            : (evidence.categoria ? [evidence.categoria] : []));
 
       function renderUploadCategoriesWidget() {
         const displayContainer = overlay.querySelector('#upload-selected-categories-display');
@@ -512,8 +514,10 @@ function formatDateForInput(dateString) {
         }
       });
 
-      // Carrega as tags sugeridas pela IA (1 a 3) ou inicia vazio []
-      let selectedTags = Array.isArray(evidence.tags) ? [...evidence.tags] : [];
+      // 💡 Inicialização das Tags com fallback duplo
+      let selectedTags = Array.isArray(evidence.tags) && evidence.tags.length > 0
+        ? [...evidence.tags]
+        : (Array.isArray(evidence.tagsSugeridas) ? [...evidence.tagsSugeridas] : []);
 
       function renderTagsWidget() {
         const displayContainer = modalBody.querySelector('#selected-tags-display');

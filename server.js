@@ -1157,14 +1157,18 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       const createdAt = new Date().toISOString();
       const tipo = extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento';
 
-// 4. Mapeamento correto das chaves retornadas pelo aiService
-      const categoriesList = Array.isArray(metadata.categoriasSugeridas) ? metadata.categoriasSugeridas : [];
+      // 4. Mapeamento robusto dos campos da IA com suporte a fallbacks
+      const rawCategories = metadata.categoriasSugeridas || metadata.categorias || [];
+      const categoriesList = Array.isArray(rawCategories) ? rawCategories : [];
       const primaryCategory = categoriesList.length > 0 ? categoriesList[0] : '';
-      const tagsList = Array.isArray(metadata.tagsSugeridas) ? metadata.tagsSugeridas : [];
-      const tituloFinal = metadata.titulo || originalName;
+
+      const rawTags = metadata.tagsSugeridas || metadata.tags || [];
+      const tagsList = Array.isArray(rawTags) ? rawTags : [];
+
+      const tituloFinal = metadata.titulo && metadata.titulo.trim().length > 0 ? metadata.titulo : originalName;
       const eventoFinal = metadata.evento || 'Sem Evento';
 
-      // Query de inserção no banco
+      // Query de inserção no banco PostgreSQL
       const insertQuery = `
         INSERT INTO public.evidences (
           "titulo", "nome", "tipo", "data", "evento", 
@@ -1192,9 +1196,9 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
           new Date().toLocaleDateString('pt-BR'),   // $4:  data
           eventoFinal,                              // $5:  evento sugerido pela IA
           primaryCategory,                          // $6:  categoria principal (ou vazia '')
-          JSON.stringify(categoriesList),           // $7:  categorias (JSONB array de 1 a 3)
+          JSON.stringify(categoriesList),           // $7:  categorias (JSONB array)
           responsavel,                              // $8:  responsavel
-          JSON.stringify(tagsList),                 // $9:  tags (JSONB array de 1 a 3)
+          JSON.stringify(tagsList),                 // $9:  tags (JSONB array)
           metadata.resumo || '',                    // $10: resumo
           metadata.textoExtraido || '',             // $11: textoExtraido
           storagePath,                              // $12: storage_path
@@ -1216,9 +1220,7 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       const id = insertResult.rows[0]?.id;
       console.log(`[UPLOAD] Registro salvo no banco para ${id}`);
 
-      // 5. Retorna a resposta completa com os dados dinâmicos da IA para o UploadModal.js
-// 💡 Ajuste no retorno do res.json no server.js
-      // 💡 Retorno limpo e direto para o UploadModal.js do CEI
+      // 5. Retorno limpo e padronizado para a interface (UploadModal.js)
       res.json({
         id,
         titulo: tituloFinal,
@@ -1227,9 +1229,9 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
         data: new Date().toLocaleDateString('pt-BR'),
         evento: eventoFinal,
         categoria: primaryCategory,
-        categorias: Array.isArray(metadata.categoriasSugeridas) ? metadata.categoriasSugeridas : categoriesList,
+        categorias: categoriesList,
         responsavel: responsavel,
-        tags: Array.isArray(metadata.tagsSugeridas) ? metadata.tagsSugeridas : tagsList,
+        tags: tagsList,
         resumo: metadata.resumo || '',
         textoExtraido: metadata.textoExtraido || '',
         storagePath,
@@ -1239,14 +1241,13 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
         fileSize,
         downloadUrl: buildDownloadUrl(req, id)
       });
-        } catch (error) {
+    } catch (error) {
       console.error('[UPLOAD] Falha no processamento do arquivo:', error);
       await removeTemporaryFile(tempPath);
       res.status(500).json({ error: error.message || 'Falha no processamento do arquivo.' });
     }
   });
 });
-
 app.use((err, req, res, next) => {
   console.error('[SERVER] Erro interno não tratado:', err);
   res.status(500).json({ error: err.message || 'Erro interno do servidor.' });
