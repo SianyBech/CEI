@@ -44,7 +44,7 @@ export async function resumirQualquerDocumento(caminhoArquivo, categoriasDoBanco
       textoExtraido = resultado.data.text;
     }
 
-  // 2. PDF
+    // 2. PDF
     else if (extensao === '.pdf') {
       console.log('Tentando extrair texto direto do PDF...');
       
@@ -53,14 +53,12 @@ export async function resumirQualquerDocumento(caminhoArquivo, categoriasDoBanco
           const pdfParser = new PDFParser(null, 1);
           pdfParser.on('pdfParser_dataError', errData => reject(new Error(errData.parserError)));
           pdfParser.on('pdfParser_dataReady', () => {
-            // pdf2json gera dados por página. Limitamos o texto bruto
             const rawText = pdfParser.getRawTextContent();
             resolve(rawText);
           });
           pdfParser.loadPDF(caminhoArquivo);
         });
 
-        // Se o PDF for muito extenso, limitamos a string aos primeiros 15.000 caracteres (~5 páginas de texto)
         if (textoExtraido && textoExtraido.length > 15000) {
           console.log('PDF longo detectado. Limitando o texto extraído para as primeiras páginas...');
           textoExtraido = textoExtraido.substring(0, 15000);
@@ -73,14 +71,14 @@ export async function resumirQualquerDocumento(caminhoArquivo, categoriasDoBanco
       // Fallback para PDF escaneado (OCR via Tesseract)
       if (!textoExtraido || textoExtraido.trim().length === 0) {
         let contadorPaginas = 1;
-        const LIMITE_PAGINAS_OCR = 5; // 👈 TRAVA DE SEGURANÇA CONTRA TIMEOUT 504
+        const LIMITE_PAGINAS_OCR = 5;
 
         const document = await pdf(caminhoArquivo, { scale: 2 });
 
         for await (const image of document) {
           if (contadorPaginas > LIMITE_PAGINAS_OCR) {
             console.log(`Limite de ${LIMITE_PAGINAS_OCR} páginas atingido para o OCR. Interrompendo para evitar timeout.`);
-            break; // Sai do loop imediatamente ao atingir 5 páginas
+            break;
           }
 
           console.log(`Lendo página ${contadorPaginas} de ${LIMITE_PAGINAS_OCR} via OCR...`);
@@ -128,7 +126,13 @@ export async function resumirQualquerDocumento(caminhoArquivo, categoriasDoBanco
     }
 
     console.log('Texto extraído com sucesso. Enviando para o Gemini...');
-    return await resumirTextoSimples(textoExtraido, categoriasDoBanco, tagsDoBanco);
+    const resultadoIA = await resumirTextoSimples(textoExtraido, categoriasDoBanco, tagsDoBanco);
+    
+    // Anexa o texto extraído original ao retorno da IA
+    return {
+      ...resultadoIA,
+      textoExtraido
+    };
 
   } catch (error) {
     console.error(`Erro ao processar o arquivo ${caminhoArquivo}:`, error.message);
@@ -137,7 +141,7 @@ export async function resumirQualquerDocumento(caminhoArquivo, categoriasDoBanco
 }
 
 /**
- * Envia o texto extraído para a IA selecionando de 1 a 3 categorias e tags cadastradas no banco
+ * Envia o texto extraído para a IA e gera título, evento, resumo, categorias e tags
  */
 export async function resumirTextoSimples(texto, categoriasDoBanco = [], tagsDoBanco = []) {
   try {
@@ -155,15 +159,17 @@ Sua tarefa é analisar o texto extraído de uma evidência documental e retornar
 
 A estrutura do JSON deve ser obrigatoriamente:
 {
+  "titulo": "Crie um título curto, objetivo e profissional (máximo 6 palavras) que resuma perfeitamente a essência da evidência.",
+  "evento": "Identifique o nome do evento, reunião ou atividade de origem (ex: Mentoria Tecnológica, Ata de Reunião de Alinhamento). Se não houver, use 'Sem Evento'.",
   "resumo": "Dois parágrafos em texto plano contendo a identificação do documento e a síntese das entregas principais. Use estritamente tags HTML <b> e </b> para destacar termos-chave.",
   "categoriasSugeridas": ["Array com NO MÍNIMO 1 e NO MÁXIMO 3 categorias escolhidas EXCLUSIVAMENTE da lista permitida"],
   "tagsSugeridas": ["Array com NO MÍNIMO 1 e NO MÁXIMO 3 tags escolhidas EXCLUSIVAMENTE da lista permitida"]
 }
 
-REGRAS DE SELEÇÃO:
+REGRAS DE SELEÇÃO DE CATEGORIAS E TAGS:
 1. Categorias permitidas: [${listaCategorias}]
 2. Tags permitidas: [${listaTags}]
-3. Escolha obrigatoriamente entre 1 a 3 categorias e de 1 a 3 tags da lista fornecida que melhor representam o documento. Não invente termos fora das listas fornecidas.
+3. Escolha obrigatoriamente entre 1 a 3 categorias e de 1 a 3 tags da lista fornecida que melhor representam o documento. Se nenhuma se encaixar com clareza, retorne um array vazio [].
 
 Conteúdo para análise:
 ${texto}`;
@@ -173,7 +179,7 @@ ${texto}`;
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
-    // Limpa possíveis marcações de bloco de código JSON
+    // Limpa possíveis marcações de bloco de código JSON (```json ... ```)
     const jsonText = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
     
     return JSON.parse(jsonText);

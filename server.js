@@ -13,7 +13,7 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { getUserRole, hasPermission } from './auth.js';
 import { fileURLToPath } from 'url';
-import { resumirTextoSimples } from './aiService.js';
+import { resumirQualquerDocumento, resumirTextoSimples } from './aiService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -666,26 +666,38 @@ async function extractText(filePath, extension) {
   return '';
 }
 
-async function generateMetadata(filename, extension, extractedText) {
-  let resumoIA = '';
+// Substitua o seu generateMetadata no server.js por esta versão ultra-segura:
+async function generateMetadata(tempPath, originalName, extension, dbCategories, dbTags) {
+  const extensoesSuportadas = ['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx', 'xlsx', 'xls', 'txt'];
 
-  if (extractedText && extractedText.trim().length > 0) {
-    try {
-      resumoIA = await resumirTextoSimples(extractedText);
-      console.log('[GEMINI] Resumo estruturado gerado com sucesso.');
-    } catch (err) {
-      console.error('[GEMINI] Falha ao comunicar com a IA:', err.message);
-    }
+  if (!extensoesSuportadas.includes(extension)) {
+    return {
+      titulo: originalName,
+      evento: 'Registro Interno',
+      resumo: 'Formato não suportado para processamento automático de texto pela IA.',
+      categoriasSugeridas: [],
+      tagsSugeridas: [],
+      textoExtraido: ''
+    };
   }
 
-  return {
-    evento: 'Registro Interno',
-    categoria: 'Gestão',
-    responsavel: 'Equipe CEI',
-    tags: ['CERNE', 'Evidência'],
-    resumo: resumoIA || (extractedText ? extractedText.slice(0, 220) + '...' : 'Evidência cadastrada no sistema.'),
-    textoExtraido: extractedText || ''
-  };
+  try {
+    // Chama a IA e garante o retorno das propriedades corretas
+    const resultado = await resumirQualquerDocumento(tempPath, dbCategories, dbTags);
+    return resultado;
+  } catch (err) {
+    console.warn('[GEMINI] Falha ao processar texto do arquivo com a IA:', err.message);
+    
+    // Retorno de fallback seguro mantendo a estrutura exata de chaves
+    return {
+      titulo: originalName,
+      evento: 'Sem Evento',
+      resumo: 'Não foi possível extrair texto ou gerar o resumo automático para este arquivo.',
+      categoriasSugeridas: [],
+      tagsSugeridas: [],
+      textoExtraido: ''
+    };
+  }
 }
 
 // ==========================================================================
@@ -1118,36 +1130,23 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       console.log(`[UPLOAD] Iniciando upload de ${originalName}`);
       console.log(`[UPLOAD] Arquivo recebido: ${originalName} (${fileSize} bytes, ${mimeType})`);
 
-      // 1. Busca as categorias e tags reais cadastradas no banco para o vocabulário da IA
+      // 1. Busca as categorias e tags reais cadastradas no banco (ou usa getAppSetting)
       let dbCategories = [];
       let dbTags = [];
       try {
-        const settingsRes = await dbClient.query('SELECT categories, tags FROM public.settings LIMIT 1');
-        if (settingsRes.rows.length > 0) {
-          dbCategories = settingsRes.rows[0].categories || [];
-          dbTags = settingsRes.rows[0].tags || [];
-        }
+        dbCategories = await getAppSetting('categories', ['Capacitação', 'Planejamento', 'Gestão', 'Assessoria', 'Sustentabilidade', 'Qualificação']);
+        dbTags = await getAppSetting('tags', ['CERNE', 'Gestão', 'Capacitação', 'Assessoria', 'Sustentabilidade', 'Qualificação']);
       } catch (settingsErr) {
-        console.warn('[UPLOAD] Não foi possível buscar configurações de tags/categorias do banco, usando fallback local:', settingsErr.message);
+        console.warn('[UPLOAD] Erro ao buscar configurações do banco, usando fallback local:', settingsErr.message);
       }
 
-      // 2. Extrai o texto do arquivo
-      const extractedText = ['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx'].includes(extension)
-        ? await extractText(tempPath, extension)
-        : '';
-      console.log(`[UPLOAD] Texto extraído (${extractedText.length} caracteres)`);
+      // 2. Extrai texto e processa tudo via IA usando o helper
+      const metadata = await generateMetadata(tempPath, originalName, extension, dbCategories, dbTags);
+      const responsavel = getResponsavel(req.user);
 
-      // 3. Gera metadados pela IA informando o vocabulário do banco (1 a 3 opções)
-      const metadata = await generateMetadata(originalName, extension, extractedText, dbCategories, dbTags);
-      metadata.responsavel = getResponsavel(req.user);
+      console.log(`[UPLOAD] Metadados gerados para ${originalName}:`, metadata.titulo);
 
-      if (!['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx'].includes(extension)) {
-        metadata.resumo = `${metadata.resumo || ''}\n\n(Nota: Formato não suportado para processamento automático do texto).`;
-      }
-
-      console.log(`[UPLOAD] Metadados gerados para ${originalName}`);
-
-      // 4. Envia para o Supabase Storage
+      // 3. Envia o arquivo ORIGINAL para o Supabase Storage
       const storagePath = buildStoragePath(originalName);
       await uploadFileToSupabase(tempPath, storagePath, originalName, mimeType);
       console.log(`[UPLOAD] Upload realizado para o Supabase Storage: ${storagePath}`);
@@ -1158,10 +1157,12 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       const createdAt = new Date().toISOString();
       const tipo = extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento';
 
-      // 5. Trata lista de categorias (aceita array vazio caso a IA ou banco não possuam dados)
-      const categoriesList = Array.isArray(metadata.categorias) ? metadata.categorias : (metadata.categoria ? [metadata.categoria] : []);
-      const primaryCategory = categoriesList.length > 0 ? categoriesList[0] : ''; // Fica vazio '' em vez de forçar 'Geral'
-      const tagsList = Array.isArray(metadata.tags) ? metadata.tags : [];
+      // 4. Trata as categorias e tags sugeridas pela IA (1 a 3 opções) ou vazias
+      const categoriesList = Array.isArray(metadata.categoriasSugeridas) ? metadata.categoriasSugeridas : [];
+      const primaryCategory = categoriesList.length > 0 ? categoriesList[0] : '';
+      const tagsList = Array.isArray(metadata.tagsSugeridas) ? metadata.tagsSugeridas : [];
+      const tituloFinal = metadata.titulo || originalName;
+      const eventoFinal = metadata.evento || 'Sem Evento';
 
       // Query de inserção no banco
       const insertQuery = `
@@ -1185,17 +1186,17 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
 
       try {
         insertResult = await dbClient.query(insertQuery, [
-          originalName,                             // $1:  titulo
-          originalName,                             // $2:  nome
+          tituloFinal,                              // $1:  titulo gerado pela IA
+          originalName,                             // $2:  nome original
           tipo,                                     // $3:  tipo
           new Date().toLocaleDateString('pt-BR'),   // $4:  data
-          metadata.evento || 'Sem Evento',          // $5:  evento
-          primaryCategory,                          // $6:  categoria (vazia ou 1ª categoria)
-          JSON.stringify(categoriesList),           // $7:  categorias (JSONB array, aceita [])
-          metadata.responsavel,                     // $8:  responsavel
-          JSON.stringify(tagsList),                 // $9:  tags (JSONB array, aceita [])
+          eventoFinal,                              // $5:  evento sugerido pela IA
+          primaryCategory,                          // $6:  categoria principal (ou vazia '')
+          JSON.stringify(categoriesList),           // $7:  categorias (JSONB array de 1 a 3)
+          responsavel,                              // $8:  responsavel
+          JSON.stringify(tagsList),                 // $9:  tags (JSONB array de 1 a 3)
           metadata.resumo || '',                    // $10: resumo
-          extractedText || '',                      // $11: textoExtraido
+          metadata.textoExtraido || '',             // $11: textoExtraido
           storagePath,                              // $12: storage_path
           path.basename(storagePath),               // $13: storage_filename
           originalName,                             // $14: original_filename
@@ -1215,20 +1216,20 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       const id = insertResult.rows[0]?.id;
       console.log(`[UPLOAD] Registro salvo no banco para ${id}`);
 
-      // 6. Retorna para o front-end
+      // 5. Retorna a resposta completa com os dados dinâmicos da IA para o UploadModal.js
       res.json({
         id,
-        titulo: originalName,
+        titulo: tituloFinal,
         nome: originalName,
         tipo,
         data: new Date().toLocaleDateString('pt-BR'),
-        evento: metadata.evento || 'Sem Evento',
+        evento: eventoFinal,
         categoria: primaryCategory,
         categorias: categoriesList,
-        responsavel: metadata.responsavel,
+        responsavel: responsavel,
         tags: tagsList,
         resumo: metadata.resumo,
-        textoExtraido: extractedText,
+        textoExtraido: metadata.textoExtraido,
         storagePath,
         storageFilename: path.basename(storagePath),
         originalFilename: originalName,
@@ -1236,7 +1237,7 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
         fileSize,
         downloadUrl: buildDownloadUrl(req, id)
       });
-    } catch (error) {
+        } catch (error) {
       console.error('[UPLOAD] Falha no processamento do arquivo:', error);
       await removeTemporaryFile(tempPath);
       res.status(500).json({ error: error.message || 'Falha no processamento do arquivo.' });
