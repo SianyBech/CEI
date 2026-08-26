@@ -759,6 +759,23 @@ app.post('/api/admin/users', requirePermission('settings'), async (req, res) => 
   }
 });
 
+// Exemplo no seu arquivo de rotas do backend (Server/Express)
+app.delete('/api/admin/users/:id', checkAuth, checkAdminRole, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Regra de segurança: impede que o admin exclua a si mesmo
+    if (req.user.id === id) {
+      return res.status(400).json({ error: 'Você não pode excluir sua própria conta de administrador.' });
+    }
+
+    await UserDatabase.deleteById(id); // Altere para seu método real do banco de dados
+    return res.json({ message: 'Membro removido com sucesso.' });
+  } catch (error) {
+    return res.status(500).json({ error: 'Falha ao remover o membro do banco de dados.' });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body || {};

@@ -70,7 +70,7 @@
     backdrop.querySelector('#resp-close-bottom-btn').addEventListener('click', closeModal);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
 
-    // Busca e renderiza a lista de usuários
+// Busca e renderiza a lista de usuários
     async function loadMembersList() {
       const modalBody = backdrop.querySelector('#resp-modal-body');
       try {
@@ -81,29 +81,69 @@
           return;
         }
 
-        let html = '<div style="display: flex; flex-direction: column; gap: 0.75rem;">';
-        users.forEach(u => {
-          const roleLabel = u.role === 'admin' ? '<span style="font-size:0.7rem; background:#0066cc15; color:#0066cc; padding: 2px 8px; border-radius:12px; font-weight:600;">Admin</span>' : '';
+        modalBody.innerHTML = ''; // Limpa o container antes de renderizar
+        const listContainer = document.createElement('div');
+        listContainer.style.cssText = 'display: flex; flex-direction: column; gap: 0.75rem;';
 
-          html += `
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-secondary);">
-              <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <div style="width: 36px; height: 36px; border-radius: 50%; background-color: var(--primary, #0066cc); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">
-                  ${(u.nome || 'U').charAt(0).toUpperCase()}
+        users.forEach(u => {
+          const roleLabel = u.role === 'admin' 
+            ? '<span style="font-size:0.7rem; background:#0066cc15; color:#0066cc; padding: 2px 8px; border-radius:12px; font-weight:600;">Admin</span>' 
+            : '';
+
+          const itemRow = document.createElement('div');
+          itemRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-secondary);';
+
+          itemRow.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 36px; height: 36px; border-radius: 50%; background-color: var(--primary, #0066cc); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">
+                ${(u.nome || 'U').charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
+                  ${u.nome} ${roleLabel}
                 </div>
-                <div>
-                  <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
-                    ${u.nome} ${roleLabel}
-                  </div>
-                  <div style="font-size: 0.75rem; color: var(--text-secondary);">${u.email} • ${u.cargo || 'Analista'}</div>
-                </div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">${u.email} • ${u.cargo || 'Analista'}</div>
               </div>
             </div>
-          `;
-        });
-        html += '</div>';
 
-        modalBody.innerHTML = html;
+            ${isAdmin ? `
+            <button type="button" class="btn-delete-member" data-id="${u.id}" data-nome="${u.nome}" style="background: none; border: none; cursor: pointer; color: var(--danger, #ff4757); padding: 0.4rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s;" title="Excluir membro">
+              <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
+            </button>
+            ` : ''}
+          `;
+
+          // Handler de exclusão do membro
+          if (isAdmin) {
+            const deleteBtn = itemRow.querySelector('.btn-delete-member');
+            if (deleteBtn) {
+              deleteBtn.addEventListener('click', async () => {
+                const confirmDelete = confirm(`Tem certeza de que deseja remover o membro "${u.nome}" do sistema?\n\nEsta ação não pode ser desfeita.`);
+                if (!confirmDelete) return;
+
+                deleteBtn.disabled = true;
+                
+                try {
+                  await window.CerneApp.Api.deleteUserByAdmin(u.id);
+                  itemRow.remove(); // Remove o elemento do DOM imediatamente sem recarregar tudo
+                  
+                  if (listContainer.children.length === 0) {
+                    modalBody.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Nenhum membro encontrado.</p>';
+                  }
+                } catch (err) {
+                  alert(`Não foi possível excluir o membro: ${err.message}`);
+                  deleteBtn.disabled = false;
+                }
+              });
+            }
+          }
+
+          listContainer.appendChild(itemRow);
+        });
+
+        modalBody.appendChild(listContainer);
+        if (window.lucide) lucide.createIcons();
+
       } catch (err) {
         modalBody.innerHTML = '<p style="text-align: center; color: var(--danger);">Erro ao carregar lista de membros.</p>';
       }

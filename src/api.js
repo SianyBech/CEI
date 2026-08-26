@@ -31,6 +31,12 @@ async createUserByAdmin(userData) {
   });
 },
 
+async deleteUserByAdmin(userId) {
+  return this.request(`/api/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'DELETE'
+  });
+},
+
 // Métodos de administração de usuários
   async fetchAllUsers() {
     return this.request('/api/admin/users');
