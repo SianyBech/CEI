@@ -390,51 +390,56 @@ overlay.querySelector('#detail-add-category-select').addEventListener('change', 
       if (e.target === overlay) doClose();
     });
 
-    saveBtn.addEventListener('click', async () => {
-      if (isSaving) return;
+   // Substitua o listener do saveBtn no arquivo EvidenceDetails.js por este:
+saveBtn.addEventListener('click', async () => {
+  if (isSaving) return;
 
-      const dataDigitada = dataInput.value.trim() || new Date().toLocaleDateString('pt-BR');
+  const dataDigitada = dataInput.value.trim() || new Date().toLocaleDateString('pt-BR');
 
-// Proteção caso o utilitário CerneApp.Utils não esteja carregado na página
-if (window.CerneApp.Utils?.isFutureDate?.(dataDigitada)) {
-  const confirmFuture = confirm(
-    'A data informada é uma data futura.\n\nTem certeza de que deseja salvar a evidência com esta data?'
-  );
-  if (!confirmFuture) {
-    return; // Interrompe o salvamento se o usuário clicar em "Cancelar"
+  // Proteção caso o utilitário CerneApp.Utils não esteja carregado na página
+  if (window.CerneApp.Utils?.isFutureDate?.(dataDigitada)) {
+    const confirmFuture = confirm(
+      'A data informada é uma data futura.\n\nTem certeza de que deseja salvar a evidência com esta data?'
+    );
+    if (!confirmFuture) {
+      return; // Interrompe o salvamento se o usuário clicar em "Cancelar"
+    }
   }
-}
 
-      // Garante que enviamos a lista completa de categorias
-const updatedMetadata = {
-  titulo: titleInput.value.trim() || evidence.nome,
-  evento: eventoInput.value.trim() || 'Sem Evento',
-  // Mantemos 'categorias' como a lista principal
-  categorias: selectedCategories,
-  // Mantemos 'categoria' apenas como fallback/retrocompatibilidade
-  categoria: selectedCategories.length > 0 ? selectedCategories[0] : 'Geral',
-  responsavel: responsavelInput.value.trim() || 'Não especificado',
-  data: dataDigitada,
-  resumo: resumoInput.value.trim() || 'Sem resumo disponível.',
-  tags: selectedTags
-};
+  // Garante que enviamos a lista completa de categorias
+  const updatedMetadata = {
+    titulo: titleInput.value.trim() || evidence.nome,
+    evento: eventoInput.value.trim() || 'Sem Evento',
+    categorias: selectedCategories,
+    categoria: selectedCategories.length > 0 ? selectedCategories[0] : 'Geral',
+    responsavel: responsavelInput.value.trim() || 'Não especificado',
+    data: dataDigitada,
+    resumo: resumoInput.value.trim() || 'Sem resumo disponível.',
+    tags: selectedTags
+  };
 
-      setSavingState(true);
+  // 1. Bloqueia os botões e exibe "Salvando..." na tela
+  setSavingState(true);
 
-      try {
-        const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
-        setSavingState(false);
-        showToast('Alterações salvas com sucesso.', 'success');
-        if (typeof onSave === 'function') {
-          onSave(savedEvidence);
-        }
-        doClose();
-      } catch (error) {
-        setSavingState(false);
-        alert(`Não foi possível salvar a evidência: ${error.message}`);
-      }
-    });
+  try {
+    // 2. Aguarda a resposta da API do backend
+    const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
+    
+    // 3. Notifica o estado global do app para atualizar a tabela sem F5
+    if (typeof onSave === 'function') {
+      onSave(savedEvidence);
+    }
 
+    showToast('Alterações salvas com sucesso.', 'success');
+    
+    // 4. Fecha a janela modal
+    doClose();
+  } catch (error) {
+    alert(`Não foi possível salvar a evidência: ${error.message}`);
+  } finally {
+    setSavingState(false);
+  }
+});
     overlay.querySelector('#btn-download-original').addEventListener('click', (e) => {
       e.preventDefault();
       if (evidence.downloadUrl) {
