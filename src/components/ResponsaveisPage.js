@@ -114,29 +114,28 @@
           `;
 
           // Handler de exclusão do membro
-          if (isAdmin) {
-            const deleteBtn = itemRow.querySelector('.btn-delete-member');
-            if (deleteBtn) {
-              deleteBtn.addEventListener('click', async () => {
-                const confirmDelete = confirm(`Tem certeza de que deseja remover o membro "${u.nome}" do sistema?\n\nEsta ação não pode ser desfeita.`);
-                if (!confirmDelete) return;
+         if (isAdmin) {
+  const deleteBtn = itemRow.querySelector('.btn-delete-member');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', async () => {
+      const confirmDelete = confirm(`Tem certeza de que deseja remover o membro "${u.nome}" do sistema?\n\nEsta ação não pode ser desfeita.`);
+      if (!confirmDelete) return;
 
-                deleteBtn.disabled = true;
-                
-                try {
-                  await window.CerneApp.Api.deleteUserByAdmin(u.id);
-                  itemRow.remove(); // Remove o elemento do DOM imediatamente sem recarregar tudo
-                  
-                  if (listContainer.children.length === 0) {
-                    modalBody.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Nenhum membro encontrado.</p>';
-                  }
-                } catch (err) {
-                  alert(`Não foi possível excluir o membro: ${err.message}`);
-                  deleteBtn.disabled = false;
-                }
-              });
-            }
-          }
+      deleteBtn.disabled = true;
+      
+      try {
+        // Chamada à API
+        await window.CerneApp.Api.deleteUserByAdmin(u.id);
+        
+        // Recarrega a lista diretamente do banco para atualizar a tela sem precisar de F5
+        await loadMembersList();
+      } catch (err) {
+        alert(`Não foi possível excluir o membro: ${err.message}`);
+        deleteBtn.disabled = false;
+      }
+    });
+  }
+}
 
           listContainer.appendChild(itemRow);
         });

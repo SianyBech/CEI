@@ -759,7 +759,6 @@ app.post('/api/admin/users', requirePermission('settings'), async (req, res) => 
   }
 });
 
-// Substitua o bloco da rota de exclusão por este no seu server.js:
 app.delete('/api/admin/users/:id', requirePermission('settings'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -769,19 +768,21 @@ app.delete('/api/admin/users/:id', requirePermission('settings'), async (req, re
       return res.status(400).json({ error: 'Você não pode excluir sua própria conta de administrador.' });
     }
 
-    // 1. Remove do banco do Supabase Auth se o client estiver configurado
+    // 1. Tenta remover do Supabase Auth em bloco isolado (se falhar, não trava a exclusão do banco)
     const client = getSupabaseClient();
     if (client) {
-      await client.auth.admin.deleteUser(id).catch((err) => {
-        console.warn('[ADMIN] Aviso ao remover do Supabase Auth:', err.message);
-      });
+      try {
+        await client.auth.admin.deleteUser(id);
+      } catch (authErr) {
+        console.warn('[ADMIN] Usuário não encontrado no Supabase Auth (prosseguindo com a exclusão do banco):', authErr.message);
+      }
     }
 
-    // 2. Remove da tabela do PostgreSQL
+    // 2. Remove da tabela public.usuarios no PostgreSQL
     const result = await dbClient.run(`DELETE FROM public.usuarios WHERE "id" = $1`, [id]);
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Membro não encontrado no banco de dados.' });
+      return res.status(404).json({ error: 'Membro não encontrado na tabela de usuários.' });
     }
 
     return res.json({ success: true, message: 'Membro removido com sucesso.' });
