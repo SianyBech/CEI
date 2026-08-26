@@ -72,6 +72,7 @@ window.CerneApp.UploadModal = {
     };
   },
 
+  // FIXED: Nome do método adicionado explicitamente antes dos parâmetros
   render(onClose, onAddEvidence, categories = [], tagsList = []) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -313,25 +314,24 @@ window.CerneApp.UploadModal = {
       closeBtn.style.display = 'flex';
 
       // Helper para converter "DD/MM/YYYY" -> "YYYY-MM-DD" que o <input type="date"> exige
-function formatDateForInput(dateString) {
-  if (!dateString) {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }
+      function formatDateForInput(dateString) {
+        if (!dateString) {
+          const today = new Date();
+          const yyyy = today.getFullYear();
+          const mm = String(today.getMonth() + 1).padStart(2, '0');
+          const dd = String(today.getDate()).padStart(2, '0');
+          return `${yyyy}-${mm}-${dd}`;
+        }
 
-  // Se a data já vier no formato brasileiro "25/08/2026", converte para "2026-08-25"
-  if (dateString.includes('/')) {
-    const [dd, mm, yyyy] = dateString.split('/');
-    if (dd && mm && yyyy) {
-      return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
-    }
-  }
+        if (dateString.includes('/')) {
+          const [dd, mm, yyyy] = dateString.split('/');
+          if (dd && mm && yyyy) {
+            return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+          }
+        }
 
-  return dateString;
-}
+        return dateString;
+      }
       
       const modalBody = overlay.querySelector('#modal-body-container');
       const footer = overlay.querySelector('#modal-footer-container');
@@ -348,21 +348,6 @@ function formatDateForInput(dateString) {
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#39;');
-      }
-
-      function buildCategoryOptions(selectedCategory) {
-        let html = '';
-        let hasSelected = false;
-        const cats = Array.isArray(categories) ? categories : [];
-        cats.forEach(cat => {
-          const isSel = (cat === selectedCategory);
-          if (isSel) hasSelected = true;
-          html += `<option value="${escapeHtml(cat)}" ${isSel ? 'selected' : ''}>${escapeHtml(cat)}</option>`;
-        });
-        if (!hasSelected && selectedCategory) {
-          html = `<option value="${escapeHtml(selectedCategory)}" selected>${escapeHtml(selectedCategory)}</option>` + html;
-        }
-        return html;
       }
 
       // Update body with a beautiful results summary and editable form
@@ -411,11 +396,10 @@ function formatDateForInput(dateString) {
                 <input type="text" class="form-input" id="edit-responsavel" value="${escapeHtml(evidence.responsavel)}" placeholder="Nome do responsável">
               </div>
  
-             
-            <div class="form-group">
-              <label class="form-label" for="edit-data">Data de Registro</label>
-              <input type="date" class="form-input" id="edit-data" value="${formatDateForInput(evidence.data)}">
-            </div>
+              <div class="form-group">
+                <label class="form-label" for="edit-data">Data de Registro</label>
+                <input type="date" class="form-input" id="edit-data" value="${formatDateForInput(evidence.data)}">
+              </div>
               
               <div class="form-group">
                 <label class="form-label">Tags da Evidência</label>
@@ -444,7 +428,7 @@ function formatDateForInput(dateString) {
         node: modalBody
       });
 
-// 💡 Inicialização das Categorias com fallback duplo
+      // Inicialização das Categorias com fallback duplo
       let selectedCategories = Array.isArray(evidence.categorias) && evidence.categorias.length > 0
         ? [...evidence.categorias]
         : (Array.isArray(evidence.categoriasSugeridas) && evidence.categoriasSugeridas.length > 0 
@@ -502,10 +486,8 @@ function formatDateForInput(dateString) {
         selectElement.disabled = availableCategories.length === 0;
       }
 
-      // Inicializa a lista
       renderUploadCategoriesWidget();
 
-      // Evento ao escolher uma categoria no dropdown
       overlay.querySelector('#upload-add-category-select').addEventListener('change', (e) => {
         const val = e.target.value;
         if (val && !selectedCategories.includes(val)) {
@@ -514,7 +496,7 @@ function formatDateForInput(dateString) {
         }
       });
 
-      // 💡 Inicialização das Tags com fallback duplo
+      // Inicialização das Tags com fallback duplo
       let selectedTags = Array.isArray(evidence.tags) && evidence.tags.length > 0
         ? [...evidence.tags]
         : (Array.isArray(evidence.tagsSugeridas) ? [...evidence.tagsSugeridas] : []);
@@ -570,7 +552,6 @@ function formatDateForInput(dateString) {
         }
       }
 
-      // Initialize the tags widget
       renderTagsWidget();
 
       modalBody.querySelector('#add-tag-select').addEventListener('change', (e) => {
@@ -583,7 +564,6 @@ function formatDateForInput(dateString) {
         }
       });
 
-      // Função auxiliar para exibir a notificação no topo da tela (Toast)
       function showToast(message, type = 'success') {
         const toast = document.createElement('div');
         toast.className = `app-toast ${type}`;
@@ -603,63 +583,60 @@ function formatDateForInput(dateString) {
       const saveDoneBtn = footer.querySelector('#modal-success-done-btn');
 
       saveDoneBtn.addEventListener('click', async () => {
-  const rawDateValue = modalBody.querySelector('#edit-data').value;
-  let dataFormatted = new Date().toLocaleDateString('pt-BR');
+        const rawDateValue = modalBody.querySelector('#edit-data').value;
+        let dataFormatted = new Date().toLocaleDateString('pt-BR');
 
-  // Convertemos YYYY-MM-DD do input date para DD/MM/YYYY antes de salvar
-  if (rawDateValue && rawDateValue.includes('-')) {
-    const [yyyy, mm, dd] = rawDateValue.split('-');
-    dataFormatted = `${dd}/${mm}/${yyyy}`;
-  } else if (rawDateValue) {
-    dataFormatted = rawDateValue;
-  }
+        if (rawDateValue && rawDateValue.includes('-')) {
+          const [yyyy, mm, dd] = rawDateValue.split('-');
+          dataFormatted = `${dd}/${mm}/${yyyy}`;
+        } else if (rawDateValue) {
+          dataFormatted = rawDateValue;
+        }
 
-  // Validação de Data Futura
-  if (window.CerneApp.Utils?.isFutureDate?.(dataFormatted)) {
-    const confirmFuture = confirm(
-      'A data informada é uma data futura.\n\nTem certeza de que deseja cadastrar a evidência com esta data?'
-    );
-    if (!confirmFuture) return;
-  }
+        if (window.CerneApp.Utils?.isFutureDate?.(dataFormatted)) {
+          const confirmFuture = confirm(
+            'A data informada é uma data futura.\n\nTem certeza de que deseja cadastrar a evidência com esta data?'
+          );
+          if (!confirmFuture) return;
+        }
 
-  const updatedMetadata = {
-    titulo: modalBody.querySelector('#edit-titulo').value.trim() || evidence.nome,
-    evento: modalBody.querySelector('#edit-evento').value.trim() || 'Sem Evento',
-    categorias: selectedCategories,
-    categoria: selectedCategories.length > 0 ? selectedCategories[0] : 'Geral',
-    responsavel: modalBody.querySelector('#edit-responsavel').value.trim() || 'Não especificado',
-    data: dataFormatted, // Enviamos já formatada
-    resumo: modalBody.querySelector('#edit-resumo').value.trim() || 'Sem resumo disponível.',
-    tags: selectedTags
-  };
+        const updatedMetadata = {
+          titulo: modalBody.querySelector('#edit-titulo').value.trim() || evidence.nome,
+          evento: modalBody.querySelector('#edit-evento').value.trim() || 'Sem Evento',
+          categorias: selectedCategories,
+          categoria: selectedCategories.length > 0 ? selectedCategories[0] : 'Geral',
+          responsavel: modalBody.querySelector('#edit-responsavel').value.trim() || 'Não especificado',
+          data: dataFormatted,
+          resumo: modalBody.querySelector('#edit-resumo').value.trim() || 'Sem resumo disponível.',
+          tags: selectedTags
+        };
 
-  // Bloqueio do Botão e Feedback Visual
-  saveDoneBtn.disabled = true;
-  saveDoneBtn.innerHTML = '<span class="btn-loading-spinner" aria-hidden="true"></span> Salvando...';
-  closeBtn.disabled = true;
+        saveDoneBtn.disabled = true;
+        saveDoneBtn.innerHTML = '<span class="btn-loading-spinner" aria-hidden="true"></span> Salvando...';
+        closeBtn.disabled = true;
 
-  try {
-    const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
-    
-    // 1. Atualiza o estado global e re-renderiza a tabela na hora
-    if (typeof onAddEvidence === 'function') {
-      onAddEvidence(savedEvidence);
-    }
+        try {
+          const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
+          
+          if (typeof onAddEvidence === 'function') {
+            onAddEvidence(savedEvidence);
+          }
 
-    // 2. Dispara o Toast no body da página principal
-    showToast('Evidência salva com sucesso.', 'success');
+          showToast('Evidência salva com sucesso.', 'success');
 
-    // 3. Pequeno delay de 150ms apenas para o usuário enxergar o feedback antes do modal sumir
-    setTimeout(() => {
-      doClose();
-    }, 150);
-  } catch (error) {
-    saveDoneBtn.disabled = false;
-    saveDoneBtn.textContent = 'Confirmar e Salvar';
-    closeBtn.disabled = false;
-    alert(`Não foi possível salvar a evidência: ${error.message}`);
-  }
+          setTimeout(() => {
+            doClose();
+          }, 150);
+        } catch (error) {
+          saveDoneBtn.disabled = false;
+          saveDoneBtn.textContent = 'Confirmar e Salvar';
+          closeBtn.disabled = false;
+          alert(`Não foi possível salvar a evidência: ${error.message}`);
+        }
       });
     }
+
+    // FIXED: Retorna o elemento criado no DOM para o appendChild do app.js
+    return overlay;
   }
 };
