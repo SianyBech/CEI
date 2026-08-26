@@ -410,7 +410,7 @@ window.CerneApp.UploadModal = {
                   <div class="selected-tags-display" id="selected-tags-display">
                     <!-- selected tags will be dynamically generated as pills -->
                   </div>
-                  <select class="form-select" id="add-tag-select" style="margin-top: 0.35rem;">
+                  <select class="form-select" id="add-tag-select">
                     <!-- dynamically populated option list -->
                   </select>
                 </div>

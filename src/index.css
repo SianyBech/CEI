@@ -2056,19 +2056,30 @@ textarea:focus-visible,
 
 /* Interactive Tags Selector Widget */
 .tags-selector-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem; /* Espaçamento bem ajustado entre o quadro e o select */
   margin-top: 0.25rem;
 }
+
 .selected-tags-display {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
-  padding: 0.5rem;
-  min-height: 42px;
+  padding: 0.35rem 0.5rem; /* Padding levemente reduzido para ser mais compacto */
+  min-height: auto; /* REMOVIDO os 42px fixos: agora o tamanho se adapta ao conteúdo */
   border: 1px dashed var(--border-color);
   border-radius: var(--radius-sm);
   background-color: var(--bg-secondary);
   align-items: center;
+  margin-bottom: 0;
 }
+
+/* Garante que o select colado abaixo fique sem margens topo fantasmas */
+.tags-selector-wrapper .form-select {
+  margin-top: 0 !important;
+}
+
 .tag-badge {
   display: inline-flex;
   align-items: center;
