@@ -309,9 +309,12 @@ window.CerneApp.UploadModal = {
       }, 300);
     });
 
-    function showSuccessScreen(evidence) {
+   function showSuccessScreen(evidence) {
       // Re-enable closing
       closeBtn.style.display = 'flex';
+
+      // 💡 1. VARIÁVEL DE CONTROLE: Indica se o usuário salvou intencionalmente
+      let wasSaved = false;
 
       // Helper para converter "DD/MM/YYYY" -> "YYYY-MM-DD" que o <input type="date"> exige
       function formatDateForInput(dateString) {
@@ -428,7 +431,7 @@ window.CerneApp.UploadModal = {
         node: modalBody
       });
 
-      // Inicialização das Categorias com fallback duplo
+      // Inicialização das Categorias
       let selectedCategories = Array.isArray(evidence.categorias) && evidence.categorias.length > 0
         ? [...evidence.categorias]
         : (Array.isArray(evidence.categoriasSugeridas) && evidence.categoriasSugeridas.length > 0 
@@ -496,7 +499,7 @@ window.CerneApp.UploadModal = {
         }
       });
 
-      // Inicialização das Tags com fallback duplo
+      // Inicialização das Tags
       let selectedTags = Array.isArray(evidence.tags) && evidence.tags.length > 0
         ? [...evidence.tags]
         : (Array.isArray(evidence.tagsSugeridas) ? [...evidence.tagsSugeridas] : []);
@@ -580,6 +583,26 @@ window.CerneApp.UploadModal = {
         }, 2600);
       }
 
+      // 💡 2. SOBRESCREVEMOS O CLOSER DA MODAL NESTE ESTÁGIO
+      // Se o usuário fechar SEM ter salvado, excluímos o rascunho temporário do backend
+      const handleModalClose = () => {
+        if (!wasSaved && evidence && evidence.id) {
+          window.CerneApp.Api.deleteEvidence(evidence.id).catch(err => {
+            console.warn('[UploadModal] Erro ao limpar rascunho descartado:', err);
+          });
+        }
+        overlay.remove();
+        onClose();
+      };
+
+      // Atualiza os botões de fechar e o clique no overlay para usar o novo handler
+      closeBtn.onclick = handleModalClose;
+      const cancelBtnInSuccess = footer.querySelector('#modal-cancel-btn');
+      if (cancelBtnInSuccess) cancelBtnInSuccess.onclick = handleModalClose;
+      overlay.onclick = (e) => {
+        if (e.target === overlay) handleModalClose();
+      };
+
       const saveDoneBtn = footer.querySelector('#modal-success-done-btn');
 
       saveDoneBtn.addEventListener('click', async () => {
@@ -618,6 +641,9 @@ window.CerneApp.UploadModal = {
         try {
           const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
           
+          // 💡 3. MARCAMOS COMO SALVO COM SUCESSO
+          wasSaved = true;
+
           if (typeof onAddEvidence === 'function') {
             onAddEvidence(savedEvidence);
           }
@@ -625,7 +651,8 @@ window.CerneApp.UploadModal = {
           showToast('Evidência salva com sucesso.', 'success');
 
           setTimeout(() => {
-            doClose();
+            overlay.remove();
+            onClose();
           }, 150);
         } catch (error) {
           saveDoneBtn.disabled = false;
