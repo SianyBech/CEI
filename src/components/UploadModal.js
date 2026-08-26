@@ -366,65 +366,73 @@ window.CerneApp.UploadModal = {
             </div>
           </div>
  
-          <div style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); background-color: var(--bg-secondary); padding: 1.25rem;">
-            <div class="edit-form-grid">
-              
-              <div class="form-group edit-form-fullwidth">
-                <label class="form-label" for="edit-titulo">Título da Evidência</label>
-                <input type="text" class="form-input" id="edit-titulo" value="${escapeHtml(evidence.titulo || evidence.nome)}" placeholder="Título da evidência">
-              </div>
- 
-              <div class="form-group edit-form-fullwidth">
-                <label class="form-label" for="edit-nome">Arquivo Original</label>
-                <input type="text" class="form-input" id="edit-nome" value="${escapeHtml(evidence.nome)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;">
-              </div>
- 
-              <div class="form-group edit-form-fullwidth">
-                <label class="form-label" for="edit-evento">Evento de Origem</label>
-                <input type="text" class="form-input" id="edit-evento" value="${escapeHtml(evidence.evento)}" placeholder="Ex: Reunião do Conselho, Mentoria, etc.">
-              </div>
- 
-              <div class="form-group">
-                <label class="form-label">Categorias CERNE</label>
-                <div class="tags-selector-wrapper">
-                  <div class="selected-tags-display" id="upload-selected-categories-display"></div>
-                  <select class="form-select" id="upload-add-category-select" style="margin-top: 0.35rem;">
-                    <!-- Preenchido via JS -->
-                  </select>
-                </div>
-              </div>
- 
-            <div class="form-group edit-form-fullwidth">
-              <label class="form-label" for="edit-responsavel">Responsável pelo Envio</label>
-              <select class="form-select" id="edit-responsavel">
-                <!-- As opções de usuários serão injetadas dinamicamente via JS -->
+                <div style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); background-color: var(--bg-secondary); padding: 1.25rem;">
+        <div class="edit-form-grid">
+          
+          <!-- 1. Título (2 Colunas) -->
+          <div class="form-group edit-form-fullwidth">
+            <label class="form-label" for="edit-titulo">Título da Evidência</label>
+            <input type="text" class="form-input" id="edit-titulo" value="${escapeHtml(evidence.titulo || evidence.nome)}" placeholder="Título da evidência">
+          </div>
+
+          <!-- 2. Arquivo Original (2 Colunas) -->
+          <div class="form-group edit-form-fullwidth">
+            <label class="form-label" for="edit-nome">Arquivo Original</label>
+            <input type="text" class="form-input" id="edit-nome" value="${escapeHtml(evidence.nome)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;">
+          </div>
+
+          <!-- 3. Evento de Origem (2 Colunas) -->
+          <div class="form-group edit-form-fullwidth">
+            <label class="form-label" for="edit-evento">Evento de Origem</label>
+            <input type="text" class="form-input" id="edit-evento" value="${escapeHtml(evidence.evento)}" placeholder="Ex: Reunião do Conselho, Mentoria, etc.">
+          </div>
+
+          <!-- 4. LINHA 1 DA PAREDINHA: Categorias CERNE (Coluna 1) -->
+          <div class="form-group">
+            <label class="form-label">Categorias CERNE</label>
+            <div class="tags-selector-wrapper">
+              <div class="selected-tags-display" id="upload-selected-categories-display"></div>
+              <select class="form-select" id="upload-add-category-select">
+                <!-- Preenchido via JS -->
               </select>
             </div>
- 
-              <div class="form-group">
-                <label class="form-label" for="edit-data">Data de Registro</label>
-                <input type="date" class="form-input" id="edit-data" value="${formatDateForInput(evidence.data)}">
+          </div>
+
+          <!-- 5. LINHA 1 DA PAREDINHA: Tags da Evidência (Coluna 2) -->
+          <div class="form-group">
+            <label class="form-label">Tags da Evidência</label>
+            <div class="tags-selector-wrapper">
+              <div class="selected-tags-display" id="selected-tags-display">
+                <!-- Tags dinâmicas -->
               </div>
-              
-              <div class="form-group">
-                <label class="form-label">Tags da Evidência</label>
-                <div class="tags-selector-wrapper">
-                  <div class="selected-tags-display" id="selected-tags-display">
-                    <!-- selected tags will be dynamically generated as pills -->
-                  </div>
-                  <select class="form-select" id="add-tag-select">
-                    <!-- dynamically populated option list -->
-                  </select>
-                </div>
-              </div>
- 
-              <div class="form-group edit-form-fullwidth">
-                <label class="form-label" for="edit-resumo">Resumo da IA</label>
-                <textarea class="form-textarea" id="edit-resumo" placeholder="Escreva um breve resumo da evidência...">${escapeHtml(evidence.resumo)}</textarea>
-              </div>
- 
+              <select class="form-select" id="add-tag-select">
+                <!-- Preenchido via JS -->
+              </select>
             </div>
           </div>
+
+          <!-- 6. LINHA 2 DA PAREDINHA: Responsável pelo Envio (Coluna 1) -->
+          <div class="form-group">
+            <label class="form-label" for="edit-responsavel">Responsável pelo Envio</label>
+            <select class="form-select" id="edit-responsavel">
+              <!-- Preenchido dinamicamente com os usuários reais do CEI -->
+            </select>
+          </div>
+
+          <!-- 7. LINHA 2 DA PAREDINHA: Data de Registro (Coluna 2) -->
+          <div class="form-group">
+            <label class="form-label" for="edit-data">Data de Registro</label>
+            <input type="date" class="form-input" id="edit-data" value="${formatDateForInput(evidence.data)}">
+          </div>
+
+          <!-- 8. Resumo da IA (2 Colunas) -->
+          <div class="form-group edit-form-fullwidth">
+            <label class="form-label" for="edit-resumo">Resumo da IA</label>
+            <textarea class="form-textarea" id="edit-resumo" placeholder="Escreva um breve resumo da evidência...">${escapeHtml(evidence.resumo)}</textarea>
+          </div>
+
+          </div>
+        </div>
         </div>
       `;
  
