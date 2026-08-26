@@ -494,26 +494,34 @@ window.CerneApp.UploadModal = {
         if (selectedCategories.length === 0) {
           displayContainer.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-tertiary); font-style: italic;">Nenhuma categoria selecionada</span>';
         } else {
-          selectedCategories.forEach(cat => {
-            const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
-            const badge = document.createElement('span');
-            badge.className = `badge ${categoryClass}`;
-            badge.style.display = 'inline-flex';
-            badge.style.alignItems = 'center';
-            badge.style.gap = '0.35rem';
-            badge.style.padding = '0.25rem 0.5rem';
+      selectedCategories.forEach(cat => {
+  // Busca o estilo dinâmico configurado para a categoria (igual ao da tabela)
+  const customStyle = window.getCategoryStyle ? window.getCategoryStyle(cat) : '';
+  const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
 
-            badge.innerHTML = `
-              <span>${escapeHtml(cat)}</span>
-              <button type="button" class="tag-badge-remove" style="background:none; border:none; cursor:pointer; font-size: 0.9rem;" title="Remover categoria">&times;</button>
-            `;
-            badge.querySelector('.tag-badge-remove').addEventListener('click', (e) => {
-              e.preventDefault();
-              selectedCategories = selectedCategories.filter(c => c !== cat);
-              renderUploadCategoriesWidget();
-            });
-            displayContainer.appendChild(badge);
-          });
+  const badge = document.createElement('span');
+  badge.className = `badge ${categoryClass}`;
+  if (customStyle) {
+    badge.setAttribute('style', customStyle); // Aplica a cor exata da tabela
+  }
+  badge.style.display = 'inline-flex';
+  badge.style.alignItems = 'center';
+  badge.style.gap = '0.35rem';
+  badge.style.padding = '0.25rem 0.5rem';
+
+  badge.innerHTML = `
+    <span>${escapeHtml(cat)}</span>
+    <button type="button" class="tag-badge-remove" style="background:none; border:none; cursor:pointer; font-size: 0.9rem;" title="Remover categoria">&times;</button>
+  `;
+
+  badge.querySelector('.tag-badge-remove').addEventListener('click', (e) => {
+    e.preventDefault();
+    selectedCategories = selectedCategories.filter(c => c !== cat);
+    renderUploadCategoriesWidget();
+  });
+
+  displayContainer.appendChild(badge);
+});
         }
 
         selectElement.innerHTML = '';
