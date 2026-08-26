@@ -103,10 +103,12 @@ window.CerneApp.EvidenceDetails = {
           </div>
         </div>
 
-        <div class="detail-item">
-          <label class="detail-label" for="detail-responsavel-input">Responsável pelo Envio</label>
-          <input id="detail-responsavel-input" class="form-input" value="${escapeHtml(evidence.responsavel)}" />
-        </div>
+       <div class="detail-item">
+  <label class="detail-label" for="detail-responsavel-input">Responsável pelo Envio</label>
+  <select id="detail-responsavel-input" class="form-select">
+    <!-- As opções serão preenchidas dinamicamente via JS -->
+  </select>
+</div>
 
         <div class="detail-item">
           <label class="detail-label" for="detail-data-input">Data do Registro</label>
@@ -353,6 +355,41 @@ overlay.querySelector('#detail-add-category-select').addEventListener('change', 
         renderTagsWidget();
       }
     });
+
+    // Preenchimento dinâmico dos Responsáveis/Usuários na Edição
+(async () => {
+  const selectResponsavel = overlay.querySelector('#detail-responsavel-input');
+  if (!selectResponsavel) return;
+
+  try {
+    // Busca os responsáveis/usuários cadastrados no sistema
+    const listaResponsaveis = await window.CerneApp.Api.fetchResponsaveis();
+    const responsavelAtual = evidence.responsavel || '';
+
+    selectResponsavel.innerHTML = '';
+
+    // Se a evidência atual tiver um responsável que não está na lista oficial,
+    // nós o mantemos temporariamente como opção para não perder o dado antigo
+    if (responsavelAtual && !listaResponsaveis.includes(responsavelAtual)) {
+      listaResponsaveis.unshift(responsavelAtual);
+    }
+
+    // Popula o <select>
+    listaResponsaveis.forEach(nome => {
+      const option = document.createElement('option');
+      option.value = nome;
+      option.textContent = nome;
+      if (nome === responsavelAtual) {
+        option.selected = true;
+      }
+      selectResponsavel.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Erro ao carregar lista de responsáveis na edição:', error);
+    // Fallback básico caso a API falhe
+    selectResponsavel.innerHTML = `<option value="${escapeHtml(evidence.responsavel || 'Equipe CEI')}" selected>${escapeHtml(evidence.responsavel || 'Equipe CEI')}</option>`;
+  }
+})();
 
     let isSaving = false;
 

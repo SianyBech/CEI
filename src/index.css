@@ -2080,12 +2080,14 @@ textarea:focus-visible,
   margin-top: 0 !important;
 }
 
+/* 💡 UNIFICAÇÃO: Classe .tag usada nas tabelas e cards agora compartilha o mesmo roxo */
+.tag,
 .tag-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  background-color: var(--accent-light);
-  color: var(--accent);
+  background-color: var(--accent-light, #f3e8ff);
+  color: var(--accent, #6b21a8);
   border: 1px solid rgba(79, 70, 229, 0.15);
   padding: 0.25rem 0.5rem;
   border-radius: var(--radius-sm);
@@ -2093,6 +2095,7 @@ textarea:focus-visible,
   font-weight: 500;
   line-height: 1.2;
 }
+
 .tag-badge-remove {
   background: none;
   border: none;
@@ -2107,6 +2110,7 @@ textarea:focus-visible,
   justify-content: center;
   transition: color 0.15s ease;
 }
+
 .tag-badge-remove:hover {
   color: var(--danger);
 }

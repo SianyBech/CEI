@@ -83,49 +83,50 @@
       }
 
       tags.forEach((tag, index) => {
-        const badge = document.createElement('span');
-        badge.style.cssText = `
-          display: inline-flex; 
-          align-items: center; 
-          gap: 0.4rem; 
-          padding: 0.35rem 0.75rem; 
-          background-color: rgba(0, 102, 204, 0.08); 
-          color: var(--primary, #0066cc); 
-          font-size: 0.825rem; 
-          border-radius: 20px; 
-          font-weight: 500;
-          border: 1px solid rgba(0, 102, 204, 0.15);
-        `;
+  const badge = document.createElement('span');
+  // 💡 ESTILO ATUALIZADO: Fundo roxo suave com borda e texto roxo/violeta
+  badge.style.cssText = `
+    display: inline-flex; 
+    align-items: center; 
+    gap: 0.4rem; 
+    padding: 0.35rem 0.75rem; 
+    background-color: #f3e8ff; 
+    color: #6b21a8; 
+    font-size: 0.825rem; 
+    border-radius: 20px; 
+    font-weight: 500;
+    border: 1px solid #e9d5ff;
+  `;
 
-        badge.innerHTML = `
-          <span># ${tag}</span>
-          <button 
-            class="tag-del-btn" 
-            data-index="${index}" 
-            style="
-              background: none; 
-              border: none; 
-              padding: 0; 
-              cursor: pointer; 
-              display: flex; 
-              align-items: center; 
-              color: var(--primary, #0066cc); 
-              opacity: 0.7;
-            " 
-            title="Remover tag"
-          >
-            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
-          </button>
-        `;
+  badge.innerHTML = `
+    <span># ${tag}</span>
+    <button 
+      class="tag-del-btn" 
+      data-index="${index}" 
+      style="
+        background: none; 
+        border: none; 
+        padding: 0; 
+        cursor: pointer; 
+        display: flex; 
+        align-items: center; 
+        color: #6b21a8; 
+        opacity: 0.7;
+      " 
+      title="Remover tag"
+    >
+      <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+    </button>
+  `;
 
-        badge.querySelector('.tag-del-btn').addEventListener('click', (e) => {
-          e.stopPropagation();
-          tags.splice(index, 1);
-          renderTags();
-        });
+  badge.querySelector('.tag-del-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    tags.splice(index, 1);
+    renderTags();
+  });
 
-        cloudContainer.appendChild(badge);
-      });
+  cloudContainer.appendChild(badge);
+});
 
       if (window.lucide) lucide.createIcons();
     }
