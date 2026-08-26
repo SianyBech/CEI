@@ -768,24 +768,22 @@ app.delete('/api/admin/users/:id', requirePermission('settings'), async (req, re
       return res.status(400).json({ error: 'Você não pode excluir sua própria conta de administrador.' });
     }
 
-    // 1. Tenta remover do Supabase Auth em bloco isolado (se falhar, não trava a exclusão do banco)
+    // 1. Tenta remover do Supabase Auth em bloco isolado
     const client = getSupabaseClient();
     if (client) {
       try {
         await client.auth.admin.deleteUser(id);
       } catch (authErr) {
-        console.warn('[ADMIN] Usuário não encontrado no Supabase Auth (prosseguindo com a exclusão do banco):', authErr.message);
+        console.warn('[ADMIN] Usuário não encontrado no Supabase Auth:', authErr.message);
       }
     }
 
-    // 2. Remove da tabela public.usuarios no PostgreSQL
-    const result = await dbClient.run(`DELETE FROM public.usuarios WHERE "id" = $1`, [id]);
+    // 2. Tenta remover da tabela public.usuarios (pode já ter sido removido por CASCADE)
+    await dbClient.run(`DELETE FROM public.usuarios WHERE "id" = $1`, [id]);
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Membro não encontrado na tabela de usuários.' });
-    }
-
+    // Retorna sucesso independente de rowCount ser 0 ou 1, pois o usuário não está mais lá!
     return res.json({ success: true, message: 'Membro removido com sucesso.' });
+    
   } catch (error) {
     console.error('[ADMIN] Erro ao excluir membro:', error);
     return res.status(500).json({ error: 'Falha ao remover o membro do banco de dados.' });
