@@ -603,51 +603,63 @@ function formatDateForInput(dateString) {
       const saveDoneBtn = footer.querySelector('#modal-success-done-btn');
 
       saveDoneBtn.addEventListener('click', async () => {
-        const dataDigitada = modalBody.querySelector('#edit-data').value.trim() || new Date().toLocaleDateString('pt-BR');
+  const rawDateValue = modalBody.querySelector('#edit-data').value;
+  let dataFormatted = new Date().toLocaleDateString('pt-BR');
 
-        // ⚠️ Validação de Data Futura
-        if (window.CerneApp.Utils && window.CerneApp.Utils.isFutureDate(dataDigitada)) {
-          const confirmFuture = confirm(
-            'A data informada é uma data futura.\n\nTem certeza de que deseja cadastrar a evidência com esta data?'
-          );
-          if (!confirmFuture) {
-            return; // Interrompe o envio se o usuário clicar em "Cancelar"
-          }
-        }
+  // Convertemos YYYY-MM-DD do input date para DD/MM/YYYY antes de salvar
+  if (rawDateValue && rawDateValue.includes('-')) {
+    const [yyyy, mm, dd] = rawDateValue.split('-');
+    dataFormatted = `${dd}/${mm}/${yyyy}`;
+  } else if (rawDateValue) {
+    dataFormatted = rawDateValue;
+  }
 
-        const updatedMetadata = {
-          titulo: modalBody.querySelector('#edit-titulo').value.trim() || evidence.nome,
-          evento: modalBody.querySelector('#edit-evento').value.trim() || 'Sem Evento',
-          categorias: selectedCategories,
-          categoria: selectedCategories.length > 0 ? selectedCategories[0] : '', // Não força 'Geral'
-          responsavel: modalBody.querySelector('#edit-responsavel').value.trim() || 'Não especificado',
-          data: dataDigitada,
-          resumo: modalBody.querySelector('#edit-resumo').value.trim() || 'Sem resumo disponível.',
-          tags: selectedTags
-        };
+  // Validação de Data Futura
+  if (window.CerneApp.Utils?.isFutureDate?.(dataFormatted)) {
+    const confirmFuture = confirm(
+      'A data informada é uma data futura.\n\nTem certeza de que deseja cadastrar a evidência com esta data?'
+    );
+    if (!confirmFuture) return;
+  }
 
-        // 💡 1. MUDANÇA VISUAL DE UX: Bloqueia botões e exibe "Salvando..."
-        saveDoneBtn.disabled = true;
-        saveDoneBtn.innerHTML = '<span class="btn-loading-spinner" aria-hidden="true"></span> Salvando...';
-        closeBtn.disabled = true;
+  const updatedMetadata = {
+    titulo: modalBody.querySelector('#edit-titulo').value.trim() || evidence.nome,
+    evento: modalBody.querySelector('#edit-evento').value.trim() || 'Sem Evento',
+    categorias: selectedCategories,
+    categoria: selectedCategories.length > 0 ? selectedCategories[0] : 'Geral',
+    responsavel: modalBody.querySelector('#edit-responsavel').value.trim() || 'Não especificado',
+    data: dataFormatted, // Enviamos já formatada
+    resumo: modalBody.querySelector('#edit-resumo').value.trim() || 'Sem resumo disponível.',
+    tags: selectedTags
+  };
 
-        try {
-          const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
-          
-          // 💡 2. DISPARA O TOAST DE CONFIRMAÇÃO
-          showToast('Evidência salva com sucesso.', 'success');
+  // Bloqueio do Botão e Feedback Visual
+  saveDoneBtn.disabled = true;
+  saveDoneBtn.innerHTML = '<span class="btn-loading-spinner" aria-hidden="true"></span> Salvando...';
+  closeBtn.disabled = true;
 
-          onAddEvidence(savedEvidence);
-          doClose();
-        } catch (error) {
-          // Em caso de falha, destrava o botão e alerta o erro
-          saveDoneBtn.disabled = false;
-          saveDoneBtn.textContent = 'Confirmar e Salvar';
-          closeBtn.disabled = false;
-          alert(`Não foi possível salvar a evidência: ${error.message}`);
-        }
+  try {
+    const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
+    
+    // 1. Atualiza o estado global e re-renderiza a tabela na hora
+    if (typeof onAddEvidence === 'function') {
+      onAddEvidence(savedEvidence);
+    }
+
+    // 2. Dispara o Toast no body da página principal
+    showToast('Evidência salva com sucesso.', 'success');
+
+    // 3. Pequeno delay de 150ms apenas para o usuário enxergar o feedback antes do modal sumir
+    setTimeout(() => {
+      doClose();
+    }, 150);
+  } catch (error) {
+    saveDoneBtn.disabled = false;
+    saveDoneBtn.textContent = 'Confirmar e Salvar';
+    closeBtn.disabled = false;
+    alert(`Não foi possível salvar a evidência: ${error.message}`);
+  }
       });
     }
-    return overlay;
   }
 };
