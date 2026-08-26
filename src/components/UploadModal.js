@@ -394,10 +394,12 @@ window.CerneApp.UploadModal = {
                 </div>
               </div>
  
-              <div class="form-group">
-                <label class="form-label" for="edit-responsavel">Responsável pelo Envio</label>
-                <input type="text" class="form-input" id="edit-responsavel" value="${escapeHtml(evidence.responsavel)}" placeholder="Nome do responsável">
-              </div>
+            <div class="form-group edit-form-fullwidth">
+              <label class="form-label" for="edit-responsavel">Responsável pelo Envio</label>
+              <select class="form-select" id="edit-responsavel">
+                <!-- As opções de usuários serão injetadas dinamicamente via JS -->
+              </select>
+            </div>
  
               <div class="form-group">
                 <label class="form-label" for="edit-data">Data de Registro</label>
@@ -430,6 +432,43 @@ window.CerneApp.UploadModal = {
         nameAttr: 'data-lucide',
         node: modalBody
       });
+
+
+      // Preenchimento dinâmico dos Responsáveis/Usuários
+(async () => {
+  const selectResponsavel = overlay.querySelector('#edit-responsavel');
+  if (!selectResponsavel) return;
+
+  try {
+    // Busca os responsáveis/usuários cadastrados na API
+    const listaResponsaveis = await window.CerneApp.Api.fetchResponsaveis();
+    
+    // Nome que veio da análise do arquivo (se houver)
+    const responsavelAtual = evidence.responsavel || '';
+
+    selectResponsavel.innerHTML = '';
+
+    // Se o nome sugerido pela IA não estiver na lista cadastrada, adicionamos ele como opção inicial
+    if (responsavelAtual && !listaResponsaveis.includes(responsavelAtual)) {
+      listaResponsaveis.unshift(responsavelAtual);
+    }
+
+    // Monta as opções do <select>
+    listaResponsaveis.forEach(nome => {
+      const option = document.createElement('option');
+      option.value = nome;
+      option.textContent = nome;
+      if (nome === responsavelAtual) {
+        option.selected = true;
+      }
+      selectResponsavel.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Erro ao carregar lista de responsáveis:', error);
+    // Fallback básico caso a API falhe
+    selectResponsavel.innerHTML = `<option value="${evidence.responsavel || 'Equipe CEI'}">${evidence.responsavel || 'Equipe CEI'}</option>`;
+  }
+})();
 
       // Inicialização das Categorias
       let selectedCategories = Array.isArray(evidence.categorias) && evidence.categorias.length > 0
