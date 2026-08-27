@@ -214,6 +214,30 @@ function sanitizeFileName(fileName) {
   return baseName.replace(/[^a-zA-Z0-9._-]/g, '_') || 'arquivo';
 }
 
+// Função para extrair texto de páginas da web
+async function extractTextFromLink(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Não foi possível acessar a página');
+    
+    const html = await response.text();
+    
+    // Expressões regulares para limpar o HTML (remove scripts, estilos e tags HTML)
+    const cleanText = html
+      .replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, ' ')
+      .replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+      
+    // Retorna os primeiros 15000 caracteres para não sobrecarregar a IA
+    return cleanText.substring(0, 15000); 
+  } catch (error) {
+    console.error('[SCRAPER] Erro ao extrair texto do link:', error.message);
+    return 'Conteúdo inacessível automaticamente.';
+  }
+}
+
 async function ensureAppSetting(poolInstance, key, defaultValue) {
   const result = await poolInstance.query('SELECT 1 FROM public.app_settings WHERE key = $1 LIMIT 1', [key]);
   if (result.rowCount === 0) {
@@ -1161,46 +1185,31 @@ app.delete('/api/evidences/:id', requirePermission('delete'), async (req, res, n
 
 app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
   upload.single('file')(req, res, async (err) => {
+    // 1. Tratamento de erros iniciais (Multer)
     if (err) {
       if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({ error: 'O tamanho máximo permitido é de 30 MB.' });
       }
-
       if (err.message === 'Tipo de arquivo não permitido por segurança.') {
         return res.status(400).json({ error: 'Tipo de arquivo não permitido por segurança.' });
       }
-
       console.error('[UPLOAD] Erro ao processar multipart:', err);
-      return res.status(400).json({ error: 'Erro ao receber o arquivo enviado.' });
+      return res.status(400).json({ error: 'Erro ao receber os dados enviados.' });
     }
 
-    if (!req.file) {
-      return res.status(400).json({ error: 'Nenhum arquivo enviado. Use multer com nome de campo "file".' });
-    }
-
-    const tempPath = req.file.path;
-    const originalName = sanitizeFileName(req.file.originalname || 'arquivo');
-    const extension = getFileExtension(originalName);
-    const mimeType = (req.file.mimetype || getMimeType(originalName)).toLowerCase();
-    const fileSize = Number(req.file.size || 0);
-
-    if (fileSize > 30 * 1024 * 1024) {
-      await removeTemporaryFile(tempPath);
-      return res.status(413).json({ error: 'O tamanho máximo permitido é de 30 MB.' });
-    }
-
-    if (isForbiddenFile(originalName, mimeType)) {
-      await removeTemporaryFile(tempPath);
-      return res.status(400).json({ error: 'Tipo de arquivo não permitido por segurança.' });
+    // 2. Validação: Exige obrigatoriamente um arquivo OU um link
+    const linkEnviado = req.body.link ? req.body.link.trim() : null;
+    if (!req.file && !linkEnviado) {
+      return res.status(400).json({ error: 'Envie um arquivo ou cole um link válido.' });
     }
 
     try {
-      console.log(`[UPLOAD] Iniciando upload de ${originalName}`);
-      console.log(`[UPLOAD] Arquivo recebido: ${originalName} (${fileSize} bytes, ${mimeType})`);
-
-      // 1. Busca as categorias e tags reais cadastradas no banco (ou usa getAppSetting)
+      // 3. Preparação das variáveis consolidadas (usadas por ambos os fluxos)
+      const responsavel = getResponsavel(req.user);
+      const createdAt = new Date().toISOString();
       let dbCategories = [];
       let dbTags = [];
+      
       try {
         dbCategories = await getAppSetting('categories', ['Capacitação', 'Planejamento', 'Gestão', 'Assessoria', 'Sustentabilidade', 'Qualificação']);
         dbTags = await getAppSetting('tags', ['CERNE', 'Gestão', 'Capacitação', 'Assessoria', 'Sustentabilidade', 'Qualificação']);
@@ -1208,87 +1217,133 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
         console.warn('[UPLOAD] Erro ao buscar configurações do banco, usando fallback local:', settingsErr.message);
       }
 
-      // 2. Extrai texto e processa tudo via IA usando o helper
-      const metadata = await generateMetadata(tempPath, originalName, extension, dbCategories, dbTags);
-      const responsavel = getResponsavel(req.user);
+      let metadata = {};
+      let tituloFinal = '';
+      let eventoFinal = 'Sem Evento';
+      let originalName = '';
+      let tipo = '';
+      let mimeType = null;
+      let fileSize = 0;
+      let storagePath = null;
+      let textoExtraido = '';
 
-      console.log(`[UPLOAD] Metadados gerados para ${originalName}:`, metadata.titulo);
+      // ==========================================
+      // FLUXO A: PROCESSAMENTO DE LINK
+      // ==========================================
+      if (linkEnviado && !req.file) {
+        console.log(`[UPLOAD] Iniciando processamento de Link: ${linkEnviado}`);
+        tipo = 'link';
+        originalName = linkEnviado;
+        
+        // Extrai o texto da página usando a função de scraping
+        textoExtraido = await extractTextFromLink(linkEnviado);
+        
+        // Envia o texto raspado para o serviço de IA.
+        // DICA: Certifique-se de que o seu aiService possua uma função para lidar com texto puro.
+        metadata = await resumirQualquerDocumento(textoExtraido, 'txt', dbCategories, dbTags);
+        
+        tituloFinal = metadata.titulo && metadata.titulo.trim() !== '' ? metadata.titulo : 'Página Web Salva';
+        eventoFinal = metadata.evento || 'Sem Evento';
+      } 
+      
+      // ==========================================
+      // FLUXO B: PROCESSAMENTO DE ARQUIVO
+      // ==========================================
+      else if (req.file) {
+        const tempPath = req.file.path;
+        originalName = sanitizeFileName(req.file.originalname || 'arquivo');
+        const extension = getFileExtension(originalName);
+        mimeType = (req.file.mimetype || getMimeType(originalName)).toLowerCase();
+        fileSize = Number(req.file.size || 0);
 
-      // 3. Envia o arquivo ORIGINAL para o Supabase Storage
-      const storagePath = buildStoragePath(originalName);
-      await uploadFileToSupabase(tempPath, storagePath, originalName, mimeType);
-      console.log(`[UPLOAD] Upload realizado para o Supabase Storage: ${storagePath}`);
+        if (fileSize > 30 * 1024 * 1024) {
+          await removeTemporaryFile(tempPath);
+          return res.status(413).json({ error: 'O tamanho máximo permitido é de 30 MB.' });
+        }
 
-      await removeTemporaryFile(tempPath);
-      console.log(`[UPLOAD] Arquivo temporário removido`);
+        if (isForbiddenFile(originalName, mimeType)) {
+          await removeTemporaryFile(tempPath);
+          return res.status(400).json({ error: 'Tipo de arquivo não permitido por segurança.' });
+        }
 
-      const createdAt = new Date().toISOString();
-      const tipo = extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento';
+        console.log(`[UPLOAD] Arquivo recebido: ${originalName} (${fileSize} bytes, ${mimeType})`);
 
-      // 4. Mapeamento robusto dos campos da IA com suporte a fallbacks
+        // Extrai metadados do arquivo via IA
+        metadata = await generateMetadata(tempPath, originalName, extension, dbCategories, dbTags);
+        
+        tituloFinal = metadata.titulo && metadata.titulo.trim() !== '' ? metadata.titulo : originalName;
+        eventoFinal = metadata.evento || 'Sem Evento';
+        textoExtraido = metadata.textoExtraido || '';
+        tipo = extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento';
+
+        // Salva no Storage e limpa o temporário
+        storagePath = buildStoragePath(originalName);
+        await uploadFileToSupabase(tempPath, storagePath, originalName, mimeType);
+        await removeTemporaryFile(tempPath);
+      }
+
+      console.log(`[UPLOAD] Metadados consolidados:`, tituloFinal);
+
+      // 4. Mapeamento final dos arrays de IA
       const rawCategories = metadata.categoriasSugeridas || metadata.categorias || [];
       const categoriesList = Array.isArray(rawCategories) ? rawCategories : [];
       const primaryCategory = categoriesList.length > 0 ? categoriesList[0] : '';
-
       const rawTags = metadata.tagsSugeridas || metadata.tags || [];
       const tagsList = Array.isArray(rawTags) ? rawTags : [];
 
-      const tituloFinal = metadata.titulo && metadata.titulo.trim().length > 0 ? metadata.titulo : originalName;
-      const eventoFinal = metadata.evento || 'Sem Evento';
-
-      // Query de inserção no banco PostgreSQL
+      // 5. Query de inserção (Agora com 22 campos, inserindo o link)
       const insertQuery = `
         INSERT INTO public.evidences (
           "titulo", "nome", "tipo", "data", "evento", 
           "categoria", "categorias", "responsavel", "tags", "resumo", 
           "textoExtraido", "storage_path", "storage_filename", "original_filename", "mime_type", 
-          "file_size", "criadoEm", "created_by", "created_at", "updated_by", 
+          "file_size", "link", "criadoEm", "created_by", "created_at", "updated_by", 
           "updated_at"
         ) VALUES (
           $1, $2, $3, $4, $5, 
           $6, $7::jsonb, $8, $9::jsonb, $10, 
           $11, $12, $13, $14, $15, 
           $16, $17, $18, $19, $20, 
-          $21
+          $21, $22
         )
         RETURNING "id"
       `;
 
       let insertResult;
-
       try {
         insertResult = await dbClient.query(insertQuery, [
-          tituloFinal,                              // $1:  titulo gerado pela IA
-          originalName,                             // $2:  nome original
-          tipo,                                     // $3:  tipo
-          new Date().toLocaleDateString('pt-BR'),   // $4:  data
-          eventoFinal,                              // $5:  evento sugerido pela IA
-          primaryCategory,                          // $6:  categoria principal (ou vazia '')
-          JSON.stringify(categoriesList),           // $7:  categorias (JSONB array)
-          responsavel,                              // $8:  responsavel
-          JSON.stringify(tagsList),                 // $9:  tags (JSONB array)
-          metadata.resumo || '',                    // $10: resumo
-          metadata.textoExtraido || '',             // $11: textoExtraido
-          storagePath,                              // $12: storage_path
-          path.basename(storagePath),               // $13: storage_filename
-          originalName,                             // $14: original_filename
-          mimeType,                                 // $15: mime_type
-          fileSize,                                 // $16: file_size
-          createdAt,                                // $17: criadoEm
-          req.user?.email || null,                  // $18: created_by
-          createdAt,                                // $19: created_at
-          req.user?.email || null,                  // $20: updated_by
-          createdAt                                 // $21: updated_at
+          tituloFinal,                              // $1
+          originalName,                             // $2
+          tipo,                                     // $3
+          new Date().toLocaleDateString('pt-BR'),   // $4
+          eventoFinal,                              // $5
+          primaryCategory,                          // $6
+          JSON.stringify(categoriesList),           // $7
+          responsavel,                              // $8
+          JSON.stringify(tagsList),                 // $9
+          metadata.resumo || '',                    // $10
+          textoExtraido,                            // $11
+          storagePath,                              // $12 (será null se for link)
+          storagePath ? path.basename(storagePath) : null, // $13
+          originalName,                             // $14
+          mimeType,                                 // $15
+          fileSize,                                 // $16
+          linkEnviado || null,                      // $17: link inserido aqui!
+          createdAt,                                // $18
+          req.user?.email || null,                  // $19
+          createdAt,                                // $20
+          req.user?.email || null,                  // $21
+          createdAt                                 // $22
         ]);
       } catch (dbError) {
-        await deleteFileFromSupabase(storagePath);
+        if (storagePath) await deleteFileFromSupabase(storagePath);
         throw dbError;
       }
 
       const id = insertResult.rows[0]?.id;
       console.log(`[UPLOAD] Registro salvo no banco para ${id}`);
 
-      // 5. Retorno limpo e padronizado para a interface (UploadModal.js)
+      // 6. Retorno padronizado para o front-end
       res.json({
         id,
         titulo: tituloFinal,
@@ -1301,21 +1356,27 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
         responsavel: responsavel,
         tags: tagsList,
         resumo: metadata.resumo || '',
-        textoExtraido: metadata.textoExtraido || '',
+        textoExtraido: textoExtraido,
         storagePath,
-        storageFilename: path.basename(storagePath),
+        storageFilename: storagePath ? path.basename(storagePath) : null,
         originalFilename: originalName,
         mimeType,
         fileSize,
-        downloadUrl: buildDownloadUrl(req, id)
+        link: linkEnviado || null,
+        downloadUrl: storagePath ? buildDownloadUrl(req, id) : null
       });
+
     } catch (error) {
-      console.error('[UPLOAD] Falha no processamento do arquivo:', error);
-      await removeTemporaryFile(tempPath);
-      res.status(500).json({ error: error.message || 'Falha no processamento do arquivo.' });
+      console.error('[UPLOAD] Falha no processamento:', error);
+      // Fallback de limpeza caso dê erro na extração de metadados do arquivo
+      if (req.file && req.file.path) {
+        await removeTemporaryFile(req.file.path).catch(() => {});
+      }
+      res.status(500).json({ error: error.message || 'Falha no processamento.' });
     }
   });
 });
+
 app.use((err, req, res, next) => {
   console.error('[SERVER] Erro interno não tratado:', err);
   res.status(500).json({ error: err.message || 'Erro interno do servidor.' });

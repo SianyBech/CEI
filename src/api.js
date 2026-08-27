@@ -147,21 +147,31 @@ async fetchTags() {
   }
 },
 
-  uploadEvidence(file, onProgress) {
+uploadEvidence(file, link, onProgress) {
     return new Promise((resolve, reject) => {
       const formData = new FormData();
-      formData.append('file', file);
+      
+      // Validação flexível: Anexa o que o usuário tiver enviado
+      if (file) {
+        formData.append('file', file);
+      }
+      
+      if (link) {
+        formData.append('link', link.trim());
+      }
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload', true);
       xhr.withCredentials = true;
 
+      // Monitoramento da barra de progresso
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable && typeof onProgress === 'function') {
           onProgress(Math.round((event.loaded * 100) / event.total));
         }
       });
 
+      // Resposta do servidor
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
@@ -170,7 +180,7 @@ async fetchTags() {
             reject(new Error('Resposta inválida do servidor.'));
           }
         } else {
-          let errorMessage = `Upload falhou: ${xhr.statusText} (${xhr.status})`;
+          let errorMessage = `Envio falhou: ${xhr.statusText} (${xhr.status})`;
 
           try {
             const errorBody = JSON.parse(xhr.responseText);
@@ -185,7 +195,9 @@ async fetchTags() {
         }
       };
 
-      xhr.onerror = () => reject(new Error('Erro de rede durante o upload.'));
+      xhr.onerror = () => reject(new Error('Erro de rede durante o envio.'));
+      
+      // Dispara a requisição com o arquivo, com o link, ou com ambos.
       xhr.send(formData);
     });
   }

@@ -70,9 +70,8 @@ window.CerneApp.UploadModal = {
       resumo: resumo,
       textoExtraido: textoExtraido
     };
-  },
+  }, 
 
-  // FIXED: Nome do método adicionado explicitamente antes dos parâmetros
   render(onClose, onAddEvidence, categories = [], tagsList = []) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -88,7 +87,7 @@ window.CerneApp.UploadModal = {
         </div>
 
         <div class="modal-body" id="modal-body-container">
-          <!-- Step 1: File Selection -->
+          <!-- Step 1: File Selection or Link -->
           <div id="upload-step-select" style="display: flex; flex-direction: column; gap: 1rem;">
             <div class="dropzone" id="dropzone-box">
               <i data-lucide="upload-cloud" class="dropzone-icon"></i>
@@ -96,7 +95,7 @@ window.CerneApp.UploadModal = {
                 <strong>Arraste seu arquivo aqui</strong> ou clique para navegar
               </div>
               <div class="dropzone-subtext">
-                Suporta PDF, Imagens (JPG/PNG) ou Documentos (DOCX) até 10MB
+                Suporta PDF, Imagens (JPG/PNG) ou Documentos (DOCX) até 30MB
               </div>
               <input type="file" id="file-input-element" style="display: none;" accept=".pdf, .png, .jpg, .jpeg, .docx, .pptx">
             </div>
@@ -110,6 +109,17 @@ window.CerneApp.UploadModal = {
                 <i data-lucide="trash-2" style="width: 16px; height: 16px; color: var(--danger);"></i>
               </button>
             </div>
+
+            <!-- CAMPO DE LINK -->
+            <div style="display: flex; align-items: center; text-align: center; gap: 0.75rem; color: var(--text-secondary); font-size: 0.8rem;">
+              <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
+              <span>OU ENVIE UM LINK DA WEB</span>
+              <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
+            </div>
+
+            <div>
+              <input type="url" id="link-input-element" class="form-input" placeholder="https://exemplo.com/noticia-sobre-o-cei" style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);" />
+            </div>
           </div>
         </div>
 
@@ -120,7 +130,6 @@ window.CerneApp.UploadModal = {
       </div>
     `;
 
-    // Modal elements
     const fileInput = overlay.querySelector('#file-input-element');
     const dropzone = overlay.querySelector('#dropzone-box');
     const fileInfoBox = overlay.querySelector('#file-selected-info-box');
@@ -130,13 +139,21 @@ window.CerneApp.UploadModal = {
     const submitBtn = overlay.querySelector('#modal-upload-submit-btn');
     const cancelBtn = overlay.querySelector('#modal-cancel-btn');
     const closeBtn = overlay.querySelector('#modal-close-btn');
+    const linkInput = overlay.querySelector('#link-input-element');
 
     let selectedFile = null;
 
-    // Trigger file input click
+    // Validação do formulário (Arquivo OU Link)
+    function checkFormValidity() {
+      if (selectedFile || (linkInput && linkInput.value.trim().length > 0)) {
+        submitBtn.removeAttribute('disabled');
+      } else {
+        submitBtn.setAttribute('disabled', 'true');
+      }
+    }
+
     dropzone.addEventListener('click', () => fileInput.click());
 
-    // Drag and drop events
     dropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
       dropzone.style.borderColor = 'var(--accent)';
@@ -152,7 +169,6 @@ window.CerneApp.UploadModal = {
       e.preventDefault();
       dropzone.style.borderColor = 'var(--border-color)';
       dropzone.style.backgroundColor = '#fafafa';
-      
       if (e.dataTransfer.files.length > 0) {
         handleFileSelect(e.dataTransfer.files[0]);
       }
@@ -164,11 +180,12 @@ window.CerneApp.UploadModal = {
       }
     });
 
+    linkInput.addEventListener('input', checkFormValidity);
+
     function handleFileSelect(file) {
       selectedFile = file;
       selectedFileName.textContent = file.name;
       
-      // Update icon based on file extension
       const ext = file.name.split('.').pop().toLowerCase();
       if (['png', 'jpg', 'jpeg'].includes(ext)) {
         selectedFileIcon.setAttribute('data-lucide', 'image');
@@ -182,15 +199,13 @@ window.CerneApp.UploadModal = {
       }
       
       lucide.createIcons({
-        attrs: {
-          style: 'width: 16px; height: 16px;'
-        },
+        attrs: { style: 'width: 16px; height: 16px;' },
         nameAttr: 'data-lucide',
         node: fileInfoBox
       });
 
       fileInfoBox.style.display = 'flex';
-      submitBtn.removeAttribute('disabled');
+      checkFormValidity();
     }
 
     removeFileBtn.addEventListener('click', (e) => {
@@ -198,10 +213,9 @@ window.CerneApp.UploadModal = {
       selectedFile = null;
       fileInput.value = '';
       fileInfoBox.style.display = 'none';
-      submitBtn.setAttribute('disabled', 'true');
+      checkFormValidity();
     });
 
-    // Close handlers
     const doClose = () => {
       overlay.remove();
       onClose();
@@ -213,133 +227,140 @@ window.CerneApp.UploadModal = {
       if (e.target === overlay) doClose();
     });
 
-    // Submit / Processing logic
-    submitBtn.addEventListener('click', () => {
-      if (!selectedFile) return;
+    // Função de atualização visual dos passos modernos
+    function updateUploadStep(stepNumber, progressPercent) {
+      const barFill = overlay.querySelector('#upload-progress-bar-fill');
+      if (barFill) {
+        barFill.style.width = `${progressPercent}%`;
+      }
+
+      for (let i = 1; i <= 4; i++) {
+        const stepEl = overlay.querySelector(`#step-${i}`);
+        if (!stepEl) continue;
+        
+        const iconEl = stepEl.querySelector('.step-icon');
+
+        if (i < stepNumber) {
+          stepEl.style.opacity = '1';
+          iconEl.style.backgroundColor = '#d1fae5';
+          iconEl.style.color = '#065f46';
+          iconEl.innerHTML = '✓';
+        } else if (i === stepNumber) {
+          stepEl.style.opacity = '1';
+          iconEl.style.backgroundColor = '#f3e8ff';
+          iconEl.style.color = '#6b21a8';
+          iconEl.innerHTML = `<div style="width: 10px; height: 10px; border: 2px solid #6b21a8; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>`;
+        } else {
+          stepEl.style.opacity = '0.4';
+          iconEl.style.backgroundColor = '#e2e8f0';
+          iconEl.style.color = '#64748b';
+          iconEl.textContent = i;
+        }
+      }
+    }
+
+    // Submit / Processing logic limpo com os novos passos
+    submitBtn.addEventListener('click', async () => {
+      const linkValue = linkInput ? linkInput.value.trim() : null;
+      if (!selectedFile && !linkValue) return;
 
       submitBtn.style.display = 'none';
       cancelBtn.style.display = 'none';
       closeBtn.style.display = 'none';
 
       const modalBody = overlay.querySelector('#modal-body-container');
+      
       modalBody.innerHTML = `
-        <div class="ai-processing-container">
-          <div class="ai-processing-header">
-            <div class="ai-icon-pulse">
-              <i data-lucide="sparkles" style="width: 20px; height: 20px;"></i>
+        <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="background-color: #f3e8ff; color: #6b21a8; padding: 0.75rem; border-radius: 12px; display: flex;">
+              <i data-lucide="sparkles" style="width: 24px; height: 24px;"></i>
             </div>
             <div>
-              <span class="ai-processing-title">Upload e análise de evidência</span>
-              <p style="font-size: 0.75rem; color: var(--text-secondary);">Enviando arquivo e extraindo metadados com OCR + IA...</p>
+              <h3 style="margin: 0; font-size: 1rem; font-weight: 600; color: var(--text-primary);">Processando Evidência</h3>
+              <p style="margin: 0; font-size: 0.825rem; color: var(--text-secondary);">Analisando e estruturando metadados com Inteligência Artificial...</p>
             </div>
           </div>
 
-          <div class="progress-bar-container">
-            <div class="progress-bar-fill" id="upload-progress-fill"></div>
+          <div style="width: 100%; background-color: var(--bg-secondary); height: 6px; border-radius: 3px; overflow: hidden;">
+            <div id="upload-progress-bar-fill" style="width: 15%; height: 100%; background-color: #6b21a8; transition: width 0.4s ease;"></div>
           </div>
 
-          <div class="processing-steps-log" id="steps-log-console"></div>
+          <div style="display: flex; flex-direction: column; gap: 0.75rem; background-color: var(--bg-secondary, #f8fafc); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem;">
+            <div id="step-1" class="upload-step" style="display: flex; align-items: center; gap: 0.75rem; opacity: 0.5; transition: opacity 0.3s;">
+              <div class="step-icon" style="width: 24px; height: 24px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; color: #64748b;">1</div>
+              <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-primary);">Validando e preparando dados...</span>
+            </div>
+            <div id="step-2" class="upload-step" style="display: flex; align-items: center; gap: 0.75rem; opacity: 0.5; transition: opacity 0.3s;">
+              <div class="step-icon" style="width: 24px; height: 24px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; color: #64748b;">2</div>
+              <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-primary);">Enviando para o servidor seguro...</span>
+            </div>
+            <div id="step-3" class="upload-step" style="display: flex; align-items: center; gap: 0.75rem; opacity: 0.5; transition: opacity 0.3s;">
+              <div class="step-icon" style="width: 24px; height: 24px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; color: #64748b;">3</div>
+              <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-primary);">Extraindo texto (OCR / Web Scraping)...</span>
+            </div>
+            <div id="step-4" class="upload-step" style="display: flex; align-items: center; gap: 0.75rem; opacity: 0.5; transition: opacity 0.3s;">
+              <div class="step-icon" style="width: 24px; height: 24px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; color: #64748b;">4</div>
+              <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-primary);">Processando IA (Resumo e Tags CERNE)...</span>
+            </div>
+          </div>
         </div>
       `;
 
-      lucide.createIcons({
-        nameAttr: 'data-lucide',
-        node: modalBody
-      });
+      lucide.createIcons({ nameAttr: 'data-lucide', node: modalBody });
 
-      const progressFill = modalBody.querySelector('#upload-progress-fill');
-      const logConsole = modalBody.querySelector('#steps-log-console');
+      updateUploadStep(1, 25);
 
-      function addLog(message, completed = false) {
-        const logItem = document.createElement('div');
-        logItem.className = `step-log-item ${completed ? 'completed' : 'active'}`;
-        logItem.innerHTML = `
-          <span class="step-status-indicator">${completed ? '<span class="step-log-checkmark">✓</span>' : '⚙'}</span>
-          <span>${message}</span>
-        `;
-        logConsole.appendChild(logItem);
-        logConsole.scrollTop = logConsole.scrollHeight;
-        return logItem;
-      }
+      setTimeout(async () => {
+        try {
+          updateUploadStep(2, 50);
 
-      const pendingLog = addLog('Preparando upload...');
-      setTimeout(() => {
-        pendingLog.classList.remove('active');
-        pendingLog.classList.add('completed');
-        pendingLog.querySelector('.step-status-indicator').innerHTML = '<span class="step-log-checkmark">✓</span>';
+          const uploadedEvidence = await window.CerneApp.Api.uploadEvidence(selectedFile, linkValue, (percentage) => {
+            if (percentage > 50) {
+              updateUploadStep(3, 75);
+            }
+          });
 
-        const uploadingLog = addLog('Enviando arquivo para o servidor...');
+          updateUploadStep(4, 100);
 
-        window.CerneApp.Api.uploadEvidence(selectedFile, (percentage) => {
-          progressFill.style.width = `${percentage}%`;
-        })
-          .then((uploadedEvidence) => {
-            uploadingLog.classList.remove('active');
-            uploadingLog.classList.add('completed');
-            uploadingLog.querySelector('.step-status-indicator').innerHTML = '<span class="step-log-checkmark">✓</span>';
-            addLog('Arquivo processado com sucesso.', true);
-            progressFill.style.width = '100%';
+          setTimeout(() => {
             closeBtn.style.display = 'flex';
             showSuccessScreen(uploadedEvidence);
-          })
-          .catch((error) => {
-            uploadingLog.classList.remove('active');
-            uploadingLog.classList.add('completed');
-            uploadingLog.querySelector('.step-status-indicator').innerHTML = '<span class="step-log-checkmark">✕</span>';
-            progressFill.style.backgroundColor = 'var(--danger)';
-            modalBody.innerHTML = `
-              <div class="ai-processing-container">
-                <div class="ai-processing-header">
-                  <div class="ai-icon-pulse" style="background-color: var(--danger-bg);">
-                    <i data-lucide="alert-triangle" style="width: 20px; height: 20px; color: var(--danger);"></i>
-                  </div>
-                  <div>
-                    <span class="ai-processing-title">Falha no upload</span>
-                    <p style="font-size: 0.75rem; color: var(--text-secondary);">${error.message}</p>
-                  </div>
-                </div>
-              </div>
-            `;
-            lucide.createIcons({
-              nameAttr: 'data-lucide',
-              node: modalBody
-            });
-            closeBtn.style.display = 'flex';
-          });
-      }, 300);
+          }, 400);
+
+        } catch (error) {
+          closeBtn.style.display = 'flex';
+          modalBody.innerHTML = `
+            <div style="padding: 2rem; text-align: center; color: var(--danger);">
+              <i data-lucide="alert-triangle" style="width: 32px; height: 32px; margin-bottom: 0.5rem;"></i>
+              <h4 style="margin: 0 0 0.5rem 0;">Falha no processamento</h4>
+              <p style="font-size: 0.85rem; color: var(--text-secondary);">${error.message}</p>
+            </div>
+          `;
+          lucide.createIcons({ nameAttr: 'data-lucide', node: modalBody });
+        }
+      }, 400);
     });
 
-   function showSuccessScreen(evidence) {
-      // Re-enable closing
+    function showSuccessScreen(evidence) {
       closeBtn.style.display = 'flex';
-
-      // 💡 1. VARIÁVEL DE CONTROLE: Indica se o usuário salvou intencionalmente
       let wasSaved = false;
 
-      // Helper para converter "DD/MM/YYYY" -> "YYYY-MM-DD" que o <input type="date"> exige
       function formatDateForInput(dateString) {
         if (!dateString) {
           const today = new Date();
-          const yyyy = today.getFullYear();
-          const mm = String(today.getMonth() + 1).padStart(2, '0');
-          const dd = String(today.getDate()).padStart(2, '0');
-          return `${yyyy}-${mm}-${dd}`;
+          return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
         }
-
         if (dateString.includes('/')) {
           const [dd, mm, yyyy] = dateString.split('/');
-          if (dd && mm && yyyy) {
-            return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
-          }
+          if (dd && mm && yyyy) return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
         }
-
         return dateString;
       }
       
       const modalBody = overlay.querySelector('#modal-body-container');
       const footer = overlay.querySelector('#modal-footer-container');
 
-      // Update footer
       footer.innerHTML = `
         <button class="btn btn-primary" id="modal-success-done-btn">Confirmar e Salvar</button>
       `;
@@ -353,7 +374,6 @@ window.CerneApp.UploadModal = {
           .replace(/'/g, '&#39;');
       }
 
-      // Update body with a beautiful results summary and editable form
       modalBody.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 1.25rem; animation: fadeIn var(--transition-normal) forwards;">
           <div style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.5rem;">
@@ -366,119 +386,82 @@ window.CerneApp.UploadModal = {
             </div>
           </div>
  
-                <div style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); background-color: var(--bg-secondary); padding: 1.25rem;">
-        <div class="edit-form-grid">
-          
-          <!-- 1. Título (2 Colunas) -->
-          <div class="form-group edit-form-fullwidth">
-            <label class="form-label" for="edit-titulo">Título da Evidência</label>
-            <input type="text" class="form-input" id="edit-titulo" value="${escapeHtml(evidence.titulo || evidence.nome)}" placeholder="Título da evidência">
-          </div>
-
-          <!-- 2. Arquivo Original (2 Colunas) -->
-          <div class="form-group edit-form-fullwidth">
-            <label class="form-label" for="edit-nome">Arquivo Original</label>
-            <input type="text" class="form-input" id="edit-nome" value="${escapeHtml(evidence.nome)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;">
-          </div>
-
-          <!-- 3. Evento de Origem (2 Colunas) -->
-          <div class="form-group edit-form-fullwidth">
-            <label class="form-label" for="edit-evento">Evento de Origem</label>
-            <input type="text" class="form-input" id="edit-evento" value="${escapeHtml(evidence.evento)}" placeholder="Ex: Reunião do Conselho, Mentoria, etc.">
-          </div>
-
-          <!-- 4. LINHA 1 DA PAREDINHA: Categorias CERNE (Coluna 1) -->
-          <div class="form-group">
-            <label class="form-label">Categorias CERNE</label>
-            <div class="tags-selector-wrapper">
-              <div class="selected-tags-display" id="upload-selected-categories-display"></div>
-              <select class="form-select" id="upload-add-category-select">
-                <!-- Preenchido via JS -->
-              </select>
-            </div>
-          </div>
-
-          <!-- 5. LINHA 1 DA PAREDINHA: Tags da Evidência (Coluna 2) -->
-          <div class="form-group">
-            <label class="form-label">Tags da Evidência</label>
-            <div class="tags-selector-wrapper">
-              <div class="selected-tags-display" id="selected-tags-display">
-                <!-- Tags dinâmicas -->
+          <div style="width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); background-color: var(--bg-secondary); padding: 1.25rem;">
+            <div class="edit-form-grid">
+              <div class="form-group edit-form-fullwidth">
+                <label class="form-label" for="edit-titulo">Título da Evidência</label>
+                <input type="text" class="form-input" id="edit-titulo" value="${escapeHtml(evidence.titulo || evidence.nome)}" placeholder="Título da evidência">
               </div>
-              <select class="form-select" id="add-tag-select">
-                <!-- Preenchido via JS -->
-              </select>
+
+              <div class="form-group edit-form-fullwidth">
+                <label class="form-label" for="edit-nome">Arquivo / Link Original</label>
+                <input type="text" class="form-input" id="edit-nome" value="${escapeHtml(evidence.nome || evidence.link)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;">
+              </div>
+
+              <div class="form-group edit-form-fullwidth">
+                <label class="form-label" for="edit-evento">Evento de Origem</label>
+                <input type="text" class="form-input" id="edit-evento" value="${escapeHtml(evidence.evento)}" placeholder="Ex: Reunião do Conselho, Mentoria, etc.">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Categorias CERNE</label>
+                <div class="tags-selector-wrapper">
+                  <div class="selected-tags-display" id="upload-selected-categories-display"></div>
+                  <select class="form-select" id="upload-add-category-select"></select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Tags da Evidência</label>
+                <div class="tags-selector-wrapper">
+                  <div class="selected-tags-display" id="selected-tags-display"></div>
+                  <select class="form-select" id="add-tag-select"></select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="edit-responsavel">Responsável pelo Envio</label>
+                <select class="form-select" id="edit-responsavel"></select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="edit-data">Data de Registro</label>
+                <input type="date" class="form-input" id="edit-data" value="${formatDateForInput(evidence.data)}">
+              </div>
+
+              <div class="form-group edit-form-fullwidth">
+                <label class="form-label" for="edit-resumo">Resumo da IA</label>
+                <textarea class="form-textarea" id="edit-resumo" placeholder="Escreva um breve resumo da evidência...">${escapeHtml(evidence.resumo)}</textarea>
+              </div>
             </div>
           </div>
-
-          <!-- 6. LINHA 2 DA PAREDINHA: Responsável pelo Envio (Coluna 1) -->
-          <div class="form-group">
-            <label class="form-label" for="edit-responsavel">Responsável pelo Envio</label>
-            <select class="form-select" id="edit-responsavel">
-              <!-- Preenchido dinamicamente com os usuários reais do CEI -->
-            </select>
-          </div>
-
-          <!-- 7. LINHA 2 DA PAREDINHA: Data de Registro (Coluna 2) -->
-          <div class="form-group">
-            <label class="form-label" for="edit-data">Data de Registro</label>
-            <input type="date" class="form-input" id="edit-data" value="${formatDateForInput(evidence.data)}">
-          </div>
-
-          <!-- 8. Resumo da IA (2 Colunas) -->
-          <div class="form-group edit-form-fullwidth">
-            <label class="form-label" for="edit-resumo">Resumo da IA</label>
-            <textarea class="form-textarea" id="edit-resumo" placeholder="Escreva um breve resumo da evidência...">${escapeHtml(evidence.resumo)}</textarea>
-          </div>
-
-          </div>
-        </div>
         </div>
       `;
  
-      lucide.createIcons({
-        nameAttr: 'data-lucide',
-        node: modalBody
-      });
+      lucide.createIcons({ nameAttr: 'data-lucide', node: modalBody });
 
+      (async () => {
+        const selectResponsavel = overlay.querySelector('#edit-responsavel');
+        if (!selectResponsavel) return;
+        try {
+          const listaResponsaveis = await window.CerneApp.Api.fetchResponsaveis();
+          const responsavelAtual = evidence.responsavel || '';
+          selectResponsavel.innerHTML = '';
+          if (responsavelAtual && !listaResponsaveis.includes(responsavelAtual)) {
+            listaResponsaveis.unshift(responsavelAtual);
+          }
+          listaResponsaveis.forEach(nome => {
+            const option = document.createElement('option');
+            option.value = nome;
+            option.textContent = nome;
+            if (nome === responsavelAtual) option.selected = true;
+            selectResponsavel.appendChild(option);
+          });
+        } catch (error) {
+          selectResponsavel.innerHTML = `<option value="${evidence.responsavel || 'Equipe CEI'}">${evidence.responsavel || 'Equipe CEI'}</option>`;
+        }
+      })();
 
-      // Preenchimento dinâmico dos Responsáveis/Usuários
-(async () => {
-  const selectResponsavel = overlay.querySelector('#edit-responsavel');
-  if (!selectResponsavel) return;
-
-  try {
-    // Busca os responsáveis/usuários cadastrados na API
-    const listaResponsaveis = await window.CerneApp.Api.fetchResponsaveis();
-    
-    // Nome que veio da análise do arquivo (se houver)
-    const responsavelAtual = evidence.responsavel || '';
-
-    selectResponsavel.innerHTML = '';
-
-    // Se o nome sugerido pela IA não estiver na lista cadastrada, adicionamos ele como opção inicial
-    if (responsavelAtual && !listaResponsaveis.includes(responsavelAtual)) {
-      listaResponsaveis.unshift(responsavelAtual);
-    }
-
-    // Monta as opções do <select>
-    listaResponsaveis.forEach(nome => {
-      const option = document.createElement('option');
-      option.value = nome;
-      option.textContent = nome;
-      if (nome === responsavelAtual) {
-        option.selected = true;
-      }
-      selectResponsavel.appendChild(option);
-    });
-  } catch (error) {
-    console.error('Erro ao carregar lista de responsáveis:', error);
-    // Fallback básico caso a API falhe
-    selectResponsavel.innerHTML = `<option value="${evidence.responsavel || 'Equipe CEI'}">${evidence.responsavel || 'Equipe CEI'}</option>`;
-  }
-})();
-
-      // Inicialização das Categorias
       let selectedCategories = Array.isArray(evidence.categorias) && evidence.categorias.length > 0
         ? [...evidence.categorias]
         : (Array.isArray(evidence.categoriasSugeridas) && evidence.categoriasSugeridas.length > 0 
@@ -494,34 +477,31 @@ window.CerneApp.UploadModal = {
         if (selectedCategories.length === 0) {
           displayContainer.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-tertiary); font-style: italic;">Nenhuma categoria selecionada</span>';
         } else {
-      selectedCategories.forEach(cat => {
-  // Busca o estilo dinâmico configurado para a categoria (igual ao da tabela)
-  const customStyle = window.getCategoryStyle ? window.getCategoryStyle(cat) : '';
-  const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
+          selectedCategories.forEach(cat => {
+            const customStyle = window.getCategoryStyle ? window.getCategoryStyle(cat) : '';
+            const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
 
-  const badge = document.createElement('span');
-  badge.className = `badge ${categoryClass}`;
-  if (customStyle) {
-    badge.setAttribute('style', customStyle); // Aplica a cor exata da tabela
-  }
-  badge.style.display = 'inline-flex';
-  badge.style.alignItems = 'center';
-  badge.style.gap = '0.35rem';
-  badge.style.padding = '0.25rem 0.5rem';
+            const badge = document.createElement('span');
+            badge.className = `badge ${categoryClass}`;
+            if (customStyle) badge.setAttribute('style', customStyle);
+            badge.style.display = 'inline-flex';
+            badge.style.alignItems = 'center';
+            badge.style.gap = '0.35rem';
+            badge.style.padding = '0.25rem 0.5rem';
 
-  badge.innerHTML = `
-    <span>${escapeHtml(cat)}</span>
-    <button type="button" class="tag-badge-remove" style="background:none; border:none; cursor:pointer; font-size: 0.9rem;" title="Remover categoria">&times;</button>
-  `;
+            badge.innerHTML = `
+              <span>${escapeHtml(cat)}</span>
+              <button type="button" class="tag-badge-remove" style="background:none; border:none; cursor:pointer; font-size: 0.9rem;" title="Remover categoria">&times;</button>
+            `;
 
-  badge.querySelector('.tag-badge-remove').addEventListener('click', (e) => {
-    e.preventDefault();
-    selectedCategories = selectedCategories.filter(c => c !== cat);
-    renderUploadCategoriesWidget();
-  });
+            badge.querySelector('.tag-badge-remove').addEventListener('click', (e) => {
+              e.preventDefault();
+              selectedCategories = selectedCategories.filter(c => c !== cat);
+              renderUploadCategoriesWidget();
+            });
 
-  displayContainer.appendChild(badge);
-});
+            displayContainer.appendChild(badge);
+          });
         }
 
         selectElement.innerHTML = '';
@@ -554,7 +534,6 @@ window.CerneApp.UploadModal = {
         }
       });
 
-      // Inicialização das Tags
       let selectedTags = Array.isArray(evidence.tags) && evidence.tags.length > 0
         ? [...evidence.tags]
         : (Array.isArray(evidence.tagsSugeridas) ? [...evidence.tagsSugeridas] : []);
@@ -585,7 +564,6 @@ window.CerneApp.UploadModal = {
         }
 
         selectElement.innerHTML = '';
-        
         const defaultOpt = document.createElement('option');
         defaultOpt.value = '';
         defaultOpt.textContent = 'Adicionar tag...';
@@ -602,12 +580,7 @@ window.CerneApp.UploadModal = {
           selectElement.appendChild(opt);
         });
 
-        if (availableTags.length === 0) {
-          defaultOpt.textContent = 'Todas as tags disponíveis já foram adicionadas';
-          selectElement.disabled = true;
-        } else {
-          selectElement.disabled = false;
-        }
+        selectElement.disabled = availableTags.length === 0;
       }
 
       renderTagsWidget();
@@ -615,9 +588,7 @@ window.CerneApp.UploadModal = {
       modalBody.querySelector('#add-tag-select').addEventListener('change', (e) => {
         const val = e.target.value;
         if (val) {
-          if (!selectedTags.includes(val)) {
-            selectedTags.push(val);
-          }
+          if (!selectedTags.includes(val)) selectedTags.push(val);
           renderTagsWidget();
         }
       });
@@ -627,19 +598,13 @@ window.CerneApp.UploadModal = {
         toast.className = `app-toast ${type}`;
         toast.textContent = message;
         document.body.appendChild(toast);
-
-        requestAnimationFrame(() => {
-          toast.classList.add('show');
-        });
-
+        requestAnimationFrame(() => toast.classList.add('show'));
         window.setTimeout(() => {
           toast.classList.remove('show');
           window.setTimeout(() => toast.remove(), 220);
         }, 2600);
       }
 
-      // 💡 2. SOBRESCREVEMOS O CLOSER DA MODAL NESTE ESTÁGIO
-      // Se o usuário fechar SEM ter salvado, excluímos o rascunho temporário do backend
       const handleModalClose = () => {
         if (!wasSaved && evidence && evidence.id) {
           window.CerneApp.Api.deleteEvidence(evidence.id).catch(err => {
@@ -650,7 +615,6 @@ window.CerneApp.UploadModal = {
         onClose();
       };
 
-      // Atualiza os botões de fechar e o clique no overlay para usar o novo handler
       closeBtn.onclick = handleModalClose;
       const cancelBtnInSuccess = footer.querySelector('#modal-cancel-btn');
       if (cancelBtnInSuccess) cancelBtnInSuccess.onclick = handleModalClose;
@@ -672,9 +636,7 @@ window.CerneApp.UploadModal = {
         }
 
         if (window.CerneApp.Utils?.isFutureDate?.(dataFormatted)) {
-          const confirmFuture = confirm(
-            'A data informada é uma data futura.\n\nTem certeza de que deseja cadastrar a evidência com esta data?'
-          );
+          const confirmFuture = confirm('A data informada é uma data futura.\n\nTem certeza de que deseja cadastrar a evidência com esta data?');
           if (!confirmFuture) return;
         }
 
@@ -695,8 +657,6 @@ window.CerneApp.UploadModal = {
 
         try {
           const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
-          
-          // 💡 3. MARCAMOS COMO SALVO COM SUCESSO
           wasSaved = true;
 
           if (typeof onAddEvidence === 'function') {
@@ -718,7 +678,6 @@ window.CerneApp.UploadModal = {
       });
     }
 
-    // FIXED: Retorna o elemento criado no DOM para o appendChild do app.js
     return overlay;
   }
 };
