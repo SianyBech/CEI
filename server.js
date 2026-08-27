@@ -348,6 +348,7 @@ function serializeRow(row, req) {
     originalFilename: row.original_filename || row.nome || null,
     mimeType: row.mime_type || null,
     fileSize: row.file_size || null,
+    link: row.link || null,
     criadoEm: row.criadoEm,
     downloadUrl: buildDownloadUrl(req, row.id)
   };
@@ -933,7 +934,7 @@ app.use(attachAuthContext);
 app.get('/api/evidences', requirePermission('view'), async (req, res, next) => {
   try {
     console.log('[EVIDENCES] Buscando evidências...');
-    const rows = await dbClient.many(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "categorias", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm" FROM public.evidences ORDER BY "criadoEm" DESC`);
+    const rows = await dbClient.many(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "categorias", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "link", "criadoEm" FROM public.evidences ORDER BY "criadoEm" DESC`);
     res.json((rows || []).map((row) => serializeRow(row, req)));
   } catch (error) {
     console.error('[EVIDENCES] Erro ao buscar evidências:', error);
@@ -943,7 +944,7 @@ app.get('/api/evidences', requirePermission('view'), async (req, res, next) => {
 
 app.get('/api/evidences/:id', requirePermission('view'), async (req, res, next) => {
   try {
-    const row = await dbClient.one(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "categorias", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "criadoEm" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
+    const row = await dbClient.one(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "categorias", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "link", "criadoEm" FROM public.evidences WHERE "id" = $1`, [req.params.id]);
     if (!row) {
       return res.status(404).json({ error: 'Evidência não encontrada.' });
     }
@@ -1237,7 +1238,7 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       let storagePath = null;
       let textoExtraido = '';
 
-      // ==========================================
+     // ==========================================
       // FLUXO A: PROCESSAMENTO DE LINK (CORRIGIDO)
       // ==========================================
       if (linkEnviado && !req.file) {
@@ -1245,12 +1246,16 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
         tipo = 'link';
         originalName = linkEnviado;
         
-        // Extrai o texto da página usando a função de scraping
+        // 1. Extrai o texto da página via web scraping
         textoExtraido = await extractTextFromLink(linkEnviado);
         
-        // Protege a chamada de IA com fallback caso ocorra instabilidade externa
+        // 2. Salva o texto em um arquivo .txt temporário para a IA conseguir ler via caminho
+        const tempTxtPath = path.join(tempDir, `link-${Date.now()}.txt`);
+        await fs.promises.writeFile(tempTxtPath, textoExtraido, 'utf8');
+        
         try {
-          metadata = await resumirQualquerDocumento(textoExtraido, 'txt', dbCategories, dbTags);
+          // 3. Passa o caminho do arquivo temporário e a extensão 'txt'
+          metadata = await resumirQualquerDocumento(tempTxtPath, 'txt', dbCategories, dbTags);
         } catch (aiErr) {
           console.warn('[UPLOAD] IA falhou ao resumir o texto do link, usando fallback:', aiErr.message);
           metadata = {
@@ -1260,14 +1265,17 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
             categoriasSugeridas: ['Gestão'],
             tagsSugeridas: ['CERNE']
           };
+        } finally {
+          // 4. Remove o arquivo temporário de texto
+          await removeTemporaryFile(tempTxtPath);
         }
         
-        tituloFinal = metadata.titulo && metadata.titulo.trim() !== '' ? metadata.titulo : 'Página Web Salva';
+        tituloFinal = metadata.titulo && metadata.titulo.trim() !== '' ? metadata.titulo : 'Página da Web';
         eventoFinal = metadata.evento || 'Sem Evento';
-        storagePath = null; // Links não vão para o Supabase Storage
+        storagePath = null;
         mimeType = 'text/html';
         fileSize = 0;
-      } 
+      }
       
       // ==========================================
       // FLUXO B: PROCESSAMENTO DE ARQUIVO

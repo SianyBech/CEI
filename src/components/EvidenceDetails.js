@@ -5,7 +5,8 @@ window.CerneApp.EvidenceDetails = {
     overlay.id = 'details-modal-overlay';
 
     // Match CERNE category badge color
-    const categoryClass = `badge-${evidence.categoria.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
+    const primaryCat = evidence.categoria || (evidence.categorias && evidence.categorias[0]) || 'Geral';
+    const categoryClass = `badge-${primaryCat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
 
     // Determine file icon
     let iconName = 'file';
@@ -16,12 +17,10 @@ window.CerneApp.EvidenceDetails = {
     } else if (evidence.tipo === 'imagem') {
       iconName = 'image';
       iconClass = 'file-icon-imagem';
+    } else if (evidence.tipo === 'link') {
+      iconName = 'globe';
+      iconClass = 'file-icon-link';
     }
-
-    // Generate tags HTML for preview
-    const tagsHTML = (evidence.tags || [])
-      .map(tag => `<span class="tag">${tag}</span>`)
-      .join(' ');
 
     const titleText = evidence.titulo || evidence.nome;
 
@@ -34,175 +33,176 @@ window.CerneApp.EvidenceDetails = {
         .replace(/'/g, '&#39;');
     }
 
-    function buildCategoryOptions(selectedCategory) {
-      let html = '';
-      let hasSelected = false;
-      const cats = Array.isArray(categories) ? categories : [];
-      cats.forEach(cat => {
-        const isSel = (cat === selectedCategory);
-        if (isSel) hasSelected = true;
-        html += `<option value="${escapeHtml(cat)}" ${isSel ? 'selected' : ''}>${escapeHtml(cat)}</option>`;
-      });
-      if (!hasSelected && selectedCategory) {
-        html = `<option value="${escapeHtml(selectedCategory)}" selected>${escapeHtml(selectedCategory)}</option>` + html;
-      }
-      return html;
+    // Lógica dinâmica para alternar entre Botão de Link ou Botões de Arquivo
+    let actionsHtml = '';
+    if (evidence.tipo === 'link' || evidence.link) {
+      actionsHtml = `
+        <a href="${escapeHtml(evidence.link)}" target="_blank" class="btn btn-secondary" style="width: 100%; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+          <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
+          Abrir link
+        </a>
+      `;
+    } else {
+      actionsHtml = `
+        <a href="${escapeHtml(evidence.downloadUrl || '#')}" target="_blank" class="btn btn-secondary" id="btn-download-original" style="width: 100%; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+          <i data-lucide="download" style="width: 15px; height: 15px;"></i>
+          Baixar Arquivo
+        </a>
+        <button class="btn btn-secondary" id="btn-preview-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+          <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
+          Visualizar Original
+        </button>
+      `;
     }
 
     overlay.innerHTML = `
       <div class="modal-content detail-modal-width" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;">
   
-  <!-- Header da Modal (Altura fixa no topo) -->
-  <div class="modal-header" style="flex-shrink: 0;">
-    <div style="display: flex; align-items: center; gap: 0.65rem;">
-      <i data-lucide="${iconName}" class="file-icon ${iconClass}"></i>
-      <h2 class="modal-title" style="font-size: 1.1rem; max-width: 500px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(titleText)}">
-        ${escapeHtml(titleText)}
-      </h2>
-    </div>
-    <div style="display: flex; gap: 0.5rem; align-items: center;">
-      <button class="modal-close" id="details-close-btn">
-        <i data-lucide="x" style="width: 20px; height: 20px;"></i>
-      </button>
-    </div>
-  </div>
-
-  <!-- Body da Modal (Preenche o restante da altura sem criar scroll global) -->
-  <div class="modal-body" style="padding: 1.5rem; flex: 1; min-height: 0; display: flex; overflow: hidden;">
-    
-    <!-- Grid Principal (Esq + Direita) -->
-    <div class="details-grid" style="flex: 1; min-height: 0; height: 100%; display: flex; gap: 1.5rem; overflow: hidden; width: 100%;">
-      
-      <!-- Left Panel: Metadados Editáveis (Rolagem própria na esquerda) -->
-      <div class="details-sidebar" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding-right: 0.5rem;">
-        
-        <div class="detail-item">
-          <label class="detail-label" for="detail-title-input">Título da Evidência</label>
-          <input id="detail-title-input" class="form-input" value="${escapeHtml(titleText)}" />
-        </div>
-
-        <div class="detail-item">
-          <label class="detail-label" for="detail-file-name">Arquivo Original</label>
-          <input id="detail-file-name" class="form-input" value="${escapeHtml(evidence.nome)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;" />
-        </div>
-
-        <div class="detail-item">
-          <label class="detail-label" for="detail-evento-input">Evento de Origem</label>
-          <input id="detail-evento-input" class="form-input" value="${escapeHtml(evidence.evento)}" />
-        </div>
-
-        <div class="detail-item">
-          <label class="detail-label">Categorias CERNE</label>
-          <div class="tags-selector-wrapper">
-            <div class="selected-tags-display" id="detail-selected-categories-display">
-              <!-- As badges das categorias selecionadas são inseridas aqui dinamicamente -->
-            </div>
-            <select class="form-select" id="detail-add-category-select" style="margin-top: 0.35rem;">
-              <!-- Dropdown para escolher e adicionar mais uma categoria -->
-            </select>
+        <!-- Header da Modal (Altura fixa no topo) -->
+        <div class="modal-header" style="flex-shrink: 0;">
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <i data-lucide="${iconName}" class="file-icon ${iconClass}"></i>
+            <h2 class="modal-title" style="font-size: 1.1rem; max-width: 500px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(titleText)}">
+              ${escapeHtml(titleText)}
+            </h2>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button class="modal-close" id="details-close-btn">
+              <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+            </button>
           </div>
         </div>
 
-       <div class="detail-item">
-  <label class="detail-label" for="detail-responsavel-input">Responsável pelo Envio</label>
-  <select id="detail-responsavel-input" class="form-select">
-    <!-- As opções serão preenchidas dinamicamente via JS -->
-  </select>
-</div>
+        <!-- Body da Modal (Preenche o restante da altura sem criar scroll global) -->
+        <div class="modal-body" style="padding: 1.5rem; flex: 1; min-height: 0; display: flex; overflow: hidden;">
+          
+          <!-- Grid Principal (Esq + Direita) -->
+          <div class="details-grid" style="flex: 1; min-height: 0; height: 100%; display: flex; gap: 1.5rem; overflow: hidden; width: 100%;">
+            
+            <!-- Left Panel: Metadados Editáveis (Rolagem própria na esquerda) -->
+            <div class="details-sidebar" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding-right: 0.5rem;">
+              
+              <div class="detail-item">
+                <label class="detail-label" for="detail-title-input">Título da Evidência</label>
+                <input id="detail-title-input" class="form-input" value="${escapeHtml(titleText)}" />
+              </div>
 
-        <div class="detail-item">
-          <label class="detail-label" for="detail-data-input">Data do Registro</label>
-          <input id="detail-data-input" class="form-input" value="${escapeHtml(evidence.data)}" />
-        </div>
+              <div class="detail-item">
+                <label class="detail-label" for="detail-file-name">Arquivo / Link Original</label>
+                <input id="detail-file-name" class="form-input" value="${escapeHtml(evidence.nome || evidence.link)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;" />
+              </div>
 
-        <div class="detail-item">
-          <label class="detail-label">Tags da Evidência</label>
-          <div class="tags-selector-wrapper">
-            <div class="selected-tags-display" id="detail-selected-tags-display">
-              <!-- selected tags will be dynamically generated as pills -->
+              <div class="detail-item">
+                <label class="detail-label" for="detail-evento-input">Evento de Origem</label>
+                <input id="detail-evento-input" class="form-input" value="${escapeHtml(evidence.evento)}" />
+              </div>
+
+              <div class="detail-item">
+                <label class="detail-label">Categorias CERNE</label>
+                <div class="tags-selector-wrapper">
+                  <div class="selected-tags-display" id="detail-selected-categories-display">
+                    <!-- As badges das categorias selecionadas são inseridas aqui dinamicamente -->
+                  </div>
+                  <select class="form-select" id="detail-add-category-select" style="margin-top: 0.35rem;">
+                    <!-- Dropdown para escolher e adicionar mais uma categoria -->
+                  </select>
+                </div>
+              </div>
+
+              <div class="detail-item">
+                <label class="detail-label" for="detail-responsavel-input">Responsável pelo Envio</label>
+                <select id="detail-responsavel-input" class="form-select">
+                  <!-- As opções serão preenchidas dinamicamente via JS -->
+                </select>
+              </div>
+
+              <div class="detail-item">
+                <label class="detail-label" for="detail-data-input">Data do Registro</label>
+                <input id="detail-data-input" class="form-input" value="${escapeHtml(evidence.data)}" />
+              </div>
+
+              <div class="detail-item">
+                <label class="detail-label">Tags da Evidência</label>
+                <div class="tags-selector-wrapper">
+                  <div class="selected-tags-display" id="detail-selected-tags-display">
+                    <!-- selected tags will be dynamically generated as pills -->
+                  </div>
+                  <select class="form-select" id="detail-add-tag-select" style="margin-top: 0.35rem;">
+                    <!-- dynamically populated option list -->
+                  </select>
+                </div>
+              </div>
+
+              <!-- Botões dinâmicos renderizados aqui -->
+              <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.5rem;">
+                ${actionsHtml}
+              </div>
+
             </div>
-            <select class="form-select" id="detail-add-tag-select" style="margin-top: 0.35rem;">
-              <!-- dynamically populated option list -->
-            </select>
+
+            <!-- Right Panel: Resumo IA e OCR/Scraping Divididos em 50%/50% -->
+            <div style="flex: 1.2; min-height: 0; height: 100%; display: flex; flex-direction: column; gap: 1rem; overflow: hidden;">
+              
+              <!-- Bloco 1: Resumo da IA (50% da altura) -->
+              <div style="flex: 1; min-height: 0; background-color: #fafafa; border-radius: var(--radius-md); padding: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden;">
+                
+                <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--accent); margin-bottom: 0.5rem; flex-shrink: 0;">
+                  <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
+                  <strong style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Resumo da Inteligência Artificial</strong>
+                </div>
+
+                <!-- Modo Leitura (Renderiza HTML/Negritos e Parágrafos com Scroll Isolado) -->
+                <div id="resumo-display-container" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">
+                  <div 
+                    class="form-textarea-view" 
+                    style="flex: 1; min-height: 0; overflow-y: auto; line-height: 1.6; font-size: 0.9rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff;"
+                  >
+                    ${(evidence.resumo || 'Nenhum resumo gerado.').replace(/\n/g, '<br>')}
+                  </div>
+                </div>
+
+                <!-- Modo Edição (Oculto por padrão para uso em edição) -->
+                <textarea 
+                  id="detail-resumo-input" 
+                  class="form-textarea" 
+                  style="display: none; width: 100%; flex: 1; min-height: 0; line-height: 1.5; font-size: 0.9rem; color: var(--text-secondary); border-color: var(--border-color); resize: none; padding: 0.6rem;"
+                >${escapeHtml(evidence.resumo || '')}</textarea>
+
+              </div>
+
+              <!-- Bloco 2: Conteúdo Extraído OCR / Web Scraping (50% da altura) -->
+              <div class="extracted-text-container" style="flex: 1; min-height: 0; background-color: #fafafa; border-radius: var(--radius-md); padding: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden;">
+                
+                <div class="extracted-text-header" style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; flex-shrink: 0;">
+                  <i data-lucide="file-digit" style="width: 16px; height: 16px; color: var(--text-secondary);"></i>
+                  <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; color: var(--text-secondary);">Conteúdo Extraído (OCR / Web Scraping)</span>
+                </div>
+
+                <div 
+                  class="extracted-text-box" 
+                  style="flex: 1; min-height: 0; overflow-y: auto; line-height: 1.5; font-size: 0.85rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff; white-space: pre-wrap;"
+                >
+                  ${escapeHtml(evidence.textoExtraido || 'Nenhum conteúdo extraído.')}
+                </div>
+
+              </div>
+
+            </div>
+
           </div>
         </div>
 
-        <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.5rem;">
-          <a href="#" class="btn btn-secondary" id="btn-download-original" style="width: 100%; text-decoration: none;">
-            <i data-lucide="download" style="width: 15px; height: 15px;"></i>
-            Baixar Arquivo
-          </a>
-          <button class="btn btn-secondary" id="btn-preview-original" style="width: 100%;">
-            <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
-            Visualizar Original
+        <!-- Footer da Modal (Fixo na parte inferior) -->
+        <div class="modal-footer" style="flex-shrink: 0; display: flex; align-items: center; padding: 1rem 1.5rem; border-top: 1px solid var(--border-color);">
+          <button class="modal-close" id="details-delete-btn" style="background-color: #ff4757; color: white; border: none; border-radius: var(--radius-sm); padding: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; transition: background-color 0.2s; margin-right: auto;" title="Excluir evidência">
+            <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
           </button>
+            
+          <button class="btn btn-secondary" id="details-close-bottom-btn" style="padding-left: 1.5rem; padding-right: 1.5rem;">Cancelar</button>
+          <button class="btn btn-primary" id="details-save-btn" style="padding-left: 1.5rem; padding-right: 1.5rem; margin-left: 0.5rem;">Salvar alterações</button>
         </div>
 
       </div>
-
-      <!-- Right Panel: Resumo IA e OCR Divididos em 50%/50% -->
-      <div style="flex: 1.2; min-height: 0; height: 100%; display: flex; flex-direction: column; gap: 1rem; overflow: hidden;">
-        
-        <!-- Bloco 1: Resumo da IA (50% da altura) -->
-        <div style="flex: 1; min-height: 0; background-color: #fafafa; border-radius: var(--radius-md); padding: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden;">
-          
-          <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--accent); margin-bottom: 0.5rem; flex-shrink: 0;">
-            <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
-            <strong style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Resumo da Inteligência Artificial</strong>
-          </div>
-
-          <!-- Modo Leitura (Renderiza HTML/Negritos e Parágrafos com Scroll Isolado) -->
-          <div id="resumo-display-container" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">
-            <div 
-              class="form-textarea-view" 
-              style="flex: 1; min-height: 0; overflow-y: auto; line-height: 1.6; font-size: 0.9rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff;"
-            >
-              ${(evidence.resumo || 'Nenhum resumo gerado.').replace(/\n/g, '<br>')}
-            </div>
-          </div>
-
-          <!-- Modo Edição (Oculto por padrão para uso em edição) -->
-          <textarea 
-            id="detail-resumo-input" 
-            class="form-textarea" 
-            style="display: none; width: 100%; flex: 1; min-height: 0; line-height: 1.5; font-size: 0.9rem; color: var(--text-secondary); border-color: var(--border-color); resize: none; padding: 0.6rem;"
-          >${evidence.resumo || ''}</textarea>
-
-        </div>
-
-        <!-- Bloco 2: Conteúdo Extraído OCR (50% da altura) -->
-        <div class="extracted-text-container" style="flex: 1; min-height: 0; background-color: #fafafa; border-radius: var(--radius-md); padding: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden;">
-          
-          <div class="extracted-text-header" style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; flex-shrink: 0;">
-            <i data-lucide="file-digit" style="width: 16px; height: 16px; color: var(--text-secondary);"></i>
-            <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; color: var(--text-secondary);">Conteúdo Textual Extraído (Simulação OCR)</span>
-          </div>
-
-          <div 
-            class="extracted-text-box" 
-            style="flex: 1; min-height: 0; overflow-y: auto; line-height: 1.5; font-size: 0.85rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff; white-space: pre-wrap;"
-          >
-            ${evidence.textoExtraido || 'Nenhum texto extraído do arquivo.'}
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Footer da Modal (Fixo na parte inferior) -->
-  <div class="modal-footer" style="flex-shrink: 0; display: flex; align-items: center; padding: 1rem 1.5rem; border-top: 1px solid var(--border-color);">
-    <button class="modal-close" id="details-delete-btn" style="background-color: #ff4757; color: white; border: none; border-radius: var(--radius-sm); padding: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; transition: background-color 0.2s; margin-right: auto;" title="Excluir evidência">
-      <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
-    </button>
-      
-    <button class="btn btn-secondary" id="details-close-bottom-btn" style="padding-left: 1.5rem; padding-right: 1.5rem;">Cancelar</button>
-    <button class="btn btn-primary" id="details-save-btn" style="padding-left: 1.5rem; padding-right: 1.5rem; margin-left: 0.5rem;">Salvar alterações</button>
-  </div>
-
-</div>
     `;
 
     const closeBtn = overlay.querySelector('#details-close-btn');
@@ -210,85 +210,82 @@ window.CerneApp.EvidenceDetails = {
     const saveBtn = overlay.querySelector('#details-save-btn');
     const titleInput = overlay.querySelector('#detail-title-input');
     const eventoInput = overlay.querySelector('#detail-evento-input');
-    const categorySelect = overlay.querySelector('#detail-categoria-select');
-    const responsavelInput = overlay.querySelector('#detail-responsavel-input');
     const dataInput = overlay.querySelector('#detail-data-input');
     const resumoInput = overlay.querySelector('#detail-resumo-input');
 
     // Garantir que carregamos um Array (lidando com retrocompatibilidade)
-let selectedCategories = Array.isArray(evidence.categorias) 
-  ? [...evidence.categorias] 
-  : (evidence.categoria ? [evidence.categoria] : []);
+    let selectedCategories = Array.isArray(evidence.categorias) 
+      ? [...evidence.categorias] 
+      : (evidence.categoria ? [evidence.categoria] : []);
 
-// Função de renderização dinâmica das badges de categoria
-function renderCategoriesWidget() {
-  const displayContainer = overlay.querySelector('#detail-selected-categories-display');
-  const selectElement = overlay.querySelector('#detail-add-category-select');
-  if (!displayContainer || !selectElement) return;
+    // Função de renderização dinâmica das badges de categoria
+    function renderCategoriesWidget() {
+      const displayContainer = overlay.querySelector('#detail-selected-categories-display');
+      const selectElement = overlay.querySelector('#detail-add-category-select');
+      if (!displayContainer || !selectElement) return;
 
-  displayContainer.innerHTML = '';
-  if (selectedCategories.length === 0) {
-    displayContainer.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-tertiary); font-style: italic;">Nenhuma categoria selecionada</span>';
-  } else {
-    selectedCategories.forEach(cat => {
-  const customStyle = window.getCategoryStyle ? window.getCategoryStyle(cat) : '';
-  const categoryClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
+      displayContainer.innerHTML = '';
+      if (selectedCategories.length === 0) {
+        displayContainer.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-tertiary); font-style: italic;">Nenhuma categoria selecionada</span>';
+      } else {
+        selectedCategories.forEach(cat => {
+          const customStyle = window.getCategoryStyle ? window.getCategoryStyle(cat) : '';
+          const catClass = `badge-${cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
 
-  const badge = document.createElement('span');
-  badge.className = `badge ${categoryClass}`;
-  if (customStyle) {
-    badge.setAttribute('style', customStyle); // Aplica a cor exata da tabela
-  }
-  badge.style.display = 'inline-flex';
-  badge.style.alignItems = 'center';
-  badge.style.gap = '0.35rem';
-  badge.style.padding = '0.25rem 0.5rem';
+          const badge = document.createElement('span');
+          badge.className = `badge ${catClass}`;
+          if (customStyle) {
+            badge.setAttribute('style', customStyle);
+          }
+          badge.style.display = 'inline-flex';
+          badge.style.alignItems = 'center';
+          badge.style.gap = '0.35rem';
+          badge.style.padding = '0.25rem 0.5rem';
 
-  badge.innerHTML = `
-    <span>${escapeHtml(cat)}</span>
-    <button type="button" class="tag-badge-remove" style="background:none; border:none; cursor:pointer; font-size: 0.9rem;" title="Remover categoria">&times;</button>
-  `;
+          badge.innerHTML = `
+            <span>${escapeHtml(cat)}</span>
+            <button type="button" class="tag-badge-remove" style="background:none; border:none; cursor:pointer; font-size: 0.9rem;" title="Remover categoria">&times;</button>
+          `;
 
-  badge.querySelector('.tag-badge-remove').addEventListener('click', (e) => {
-    e.preventDefault();
-    selectedCategories = selectedCategories.filter(c => c !== cat);
+          badge.querySelector('.tag-badge-remove').addEventListener('click', (e) => {
+            e.preventDefault();
+            selectedCategories = selectedCategories.filter(c => c !== cat);
+            renderCategoriesWidget();
+          });
+
+          displayContainer.appendChild(badge);
+        });
+      }
+
+      selectElement.innerHTML = '';
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = '';
+      defaultOpt.textContent = 'Adicionar categoria...';
+      defaultOpt.selected = true;
+      selectElement.appendChild(defaultOpt);
+
+      const categoriesArray = Array.isArray(categories) ? categories : [];
+      const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
+
+      availableCategories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        selectElement.appendChild(opt);
+      });
+
+      selectElement.disabled = availableCategories.length === 0;
+    }
+
     renderCategoriesWidget();
-  });
 
-  displayContainer.appendChild(badge);
-});
-  }
-
-  selectElement.innerHTML = '';
-  const defaultOpt = document.createElement('option');
-  defaultOpt.value = '';
-  defaultOpt.textContent = 'Adicionar categoria...';
-  defaultOpt.selected = true;
-  selectElement.appendChild(defaultOpt);
-
-  const categoriesArray = Array.isArray(categories) ? categories : [];
-  const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
-
-  availableCategories.forEach(cat => {
-    const opt = document.createElement('option');
-    opt.value = cat;
-    opt.textContent = cat;
-    selectElement.appendChild(opt);
-  });
-
-  selectElement.disabled = availableCategories.length === 0;
-}
-
-// Inicializa e adiciona o listener
-renderCategoriesWidget();
-
-overlay.querySelector('#detail-add-category-select').addEventListener('change', (e) => {
-  const val = e.target.value;
-  if (val && !selectedCategories.includes(val)) {
-    selectedCategories.push(val);
-    renderCategoriesWidget();
-  }
-});
+    overlay.querySelector('#detail-add-category-select').addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val && !selectedCategories.includes(val)) {
+        selectedCategories.push(val);
+        renderCategoriesWidget();
+      }
+    });
 
     let selectedTags = [...(evidence.tags || [])];
 
@@ -343,7 +340,6 @@ overlay.querySelector('#detail-add-category-select').addEventListener('change', 
       }
     }
 
-    // Initialize tags widget immediately
     renderTagsWidget();
 
     overlay.querySelector('#detail-add-tag-select').addEventListener('change', (e) => {
@@ -357,39 +353,34 @@ overlay.querySelector('#detail-add-category-select').addEventListener('change', 
     });
 
     // Preenchimento dinâmico dos Responsáveis/Usuários na Edição
-(async () => {
-  const selectResponsavel = overlay.querySelector('#detail-responsavel-input');
-  if (!selectResponsavel) return;
+    (async () => {
+      const selectResponsavel = overlay.querySelector('#detail-responsavel-input');
+      if (!selectResponsavel) return;
 
-  try {
-    // Busca os responsáveis/usuários cadastrados no sistema
-    const listaResponsaveis = await window.CerneApp.Api.fetchResponsaveis();
-    const responsavelAtual = evidence.responsavel || '';
+      try {
+        const listaResponsaveis = await window.CerneApp.Api.fetchResponsaveis();
+        const responsavelAtual = evidence.responsavel || '';
 
-    selectResponsavel.innerHTML = '';
+        selectResponsavel.innerHTML = '';
 
-    // Se a evidência atual tiver um responsável que não está na lista oficial,
-    // nós o mantemos temporariamente como opção para não perder o dado antigo
-    if (responsavelAtual && !listaResponsaveis.includes(responsavelAtual)) {
-      listaResponsaveis.unshift(responsavelAtual);
-    }
+        if (responsavelAtual && !listaResponsaveis.includes(responsavelAtual)) {
+          listaResponsaveis.unshift(responsavelAtual);
+        }
 
-    // Popula o <select>
-    listaResponsaveis.forEach(nome => {
-      const option = document.createElement('option');
-      option.value = nome;
-      option.textContent = nome;
-      if (nome === responsavelAtual) {
-        option.selected = true;
+        listaResponsaveis.forEach(nome => {
+          const option = document.createElement('option');
+          option.value = nome;
+          option.textContent = nome;
+          if (nome === responsavelAtual) {
+            option.selected = true;
+          }
+          selectResponsavel.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Erro ao carregar lista de responsáveis na edição:', error);
+        selectResponsavel.innerHTML = `<option value="${escapeHtml(evidence.responsavel || 'Equipe CEI')}" selected>${escapeHtml(evidence.responsavel || 'Equipe CEI')}</option>`;
       }
-      selectResponsavel.appendChild(option);
-    });
-  } catch (error) {
-    console.error('Erro ao carregar lista de responsáveis na edição:', error);
-    // Fallback básico caso a API falhe
-    selectResponsavel.innerHTML = `<option value="${escapeHtml(evidence.responsavel || 'Equipe CEI')}" selected>${escapeHtml(evidence.responsavel || 'Equipe CEI')}</option>`;
-  }
-})();
+    })();
 
     let isSaving = false;
 
@@ -439,29 +430,27 @@ overlay.querySelector('#detail-add-category-select').addEventListener('change', 
 
       const dataDigitada = dataInput.value.trim() || new Date().toLocaleDateString('pt-BR');
 
-// Proteção caso o utilitário CerneApp.Utils não esteja carregado na página
-if (window.CerneApp.Utils?.isFutureDate?.(dataDigitada)) {
-  const confirmFuture = confirm(
-    'A data informada é uma data futura.\n\nTem certeza de que deseja salvar a evidência com esta data?'
-  );
-  if (!confirmFuture) {
-    return; // Interrompe o salvamento se o usuário clicar em "Cancelar"
-  }
-}
+      if (window.CerneApp.Utils?.isFutureDate?.(dataDigitada)) {
+        const confirmFuture = confirm(
+          'A data informada é uma data futura.\n\nTem certeza de que deseja salvar a evidência com esta data?'
+        );
+        if (!confirmFuture) {
+          return;
+        }
+      }
 
-      // Garante que enviamos a lista completa de categorias
-const updatedMetadata = {
-  titulo: titleInput.value.trim() || evidence.nome,
-  evento: eventoInput.value.trim() || 'Sem Evento',
-  // Mantemos 'categorias' como a lista principal
-  categorias: selectedCategories,
-  // Mantemos 'categoria' apenas como fallback/retrocompatibilidade
-  categoria: selectedCategories.length > 0 ? selectedCategories[0] : 'Geral',
-  responsavel: responsavelInput.value.trim() || 'Não especificado',
-  data: dataDigitada,
-  resumo: resumoInput.value.trim() || 'Sem resumo disponível.',
-  tags: selectedTags
-};
+      const responsavelInput = overlay.querySelector('#detail-responsavel-input');
+
+      const updatedMetadata = {
+        titulo: titleInput.value.trim() || evidence.nome,
+        evento: eventoInput.value.trim() || 'Sem Evento',
+        categorias: selectedCategories,
+        categoria: selectedCategories.length > 0 ? selectedCategories[0] : 'Geral',
+        responsavel: responsavelInput ? responsavelInput.value.trim() : (evidence.responsavel || 'Não especificado'),
+        data: dataDigitada,
+        resumo: resumoInput.value.trim() || 'Sem resumo disponível.',
+        tags: selectedTags
+      };
 
       setSavingState(true);
 
@@ -479,42 +468,48 @@ const updatedMetadata = {
       }
     });
 
-    overlay.querySelector('#btn-download-original').addEventListener('click', (e) => {
-      e.preventDefault();
-      if (evidence.downloadUrl) {
-        window.open(evidence.downloadUrl, '_blank');
-      }
-    });
-
-    overlay.querySelector('#btn-preview-original').addEventListener('click', () => {
-      window.open(`/api/preview/${encodeURIComponent(evidence.id)}`, '_blank');
-    });
-
-  const deleteBtn = overlay.querySelector('#details-delete-btn');
-  deleteBtn.addEventListener('click', async () => {
-    const confirmDelete = confirm(`Tem certeza que deseja excluir a evidência "${titleText}"?\n\nEsta ação não pode ser desfeita.`);
-
-    if (!confirmDelete) return;
-
-    // 💡 Salva o conteúdo original do botão antes de alterar para o loader
-    const originalContent = deleteBtn.innerHTML;
-
-    deleteBtn.disabled = true;
-    deleteBtn.innerHTML = '<i data-lucide="loader" style="width: 20px; height: 20px; animation: spin 1s linear infinite;"></i>';
-
-    try {
-      await window.CerneApp.Api.deleteEvidence(evidence.id);
-      alert('Evidência excluída com sucesso.');
-      doClose();
-      if (typeof onDelete === 'function') {
-        onDelete(evidence.id);
-      }
-    } catch (error) {
-      alert(`Não foi possível excluir a evidência: ${error.message}`);
-      deleteBtn.disabled = false;
-      deleteBtn.innerHTML = originalContent; // Agora a variável existe!
+    // Eventos de clique condicionados aos elementos de arquivo físico (se existirem na DOM)
+    const downloadBtn = overlay.querySelector('#btn-download-original');
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (evidence.downloadUrl) {
+          window.open(evidence.downloadUrl, '_blank');
+        }
+      });
     }
-  });
+
+    const previewBtn = overlay.querySelector('#btn-preview-original');
+    if (previewBtn) {
+      previewBtn.addEventListener('click', () => {
+        window.open(`/api/preview/${encodeURIComponent(evidence.id)}`, '_blank');
+      });
+    }
+
+    const deleteBtn = overlay.querySelector('#details-delete-btn');
+    deleteBtn.addEventListener('click', async () => {
+      const confirmDelete = confirm(`Tem certeza que deseja excluir a evidência "${titleText}"?\n\nEsta ação não pode ser desfeita.`);
+
+      if (!confirmDelete) return;
+
+      const originalContent = deleteBtn.innerHTML;
+
+      deleteBtn.disabled = true;
+      deleteBtn.innerHTML = '<i data-lucide="loader" style="width: 20px; height: 20px; animation: spin 1s linear infinite;"></i>';
+
+      try {
+        await window.CerneApp.Api.deleteEvidence(evidence.id);
+        alert('Evidência excluída com sucesso.');
+        doClose();
+        if (typeof onDelete === 'function') {
+          onDelete(evidence.id);
+        }
+      } catch (error) {
+        alert(`Não foi possível excluir a evidência: ${error.message}`);
+        deleteBtn.disabled = false;
+        deleteBtn.innerHTML = originalContent;
+      }
+    });
 
     return overlay;
   }
