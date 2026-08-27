@@ -37,6 +37,14 @@ async deleteUserByAdmin(userId) {
   });
 },
 
+// Adicione dentro de window.CerneApp.Api
+async updateUserByAdmin(userId, userData) {
+  return this.request(`/api/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(userData)
+  });
+},
+
 // Métodos de administração de usuários
   async fetchAllUsers() {
     return this.request('/api/admin/users');

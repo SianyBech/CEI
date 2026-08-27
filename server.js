@@ -790,6 +790,40 @@ app.delete('/api/admin/users/:id', requirePermission('settings'), async (req, re
   }
 });
 
+// Adicione em server.js logo após a rota DELETE de usuários
+app.patch('/api/admin/users/:id', requirePermission('settings'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nome, cargo } = req.body;
+
+    if (!nome || !cargo) {
+      return res.status(400).json({ error: 'Nome e cargo são obrigatórios.' });
+    }
+
+    // 1. Atualiza no PostgreSQL
+    const result = await dbClient.run(`
+      UPDATE public.usuarios 
+      SET "nome" = $1, "cargo" = $2
+      WHERE "id" = $3
+    `, [nome, cargo, id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Membro não encontrado.' });
+    }
+
+    // 2. Atualiza os metadados silenciosamente no Supabase Auth
+    const client = getSupabaseClient();
+    if (client) {
+      await client.auth.admin.updateUserById(id, { user_metadata: { nome, cargo } }).catch(() => {});
+    }
+
+    return res.json({ success: true, message: 'Dados atualizados com sucesso.' });
+  } catch (error) {
+    console.error('[ADMIN] Erro ao atualizar membro:', error);
+    return res.status(500).json({ error: 'Falha ao atualizar o membro.' });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body || {};

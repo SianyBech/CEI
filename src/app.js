@@ -644,7 +644,13 @@ function handleClearFilters() {
   renderList();
 }
 
+let isSidebarEventsSetup = false;
+
 function setupSidebarEvents() {
+
+  if (isSidebarEventsSetup) return;
+  isSidebarEventsSetup = true;
+  
   // Delegação de eventos: escuta o clique no nível do documento
   document.addEventListener('click', (event) => {
     // 1. Verifica se o clique foi em um botão de fechar o card da sidebar

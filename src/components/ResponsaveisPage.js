@@ -106,11 +106,19 @@
               </div>
             </div>
 
-            ${isAdmin ? `
-            <button type="button" class="btn-delete-member" data-id="${u.id}" data-nome="${u.nome}" style="background: none; border: none; cursor: pointer; color: var(--danger, #ff4757); padding: 0.4rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s;" title="Excluir membro">
-              <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
-            </button>
-            ` : ''}
+${isAdmin ? `
+  <div style="display: flex; gap: 0.5rem;">
+    <!-- Botão de Editar -->
+    <button type="button" class="btn-edit-member" data-id="${u.id}" data-nome="${u.nome}" data-cargo="${u.cargo || ''}" style="background: none; border: none; cursor: pointer; color: var(--primary, #0066cc); padding: 0.4rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s;" title="Editar membro">
+      <i data-lucide="edit" style="width: 18px; height: 18px;"></i>
+    </button>
+
+    <!-- Botão de Excluir original -->
+    <button type="button" class="btn-delete-member" data-id="${u.id}" data-nome="${u.nome}" style="background: none; border: none; cursor: pointer; color: var(--danger, #ff4757); padding: 0.4rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s;" title="Excluir membro">
+      <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
+    </button>
+  </div>
+` : ''}
           `;
 
           // Handler de exclusão do membro
