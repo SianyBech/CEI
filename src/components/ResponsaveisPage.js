@@ -70,7 +70,7 @@
     backdrop.querySelector('#resp-close-bottom-btn').addEventListener('click', closeModal);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
 
-// Busca e renderiza a lista de usuários
+    // Busca e renderiza a lista de usuários
     async function loadMembersList() {
       const modalBody = backdrop.querySelector('#resp-modal-body');
       try {
@@ -106,44 +106,49 @@
               </div>
             </div>
 
-${isAdmin ? `
-  <div style="display: flex; gap: 0.5rem;">
-    <!-- Botão de Editar -->
-    <button type="button" class="btn-edit-member" data-id="${u.id}" data-nome="${u.nome}" data-cargo="${u.cargo || ''}" style="background: none; border: none; cursor: pointer; color: var(--primary, #0066cc); padding: 0.4rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s;" title="Editar membro">
-      <i data-lucide="edit" style="width: 18px; height: 18px;"></i>
-    </button>
-
-    <!-- Botão de Excluir original -->
-    <button type="button" class="btn-delete-member" data-id="${u.id}" data-nome="${u.nome}" style="background: none; border: none; cursor: pointer; color: var(--danger, #ff4757); padding: 0.4rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s;" title="Excluir membro">
-      <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
-    </button>
-  </div>
-` : ''}
+            ${isAdmin ? `
+            <div style="display: flex; gap: 0.5rem;">
+              <button type="button" class="btn-edit-member" data-id="${u.id}" style="background: none; border: none; cursor: pointer; color: var(--primary, #0066cc); padding: 0.4rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s;" title="Editar membro">
+                <i data-lucide="edit" style="width: 18px; height: 18px;"></i>
+              </button>
+              <button type="button" class="btn-delete-member" data-id="${u.id}" style="background: none; border: none; cursor: pointer; color: var(--danger, #ff4757); padding: 0.4rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s;" title="Excluir membro">
+                <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
+              </button>
+            </div>
+            ` : ''}
           `;
 
-          // Handler de exclusão do membro
-         if (isAdmin) {
-  const deleteBtn = itemRow.querySelector('.btn-delete-member');
-  if (deleteBtn) {
-    deleteBtn.addEventListener('click', async () => {
-      const confirmDelete = confirm(`Tem certeza de que deseja remover o membro "${u.nome}" do sistema?\n\nEsta ação não pode ser desfeita.`);
-      if (!confirmDelete) return;
+          // Handlers de exclusão e edição
+          if (isAdmin) {
+            // Edição
+            const editBtn = itemRow.querySelector('.btn-edit-member');
+            if (editBtn) {
+              editBtn.addEventListener('click', () => {
+                openEditUserSubmodal(u, async () => {
+                  await loadMembersList(); // Recarrega a lista sem F5
+                });
+              });
+            }
 
-      deleteBtn.disabled = true;
-      
-      try {
-        // Chamada à API
-        await window.CerneApp.Api.deleteUserByAdmin(u.id);
-        
-        // Recarrega a lista diretamente do banco para atualizar a tela sem precisar de F5
-        await loadMembersList();
-      } catch (err) {
-        alert(`Não foi possível excluir o membro: ${err.message}`);
-        deleteBtn.disabled = false;
-      }
-    });
-  }
-}
+            // Exclusão
+            const deleteBtn = itemRow.querySelector('.btn-delete-member');
+            if (deleteBtn) {
+              deleteBtn.addEventListener('click', async () => {
+                const confirmDelete = confirm(`Tem certeza de que deseja remover o membro "${u.nome}" do sistema?\n\nEsta ação não pode ser desfeita.`);
+                if (!confirmDelete) return;
+
+                deleteBtn.disabled = true;
+                
+                try {
+                  await window.CerneApp.Api.deleteUserByAdmin(u.id);
+                  await loadMembersList();
+                } catch (err) {
+                  alert(`Não foi possível excluir o membro: ${err.message}`);
+                  deleteBtn.disabled = false;
+                }
+              });
+            }
+          }
 
           listContainer.appendChild(itemRow);
         });
@@ -175,7 +180,9 @@ ${isAdmin ? `
     return backdrop;
   }
 
-  // Modal secundária para digitar os dados do novo membro
+  // ==========================================
+  // MODAL DE CADASTRO
+  // ==========================================
   function openCreateUserSubmodal(onSuccess) {
     const subBackdrop = document.createElement('div');
     subBackdrop.className = 'modal-backdrop';
@@ -196,22 +203,18 @@ ${isAdmin ? `
             <label style="font-size: 0.8rem; font-weight: 600;">Nome Completo</label>
             <input type="text" id="new-user-nome" class="form-input" style="width: 100%; padding: 0.4rem;" placeholder="Ex: Maria Oliveira" />
           </div>
-
           <div>
             <label style="font-size: 0.8rem; font-weight: 600;">E-mail Institucional</label>
             <input type="email" id="new-user-email" class="form-input" style="width: 100%; padding: 0.4rem;" placeholder="maria@ufrgs.br" />
           </div>
-
           <div>
             <label style="font-size: 0.8rem; font-weight: 600;">Cargo / Função</label>
             <input type="text" id="new-user-cargo" class="form-input" style="width: 100%; padding: 0.4rem;" placeholder="Ex: Bolsista CERNE" />
           </div>
-
           <div>
             <label style="font-size: 0.8rem; font-weight: 600;">Senha Temporária</label>
             <input type="password" id="new-user-password" class="form-input" style="width: 100%; padding: 0.4rem;" placeholder="Mínimo 6 caracteres" />
           </div>
-
           <div>
             <label style="font-size: 0.8rem; font-weight: 600;">Nível de Acesso</label>
             <select id="new-user-role" class="form-select" style="width: 100%; padding: 0.4rem;">
@@ -231,7 +234,6 @@ ${isAdmin ? `
     document.body.appendChild(subBackdrop);
 
     subBackdrop.querySelector('#cancel-submodal-btn').addEventListener('click', () => subBackdrop.remove());
-
     subBackdrop.querySelector('#save-submodal-btn').addEventListener('click', async () => {
       const nome = subBackdrop.querySelector('#new-user-nome').value.trim();
       const email = subBackdrop.querySelector('#new-user-email').value.trim();
@@ -251,6 +253,73 @@ ${isAdmin ? `
         if (typeof onSuccess === 'function') onSuccess();
       } catch (err) {
         alert(`Erro ao cadastrar: ${err.message}`);
+      }
+    });
+  }
+
+  // ==========================================
+  // MODAL DE EDIÇÃO
+  // ==========================================
+  function openEditUserSubmodal(user, onSuccess) {
+    const subBackdrop = document.createElement('div');
+    subBackdrop.className = 'modal-backdrop';
+    subBackdrop.style.cssText = `
+      position: fixed !important; top: 0 !important; left: 0 !important;
+      width: 100vw !important; height: 100vh !important;
+      background-color: rgba(0, 0, 0, 0.6) !important;
+      display: flex !important; align-items: center !important; justify-content: center !important;
+      z-index: 100000 !important;
+    `;
+
+    subBackdrop.innerHTML = `
+      <div class="modal-content" style="max-width: 480px; width: 90%; background-color: var(--bg-primary); border-radius: 12px; padding: 1.5rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+        <h3 style="margin-top: 0; font-size: 1.05rem; font-weight: 600;">Editar Membro</h3>
+        <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Você está editando: <strong>${user.email}</strong></p>
+        
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600;">Nome Completo</label>
+            <input type="text" id="edit-user-nome" class="form-input" style="width: 100%; padding: 0.4rem;" value="${user.nome || ''}" />
+          </div>
+
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600;">Cargo / Função</label>
+            <input type="text" id="edit-user-cargo" class="form-input" style="width: 100%; padding: 0.4rem;" value="${user.cargo || ''}" />
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
+          <button class="btn btn-secondary" id="cancel-edit-btn">Cancelar</button>
+          <button class="btn btn-primary" id="save-edit-btn">Salvar Alterações</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(subBackdrop);
+
+    subBackdrop.querySelector('#cancel-edit-btn').addEventListener('click', () => subBackdrop.remove());
+
+    subBackdrop.querySelector('#save-edit-btn').addEventListener('click', async () => {
+      const nome = subBackdrop.querySelector('#edit-user-nome').value.trim();
+      const cargo = subBackdrop.querySelector('#edit-user-cargo').value.trim();
+
+      if (!nome) {
+        alert('O nome não pode ficar em branco.');
+        return;
+      }
+
+      const saveBtn = subBackdrop.querySelector('#save-edit-btn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Salvando...';
+
+      try {
+        await window.CerneApp.Api.updateUserByAdmin(user.id, { nome, cargo });
+        subBackdrop.remove();
+        if (typeof onSuccess === 'function') onSuccess();
+      } catch (err) {
+        alert(`Erro ao atualizar: ${err.message}`);
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salvar Alterações';
       }
     });
   }
