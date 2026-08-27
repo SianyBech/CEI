@@ -129,20 +129,23 @@ async fetchTags() {
   }
 },
 
-  // 🔹 NOVO MÉTODO: Busca e extrai os responsáveis cadastrados no sistema
   async fetchResponsaveis() {
-    try {
-      const evidences = await this.fetchEvidences();
-      if (Array.isArray(evidences) && evidences.length > 0) {
-        const nomesUnicos = [...new Set(evidences.map(e => e.responsavel).filter(Boolean))].sort();
-        if (nomesUnicos.length > 0) return nomesUnicos;
-      }
-      return ['Siany', 'Eduardo', 'Cláudia', 'André', 'Equipe CEI'];
-    } catch (error) {
-      console.error('[API] Erro em fetchResponsaveis:', error);
-      return ['Siany', 'Eduardo', 'Cláudia', 'André', 'Equipe CEI'];
+  try {
+    // Busca a lista real de usuários cadastrados no banco
+    const users = await this.fetchAllUsers();
+    
+    if (Array.isArray(users) && users.length > 0) {
+      // Extrai apenas os nomes, remove vazios e ordena alfabeticamente
+      const nomesUnicos = [...new Set(users.map(u => u.nome).filter(Boolean))].sort();
+      if (nomesUnicos.length > 0) return nomesUnicos;
     }
-  },
+    
+    return ['Equipe CEI']; // Fallback de segurança se o banco estiver vazio
+  } catch (error) {
+    console.error('[API] Erro em fetchResponsaveis:', error);
+    return ['Equipe CEI'];
+  }
+},
 
   uploadEvidence(file, onProgress) {
     return new Promise((resolve, reject) => {

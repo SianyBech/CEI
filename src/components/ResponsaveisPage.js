@@ -288,6 +288,14 @@
           </div>
         </div>
 
+        <div>
+  <label style="font-size: 0.8rem; font-weight: 600;">Nível de Acesso</label>
+  <select id="edit-user-role" class="form-select" style="width: 100%; padding: 0.4rem;">
+    <option value="membro" ${user.role !== 'admin' ? 'selected' : ''}>Membro da Equipe</option>
+    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Administrador</option>
+  </select>
+</div>
+
         <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
           <button class="btn btn-secondary" id="cancel-edit-btn">Cancelar</button>
           <button class="btn btn-primary" id="save-edit-btn">Salvar Alterações</button>
@@ -302,6 +310,7 @@
     subBackdrop.querySelector('#save-edit-btn').addEventListener('click', async () => {
       const nome = subBackdrop.querySelector('#edit-user-nome').value.trim();
       const cargo = subBackdrop.querySelector('#edit-user-cargo').value.trim();
+      const role = subBackdrop.querySelector('#edit-user-role').value; // <--- PEGA O VALOR
 
       if (!nome) {
         alert('O nome não pode ficar em branco.');
@@ -313,7 +322,7 @@
       saveBtn.textContent = 'Salvando...';
 
       try {
-        await window.CerneApp.Api.updateUserByAdmin(user.id, { nome, cargo });
+       await window.CerneApp.Api.updateUserByAdmin(user.id, { nome, cargo, role });
         subBackdrop.remove();
         if (typeof onSuccess === 'function') onSuccess();
       } catch (err) {

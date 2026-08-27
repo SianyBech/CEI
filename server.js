@@ -28,17 +28,21 @@ const rootPath = path.resolve(__dirname);
 const storageRoot = process.env.STORAGE_PATH ? path.resolve(process.env.STORAGE_PATH) : path.join(rootPath, 'storage');
 const tempDir = path.join(storageRoot, 'tmp');
 
-const RESPONSAVEIS = {
-    'sianybech21@gmail.com': 'Siany',
-    'lima.eduardo2001@gmail.com': 'Eduardo',
-    'cchristimann@inf.ufrgs.br': 'Cláudia',
-    'andre.zuliani@inf.ufrgs.br': 'André'
-};
 
 function getResponsavel(user) {
-    const email = user?.email?.toLowerCase();
+    if (!user) return 'Equipe CEI';
 
-    return RESPONSAVEIS[email] || email || 'Equipe CEI';
+    // 1. Tenta pegar o nome direto dos metadados da conta (cadastrado pelo admin)
+    if (user.user_metadata && user.user_metadata.nome) {
+        return user.user_metadata.nome;
+    }
+
+    // 2. Se por acaso não tiver nome (conta muito antiga), usa o pedaço antes do @ do e-mail
+    if (user.email) {
+        return user.email.split('@')[0];
+    }
+
+    return 'Equipe CEI';
 }
 
 fs.mkdirSync(tempDir, { recursive: true });
@@ -790,22 +794,22 @@ app.delete('/api/admin/users/:id', requirePermission('settings'), async (req, re
   }
 });
 
-// Adicione em server.js logo após a rota DELETE de usuários
+// No seu server.js, atualize a rota PATCH de usuários:
 app.patch('/api/admin/users/:id', requirePermission('settings'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { nome, cargo } = req.body;
+    const { nome, cargo, role } = req.body; // <--- ADICIONAMOS role AQUI
 
     if (!nome || !cargo) {
       return res.status(400).json({ error: 'Nome e cargo são obrigatórios.' });
     }
 
-    // 1. Atualiza no PostgreSQL
+    // 1. Atualiza no PostgreSQL incluindo a coluna role
     const result = await dbClient.run(`
       UPDATE public.usuarios 
-      SET "nome" = $1, "cargo" = $2
-      WHERE "id" = $3
-    `, [nome, cargo, id]);
+      SET "nome" = $1, "cargo" = $2, "role" = $3
+      WHERE "id" = $4
+    `, [nome, cargo, role || 'membro', id]);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Membro não encontrado.' });
