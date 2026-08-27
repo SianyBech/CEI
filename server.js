@@ -214,15 +214,25 @@ function sanitizeFileName(fileName) {
   return baseName.replace(/[^a-zA-Z0-9._-]/g, '_') || 'arquivo';
 }
 
-// Função para extrair texto de páginas da web
 async function extractTextFromLink(url) {
   try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Não foi possível acessar a página');
+    // Adicionamos um User-Agent de navegador para os sites não bloquearem o bot do CEI
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // Timeout de 8 segundos
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+
+    if (!response.ok) throw new Error(`Servidor respondeu com status ${response.status}`);
     
     const html = await response.text();
     
-    // Expressões regulares para limpar o HTML (remove scripts, estilos e tags HTML)
     const cleanText = html
       .replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, ' ')
       .replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, ' ')
@@ -230,11 +240,11 @@ async function extractTextFromLink(url) {
       .replace(/\s+/g, ' ')
       .trim();
       
-    // Retorna os primeiros 15000 caracteres para não sobrecarregar a IA
     return cleanText.substring(0, 15000); 
   } catch (error) {
     console.error('[SCRAPER] Erro ao extrair texto do link:', error.message);
-    return 'Conteúdo inacessível automaticamente.';
+    // Retorna um texto padrão em vez de quebrar a aplicação com 503
+    return 'Conteúdo da web indisponível para leitura automática, mas o link foi salvo com sucesso.';
   }
 }
 
@@ -1204,18 +1214,25 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
         console.log(`[UPLOAD] Iniciando processamento de Link: ${linkEnviado}`);
         tipo = 'link';
         
-        // 1. Extrai o texto da página usando o web scraping
         textoExtraido = await extractTextFromLink(linkEnviado);
         
-        // 2. Manda o texto raspado para a IA gerar o resumo e metadados
-        metadata = await resumirQualquerDocumento(textoExtraido, 'txt', dbCategories, dbTags);
+        try {
+          metadata = await resumirQualquerDocumento(textoExtraido, 'txt', dbCategories, dbTags);
+        } catch (aiErr) {
+          console.warn('[UPLOAD] IA falhou ao resumir o texto do link, usando fallback:', aiErr.message);
+          metadata = {
+            titulo: 'Página da Web (Link Externo)',
+            evento: 'Registro de Link',
+            resumo: 'Link institucional cadastrado via web.',
+            categoriasSugeridas: ['Gestão'],
+            tagsSugeridas: ['CERNE']
+          };
+        }
         
-        // 3. ATENÇÃO AQUI: Definimos o nome original limpo como sendo o próprio link 
-        // e garantimos que o storagePath seja NULL (já que link não vai pro Supabase Storage!)
         originalName = linkEnviado;
         tituloFinal = metadata.titulo && metadata.titulo.trim() !== '' ? metadata.titulo : 'Página da Web';
         eventoFinal = metadata.evento || 'Sem Evento';
-        storagePath = null; // IMPORTANTE: Links não geram arquivo no bucket!
+        storagePath = null;
         mimeType = 'text/html';
         fileSize = 0;
       }
