@@ -1199,9 +1199,26 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
 
     // 2. Validação: Exige obrigatoriamente um arquivo OU um link
     const linkEnviado = req.body.link ? req.body.link.trim() : null;
-    if (!req.file && !linkEnviado) {
-      return res.status(400).json({ error: 'Envie um arquivo ou cole um link válido.' });
-    }
+    
+      if (linkEnviado && !req.file) {
+        console.log(`[UPLOAD] Iniciando processamento de Link: ${linkEnviado}`);
+        tipo = 'link';
+        
+        // 1. Extrai o texto da página usando o web scraping
+        textoExtraido = await extractTextFromLink(linkEnviado);
+        
+        // 2. Manda o texto raspado para a IA gerar o resumo e metadados
+        metadata = await resumirQualquerDocumento(textoExtraido, 'txt', dbCategories, dbTags);
+        
+        // 3. ATENÇÃO AQUI: Definimos o nome original limpo como sendo o próprio link 
+        // e garantimos que o storagePath seja NULL (já que link não vai pro Supabase Storage!)
+        originalName = linkEnviado;
+        tituloFinal = metadata.titulo && metadata.titulo.trim() !== '' ? metadata.titulo : 'Página da Web';
+        eventoFinal = metadata.evento || 'Sem Evento';
+        storagePath = null; // IMPORTANTE: Links não geram arquivo no bucket!
+        mimeType = 'text/html';
+        fileSize = 0;
+      }
 
     try {
       // 3. Preparação das variáveis consolidadas (usadas por ambos os fluxos)
