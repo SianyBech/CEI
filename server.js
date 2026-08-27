@@ -1209,33 +1209,9 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
 
     // 2. Validação: Exige obrigatoriamente um arquivo OU um link
     const linkEnviado = req.body.link ? req.body.link.trim() : null;
-    
-      if (linkEnviado && !req.file) {
-        console.log(`[UPLOAD] Iniciando processamento de Link: ${linkEnviado}`);
-        tipo = 'link';
-        
-        textoExtraido = await extractTextFromLink(linkEnviado);
-        
-        try {
-          metadata = await resumirQualquerDocumento(textoExtraido, 'txt', dbCategories, dbTags);
-        } catch (aiErr) {
-          console.warn('[UPLOAD] IA falhou ao resumir o texto do link, usando fallback:', aiErr.message);
-          metadata = {
-            titulo: 'Página da Web (Link Externo)',
-            evento: 'Registro de Link',
-            resumo: 'Link institucional cadastrado via web.',
-            categoriasSugeridas: ['Gestão'],
-            tagsSugeridas: ['CERNE']
-          };
-        }
-        
-        originalName = linkEnviado;
-        tituloFinal = metadata.titulo && metadata.titulo.trim() !== '' ? metadata.titulo : 'Página da Web';
-        eventoFinal = metadata.evento || 'Sem Evento';
-        storagePath = null;
-        mimeType = 'text/html';
-        fileSize = 0;
-      }
+    if (!req.file && !linkEnviado) {
+      return res.status(400).json({ error: 'Envie um arquivo ou cole um link válido.' });
+    }
 
     try {
       // 3. Preparação das variáveis consolidadas (usadas por ambos os fluxos)
@@ -1262,7 +1238,7 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       let textoExtraido = '';
 
       // ==========================================
-      // FLUXO A: PROCESSAMENTO DE LINK
+      // FLUXO A: PROCESSAMENTO DE LINK (CORRIGIDO)
       // ==========================================
       if (linkEnviado && !req.file) {
         console.log(`[UPLOAD] Iniciando processamento de Link: ${linkEnviado}`);
@@ -1272,12 +1248,25 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
         // Extrai o texto da página usando a função de scraping
         textoExtraido = await extractTextFromLink(linkEnviado);
         
-        // Envia o texto raspado para o serviço de IA.
-        // DICA: Certifique-se de que o seu aiService possua uma função para lidar com texto puro.
-        metadata = await resumirQualquerDocumento(textoExtraido, 'txt', dbCategories, dbTags);
+        // Protege a chamada de IA com fallback caso ocorra instabilidade externa
+        try {
+          metadata = await resumirQualquerDocumento(textoExtraido, 'txt', dbCategories, dbTags);
+        } catch (aiErr) {
+          console.warn('[UPLOAD] IA falhou ao resumir o texto do link, usando fallback:', aiErr.message);
+          metadata = {
+            titulo: 'Página da Web (Link Externo)',
+            evento: 'Registro de Link',
+            resumo: 'Link institucional cadastrado via web.',
+            categoriasSugeridas: ['Gestão'],
+            tagsSugeridas: ['CERNE']
+          };
+        }
         
         tituloFinal = metadata.titulo && metadata.titulo.trim() !== '' ? metadata.titulo : 'Página Web Salva';
         eventoFinal = metadata.evento || 'Sem Evento';
+        storagePath = null; // Links não vão para o Supabase Storage
+        mimeType = 'text/html';
+        fileSize = 0;
       } 
       
       // ==========================================
@@ -1325,7 +1314,7 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       const rawTags = metadata.tagsSugeridas || metadata.tags || [];
       const tagsList = Array.isArray(rawTags) ? rawTags : [];
 
-      // 5. Query de inserção (Agora com 22 campos, inserindo o link)
+      // 5. Query de inserção no banco de dados
       const insertQuery = `
         INSERT INTO public.evidences (
           "titulo", "nome", "tipo", "data", "evento", 
@@ -1402,7 +1391,6 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
 
     } catch (error) {
       console.error('[UPLOAD] Falha no processamento:', error);
-      // Fallback de limpeza caso dê erro na extração de metadados do arquivo
       if (req.file && req.file.path) {
         await removeTemporaryFile(req.file.path).catch(() => {});
       }
