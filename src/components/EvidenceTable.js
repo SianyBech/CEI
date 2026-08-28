@@ -36,28 +36,42 @@ window.CerneApp.EvidenceTable = {
     }
 
     function formatResponsavelName(nomeCompleto, lista = []) {
-      if (!nomeCompleto) return 'Equipe CEI';
+  if (!nomeCompleto) return 'Equipe CEI';
 
-      const partes = nomeCompleto.trim().split(/\s+/);
-      const primeiroNome = partes[0];
+  const partes = nomeCompleto.trim().split(/\s+/);
+  const primeiroNome = partes[0];
 
-      if (partes.length === 1) return primeiroNome;
+  if (partes.length === 1) return primeiroNome;
 
-      // Verifica se há outra pessoa na lista com o mesmo primeiro nome
-      const temDuplicado = lista.some(outroNome => {
-        if (!outroNome || outroNome === nomeCompleto) return false;
-        const outroPrimeiro = outroNome.trim().split(/\s+/)[0];
-        return outroPrimeiro.toLowerCase() === primeiroNome.toLowerCase();
-      });
+  const nomeLower = nomeCompleto.trim().toLowerCase();
 
-      // Se houver duplicidade (ex: dois "Carlos"), exibe "Carlos Silva"
-      if (temDuplicado) {
-        const ultimoSobrenome = partes[partes.length - 1];
-        return `${primeiroNome} ${ultimoSobrenome}`;
-      }
+  // Verifica se existe OUTRA pessoa com o mesmo primeiro nome no sistema
+  const temDuplicado = lista.some(outroNome => {
+    if (!outroNome) return false;
+    const outroTrim = outroNome.trim();
+    const outroLower = outroTrim.toLowerCase();
 
-      return primeiroNome;
+    // Se for o mesmo nome ou uma variação de cadastro da mesma pessoa (ex: "Siany" vs "Siany Bech"), ignora
+    if (
+      outroLower === nomeLower ||
+      outroLower.startsWith(nomeLower) ||
+      nomeLower.startsWith(outroLower)
+    ) {
+      return false;
     }
+
+    const outroPrimeiro = outroTrim.split(/\s+/)[0];
+    return outroPrimeiro.toLowerCase() === primeiroNome.toLowerCase();
+  });
+
+  // Se realmente houver duas pessoas diferentes (ex: "Siany Silva" e "Siany Bech")
+  if (temDuplicado) {
+    const ultimoSobrenome = partes[partes.length - 1];
+    return `${primeiroNome} ${ultimoSobrenome}`;
+  }
+
+  return primeiroNome;
+}
 
     // Tratamento de Estado Vazio
     if (!evidences || evidences.length === 0) {

@@ -949,6 +949,8 @@ app.post('/api/auth/change-password', requirePermission('view'), async (req, res
   }
 });
 
+
+
 app.get('/api/auth/session', async (req, res) => {
   const authContext = await authenticateRequest(req, res);
   if (!authContext?.user) {
@@ -1003,46 +1005,69 @@ app.get('/api/settings', requirePermission('settings'), async (req, res, next) =
 // GET: Busca os dados do usuário autenticado no Supabase
 app.get('/api/user/profile', requirePermission('view'), async (req, res) => {
   try {
-    // req.user é preenchido pelo seu middleware requirePermission/attachAuthContext
     const userId = req.user?.id;
 
     if (!userId) {
       return res.status(401).json({ error: 'Usuário não autenticado.' });
     }
 
-    let user = await dbClient.one(
-      `SELECT "id", "nome", "email", "cargo", "role", "configuracoes" FROM public.usuarios WHERE "id" = $1`,
-      [userId]
-    );
+    let user = null;
 
-    // Fallback: Se por algum motivo o usuário não estiver na tabela public.usuarios, cria o registro inicial
-    if (!user) {
-      const email = req.user.email || '';
-      const nome = req.user.user_metadata?.nome || email.split('@')[0] || 'Usuário CEI';
-      const cargo = req.user.user_metadata?.cargo || 'Analista CEI';
-
-      await dbClient.run(
-        `INSERT INTO public.usuarios ("id", "email", "nome", "cargo") VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
-        [userId, email, nome, cargo]
-      );
-
-      user = await dbClient.one(
+    // 1. Tenta buscar o usuário no banco sem estourar exceção se ele não existir
+    try {
+      const result = await dbClient.query(
         `SELECT "id", "nome", "email", "cargo", "role", "configuracoes" FROM public.usuarios WHERE "id" = $1`,
         [userId]
       );
+      user = result.rows ? result.rows[0] : (Array.isArray(result) ? result[0] : result);
+    } catch (dbQueryErr) {
+      console.warn('[PROFILE] Tabela public.usuarios inacessível ou incompleta:', dbQueryErr.message);
     }
 
-    res.json({
-      id: user.id,
-      nome: user.nome,
-      email: user.email,
-      cargo: user.cargo || 'Analista CEI',
-      role: user.role || 'membro',
-      configuracoes: user.configuracoes || { defaultView: 'table', itemsPerPage: 10 }
+    // 2. Fallback: Se o usuário não existir no banco local, tenta cadastrar o registro inicial
+    if (!user) {
+      const email = req.user.email || '';
+      const nome = req.user.user_metadata?.nome || req.user.user_metadata?.full_name || email.split('@')[0] || 'Usuário CEI';
+      const cargo = req.user.user_metadata?.cargo || 'Analista CEI';
+
+      try {
+        await dbClient.query(
+          `INSERT INTO public.usuarios ("id", "email", "nome", "cargo") VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
+          [userId, email, nome, cargo]
+        );
+
+        const result = await dbClient.query(
+          `SELECT "id", "nome", "email", "cargo", "role", "configuracoes" FROM public.usuarios WHERE "id" = $1`,
+          [userId]
+        );
+        user = result.rows ? result.rows[0] : (Array.isArray(result) ? result[0] : result);
+      } catch (insertErr) {
+        console.warn('[PROFILE] Não foi possível inserir usuário local:', insertErr.message);
+      }
+    }
+
+    // 3. Resposta consolidada com valores padrão seguros
+    return res.json({
+      id: userId,
+      nome: user?.nome || req.user.user_metadata?.nome || req.user.email?.split('@')[0] || 'Usuário CEI',
+      email: user?.email || req.user.email || '',
+      cargo: user?.cargo || 'Analista CEI',
+      role: user?.role || req.user.role || 'membro',
+      configuracoes: user?.configuracoes || { defaultView: 'table', itemsPerPage: 8 }
     });
+
   } catch (error) {
-    console.error('[PROFILE] Erro ao buscar perfil:', error);
-    res.status(500).json({ error: 'Erro ao carregar perfil do usuário.' });
+    console.error('[PROFILE] Erro inesperado ao buscar perfil:', error);
+    
+    // Resposta de emergência: impede que o front-end receba 500 e trave a interface
+    return res.json({
+      id: req.user?.id || 'unknown',
+      nome: req.user?.email?.split('@')[0] || 'Usuário CEI',
+      email: req.user?.email || '',
+      cargo: 'Analista CEI',
+      role: 'membro',
+      configuracoes: { defaultView: 'table', itemsPerPage: 8 }
+    });
   }
 });
 

@@ -903,11 +903,11 @@ textarea:focus-visible,
   white-space: nowrap;
 }
 
-/* Coluna 1: Título da Evidência (Quebra suave para não empurrar as outras) */
+/* Coluna 1: Título da Evidência (Espaço prioritário e expansível) */
 .evidence-table td:nth-child(1) {
   white-space: normal;
   word-break: break-word;
-  max-width: 260px; /* Impede que títulos longos estourem a largura */
+  min-width: 260px;
   font-weight: 500;
 }
 
@@ -921,27 +921,30 @@ textarea:focus-visible,
   width: 90px;
 }
 
-/* Coluna 4: Evento */
+/* Coluna 4: Evento (Espaço garantido para descrições de evento) */
 .evidence-table td:nth-child(4) {
   white-space: normal;
   word-break: break-word;
-  max-width: 160px;
+  min-width: 200px;
 }
 
-/* Coluna 5: Categoria CERNE */
+/* Coluna 5: Categoria CERNE (Limitada para não esmagar a tabela) */
 .evidence-table td:nth-child(5) {
-  white-space: nowrap;
+  white-space: normal;
+  max-width: 220px;
+  width: 220px;
 }
 
 /* Coluna 6: Responsável */
 .evidence-table td:nth-child(6) {
   white-space: nowrap;
+  width: 120px;
 }
 
 /* Coluna 7: Tags */
 .evidence-table td:nth-child(7) {
   white-space: normal;
-  max-width: 180px;
+  max-width: 150px;
 }
 
 .evidence-table td:last-child,
