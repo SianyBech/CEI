@@ -925,14 +925,14 @@ textarea:focus-visible,
 .evidence-table td:nth-child(4) {
   white-space: normal;
   word-break: break-word;
-  min-width: 200px;
+  min-width: 160px;
 }
 
 /* Coluna 5: Categoria CERNE (Limitada para não esmagar a tabela) */
 .evidence-table td:nth-child(5) {
   white-space: normal;
-  max-width: 220px;
-  width: 220px;
+  max-width: 260px;
+  width: 260px;
 }
 
 /* Coluna 6: Responsável */
