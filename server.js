@@ -216,13 +216,13 @@ function sanitizeFileName(fileName) {
 
 async function extractTextFromLink(url) {
   try {
-    // Adicionamos um User-Agent de navegador para os sites não bloquearem o bot do CEI
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // Timeout de 8 segundos
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'pt-BR,pt;q=0.9'
       },
       signal: controller.signal
     });
@@ -232,7 +232,27 @@ async function extractTextFromLink(url) {
     if (!response.ok) throw new Error(`Servidor respondeu com status ${response.status}`);
     
     const html = await response.text();
-    
+
+    // 1. TENTA CAPTURAR A LEGENDA VIA META TAG (Ideal para Instagram, LinkedIn e Twitter/X)
+    const ogDescMatch = 
+      html.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:description["']/i) ||
+      html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i);
+
+    if (ogDescMatch && ogDescMatch[1]) {
+      const ogText = ogDescMatch[1]
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, '&')
+        .trim();
+
+      if (ogText.length > 30) {
+        console.log('[SCRAPER] Legenda capturada com sucesso via Meta Tag Open Graph!');
+        return ogText;
+      }
+    }
+
+    // 2. FALLBACK PADRÃO PARA PÁGINAS WEB TRADICIONAIS
     const cleanText = html
       .replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, ' ')
       .replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, ' ')
@@ -243,7 +263,6 @@ async function extractTextFromLink(url) {
     return cleanText.substring(0, 15000); 
   } catch (error) {
     console.error('[SCRAPER] Erro ao extrair texto do link:', error.message);
-    // Retorna um texto padrão em vez de quebrar a aplicação com 503
     return 'Conteúdo da web indisponível para leitura automática, mas o link foi salvo com sucesso.';
   }
 }
