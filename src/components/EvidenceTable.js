@@ -10,8 +10,8 @@ window.CerneApp.EvidenceTable = {
     this.currentPage = 1;
   },
 
-  // 💡 Adicionado o parâmetro customItemsPerPage
-  render(evidences, onViewDetailsClick, customItemsPerPage) {
+  // 💡 Adicionado 'listaResponsaveis' como parâmetro opcional no render
+  render(evidences, onViewDetailsClick, customItemsPerPage, listaResponsaveis = []) {
     // Se for passado um valor customizado via configurações, atualiza a propriedade do módulo
     if (customItemsPerPage && typeof customItemsPerPage === 'number') {
       this.itemsPerPage = customItemsPerPage;
@@ -19,6 +19,12 @@ window.CerneApp.EvidenceTable = {
 
     const container = document.createElement('div');
     container.className = 'table-container';
+
+    // 💡 Fallback inteligente: Se não receber a lista de responsáveis por parâmetro,
+    // extrai os nomes únicos das próprias evidências carregadas para evitar ReferenceError.
+    const listaFinalResponsaveis = Array.isArray(listaResponsaveis) && listaResponsaveis.length > 0
+      ? listaResponsaveis
+      : [...new Set((evidences || []).map(e => e.responsavel).filter(Boolean))];
 
     function escapeHtml(value) {
       return String(value || '')
@@ -29,29 +35,29 @@ window.CerneApp.EvidenceTable = {
         .replace(/'/g, '&#39;');
     }
 
-    function formatResponsavelName(nomeCompleto, listaResponsaveis = []) {
-  if (!nomeCompleto) return 'Equipe CEI';
+    function formatResponsavelName(nomeCompleto, lista = []) {
+      if (!nomeCompleto) return 'Equipe CEI';
 
-  const partes = nomeCompleto.trim().split(/\s+/);
-  const primeiroNome = partes[0];
+      const partes = nomeCompleto.trim().split(/\s+/);
+      const primeiroNome = partes[0];
 
-  if (partes.length === 1) return primeiroNome;
+      if (partes.length === 1) return primeiroNome;
 
-  // Verifica se há outra pessoa na lista com o mesmo primeiro nome
-  const temDuplicado = listaResponsaveis.some(outroNome => {
-    if (!outroNome || outroNome === nomeCompleto) return false;
-    const outroPrimeiro = outroNome.trim().split(/\s+/)[0];
-    return outroPrimeiro.toLowerCase() === primeiroNome.toLowerCase();
-  });
+      // Verifica se há outra pessoa na lista com o mesmo primeiro nome
+      const temDuplicado = lista.some(outroNome => {
+        if (!outroNome || outroNome === nomeCompleto) return false;
+        const outroPrimeiro = outroNome.trim().split(/\s+/)[0];
+        return outroPrimeiro.toLowerCase() === primeiroNome.toLowerCase();
+      });
 
-  // Se houver dois "Carlos", exibe "Carlos Silva"
-  if (temDuplicado) {
-    const ultimoSobrenome = partes[partes.length - 1];
-    return `${primeiroNome} ${ultimoSobrenome}`;
-  }
+      // Se houver duplicidade (ex: dois "Carlos"), exibe "Carlos Silva"
+      if (temDuplicado) {
+        const ultimoSobrenome = partes[partes.length - 1];
+        return `${primeiroNome} ${ultimoSobrenome}`;
+      }
 
-  return primeiroNome;
-}
+      return primeiroNome;
+    }
 
     // Tratamento de Estado Vazio
     if (!evidences || evidences.length === 0) {
@@ -101,6 +107,9 @@ window.CerneApp.EvidenceTable = {
       } else if (evidence.tipo === 'imagem') {
         iconName = 'image';
         iconClass = 'file-icon-imagem';
+      } else if (evidence.tipo === 'link') {
+        iconName = 'globe';
+        iconClass = 'file-icon-link';
       }
 
       // Gera HTML das tags
@@ -108,7 +117,8 @@ window.CerneApp.EvidenceTable = {
         .map(tag => `<span class="tag">${escapeHtml(tag)}</span>`)
         .join('');
 
-      const nomeFormatado = formatResponsavelName(evidence.responsavel, listaResponsaveis);
+      // 💡 Passa a lista protegida de responsáveis
+      const nomeFormatado = formatResponsavelName(evidence.responsavel, listaFinalResponsaveis);
 
       // Trata array de categorias ou string única
       const categoriesList = Array.isArray(evidence.categorias) && evidence.categorias.length > 0
@@ -184,37 +194,37 @@ window.CerneApp.EvidenceTable = {
       row.style.cursor = 'pointer';
     });
 
-// --- INJEÇÃO DO COMPONENTE DE PAGINAÇÃO ---
-if (window.CerneApp.Pagination) {
-  const self = this;
-  const paginationElement = window.CerneApp.Pagination.render({
-    currentPage: self.currentPage,
-    totalPages: totalPages,
-    totalItems: totalItems,
-    itemsPerPage: self.itemsPerPage,
-    onPageChange(newPage) {
-      self.currentPage = newPage;
-      
-      // Re-renderiza a tabela no container pai
-      const parent = container.parentElement;
-      if (parent) {
-        const newTable = self.render(evidences, onViewDetailsClick, self.itemsPerPage);
-        parent.replaceChild(newTable, container);
-        if (window.lucide) window.lucide.createIcons();
-      }
-    },
-    onItemsPerPageChange(newItemsPerPage) {
-      self.itemsPerPage = newItemsPerPage;
-      self.currentPage = 1; // Reseta para a página 1 ao mudar a quantidade
-      
-      const parent = container.parentElement;
-      if (parent) {
-        const newTable = self.render(evidences, onViewDetailsClick, self.itemsPerPage);
-        parent.replaceChild(newTable, container);
-        if (window.lucide) window.lucide.createIcons();
-      }
-    }
-  });
+    // --- INJEÇÃO DO COMPONENTE DE PAGINAÇÃO ---
+    if (window.CerneApp.Pagination) {
+      const self = this;
+      const paginationElement = window.CerneApp.Pagination.render({
+        currentPage: self.currentPage,
+        totalPages: totalPages,
+        totalItems: totalItems,
+        itemsPerPage: self.itemsPerPage,
+        onPageChange(newPage) {
+          self.currentPage = newPage;
+          
+          // Re-renderiza a tabela no container pai passando a lista
+          const parent = container.parentElement;
+          if (parent) {
+            const newTable = self.render(evidences, onViewDetailsClick, self.itemsPerPage, listaFinalResponsaveis);
+            parent.replaceChild(newTable, container);
+            if (window.lucide) window.lucide.createIcons();
+          }
+        },
+        onItemsPerPageChange(newItemsPerPage) {
+          self.itemsPerPage = newItemsPerPage;
+          self.currentPage = 1;
+          
+          const parent = container.parentElement;
+          if (parent) {
+            const newTable = self.render(evidences, onViewDetailsClick, self.itemsPerPage, listaFinalResponsaveis);
+            parent.replaceChild(newTable, container);
+            if (window.lucide) window.lucide.createIcons();
+          }
+        }
+      });
 
       container.appendChild(paginationElement);
     }
