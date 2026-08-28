@@ -33,27 +33,26 @@ window.CerneApp.EvidenceDetails = {
         .replace(/'/g, '&#39;');
     }
 
-    // Lógica dinâmica para alternar entre Botão de Link ou Botões de Arquivo
     let actionsHtml = '';
-    if (evidence.tipo === 'link' || evidence.link) {
-      actionsHtml = `
-        <a href="${escapeHtml(evidence.link)}" target="_blank" class="btn btn-secondary" style="width: 100%; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
-          <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
-          Abrir link
-        </a>
-      `;
-    } else {
-      actionsHtml = `
-        <a href="${escapeHtml(evidence.downloadUrl || '#')}" target="_blank" class="btn btn-secondary" id="btn-download-original" style="width: 100%; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
-          <i data-lucide="download" style="width: 15px; height: 15px;"></i>
-          Baixar Arquivo
-        </a>
-        <button class="btn btn-secondary" id="btn-preview-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
-          <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
-          Visualizar Original
-        </button>
-      `;
-    }
+if (evidence.tipo === 'link' || evidence.link) {
+  actionsHtml = `
+    <button type="button" class="btn btn-secondary" id="btn-open-link" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+      <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
+      Abrir link
+    </button>
+  `;
+} else {
+  actionsHtml = `
+    <a href="${escapeHtml(evidence.downloadUrl || '#')}" target="_blank" class="btn btn-secondary" id="btn-download-original" style="width: 100%; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+      <i data-lucide="download" style="width: 15px; height: 15px;"></i>
+      Baixar Arquivo
+    </a>
+    <button class="btn btn-secondary" id="btn-preview-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+      <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
+      Visualizar Original
+    </button>
+  `;
+}
 
     overlay.innerHTML = `
       <div class="modal-content detail-modal-width" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;">
@@ -212,6 +211,34 @@ window.CerneApp.EvidenceDetails = {
     const eventoInput = overlay.querySelector('#detail-evento-input');
     const dataInput = overlay.querySelector('#detail-data-input');
     const resumoInput = overlay.querySelector('#detail-resumo-input');
+
+    // Evento de abertura segura de link externo
+const openLinkBtn = overlay.querySelector('#btn-open-link');
+if (openLinkBtn) {
+  openLinkBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+
+    // 1. Tenta pegar a URL do campo link ou do nome original (fallback)
+    let rawUrl = evidence.link || evidence.nome || '';
+
+    if (!rawUrl || rawUrl === 'null' || rawUrl === 'undefined') {
+      alert('Não foi possível identificar o endereço do link para esta evidência.');
+      return;
+    }
+
+    let targetUrl = rawUrl.trim();
+
+    // 2. Garante o protocolo https:// se o usuário digitou apenas ufrgs.br/...
+    if (!/^https?:\/\//i.test(targetUrl)) {
+      targetUrl = `https://${targetUrl}`;
+    }
+
+    console.log('[EVIDENCE DETAILS] Abrindo link externo:', targetUrl);
+
+    // 3. Força a abertura da URL na nova aba
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  });
+}
 
     // Garantir que carregamos um Array (lidando com retrocompatibilidade)
     let selectedCategories = Array.isArray(evidence.categorias) 
