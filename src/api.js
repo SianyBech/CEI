@@ -129,6 +129,13 @@ async fetchTags() {
   }
 },
 
+async changePassword(newPassword) {
+  return this.request('/api/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ newPassword })
+  });
+},
+
   async fetchResponsaveis() {
   try {
     // Busca a lista real de usuários cadastrados no banco

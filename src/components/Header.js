@@ -3,47 +3,39 @@ window.CerneApp.Header = {
     const currentUser = user || window.CerneApp.Auth?.getCurrentUser?.() || null;
     const role = String(currentUser?.app_metadata?.role || currentUser?.role || currentUser?.user_metadata?.role || 'user').toLowerCase();
     
-    // Normalize role to check for settings permission (both admin and user have access to settings)
     const normalizedRole = ['authenticated', 'user', 'member', 'standard'].includes(role)
       ? 'user'
       : (['admin', 'administrator', 'owner'].includes(role) ? 'admin' : role);
-    const canManageSettings = ['admin', 'user'].includes(normalizedRole);
-    const displayName = currentUser?.user_metadata?.full_name || currentUser?.email || 'Usuário';
+
+    const rawName = currentUser?.user_metadata?.nome || currentUser?.user_metadata?.full_name;
+    const displayName = rawName || (currentUser?.email ? currentUser.email.split('@')[0] : 'Usuário');
+
     const header = document.createElement('header');
     header.className = 'header';
     header.innerHTML = `
       <div class="header-brand">
         <div class="header-logo">
-          <i data-lucide="brain-circuit" style="width: 20px; height: 20px; color: var(--success);"></i>
+          <img src="/src/logo.png" alt="Logo CEI" style="width: 24px; height: 24px; object-fit: contain;" />
         </div>
         <div class="header-title-container">
-          <span class="header-brand-label">CERNE</span>
           <h1 class="header-title">Olá, ${displayName} 👋</h1>
-          <span class="header-subtitle">Aqui está o panorama das evidências do CERNE.</span>
+          <span class="header-subtitle">Aqui está o panorama das evidências do CEI.</span>
         </div>
       </div>
       <div class="header-actions">
-        
-
-
-
         <button class="btn btn-primary header-primary-btn" id="btn-nova-evidencia">
           <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
           Nova Evidência
         </button>
         <div class="user-menu">
           <button class="user-menu-trigger" id="user-menu-trigger" type="button">
-            <div class="user-avatar">${(currentUser?.user_metadata?.full_name || currentUser?.email || 'U').charAt(0).toUpperCase()}</div>
+            <div class="user-avatar">${displayName.charAt(0).toUpperCase()}</div>
             <div class="user-menu-summary">
               <strong>${displayName}</strong>
               <span>${currentUser?.email ? currentUser.email : ''}</span>
             </div>
           </button>
           <div class="user-menu-dropdown" id="user-menu-dropdown">
-            <button class="user-menu-item" type="button" id="menu-profile-btn">
-              <i data-lucide="user" style="width: 16px; height: 16px; color: var(--success);"></i>
-              Meu Perfil
-            </button>
             <button class="user-menu-item" type="button" id="menu-password-btn">
               <i data-lucide="lock" style="width: 16px; height: 16px; color: var(--success);"></i>
               Alterar Senha
@@ -58,10 +50,6 @@ window.CerneApp.Header = {
     `;
 
     header.querySelector('#btn-nova-evidencia').addEventListener('click', onNewEvidenceClick);
-  //  const settingsButton = header.querySelector('#btn-settings');
-  //  if (settingsButton) {
-  //    settingsButton.addEventListener('click', onSettingsClick);
-  //  }
 
     const trigger = header.querySelector('#user-menu-trigger');
     const dropdown = header.querySelector('#user-menu-dropdown');
@@ -79,14 +67,101 @@ window.CerneApp.Header = {
     dropdown.addEventListener('click', (event) => event.stopPropagation());
 
     header.querySelector('#menu-logout-btn').addEventListener('click', () => onLogout?.());
-    header.querySelector('#menu-profile-btn').addEventListener('click', () => {
-      dropdown.classList.remove('open');
-      window.alert('O perfil completo será integrado ao painel do Supabase Auth em uma próxima etapa.');
-    });
+    
+    // Evento do botão Alterar Senha
     header.querySelector('#menu-password-btn').addEventListener('click', () => {
       dropdown.classList.remove('open');
-      window.alert('A recuperação de senha já está disponível na tela de login.');
+      openChangePasswordModal();
     });
+
+    // Função interna para construir e exibir o Modal de Alteração de Senha
+    function openChangePasswordModal() {
+      const modalOverlay = document.createElement('div');
+      modalOverlay.className = 'modal-overlay';
+      modalOverlay.id = 'change-password-modal-overlay';
+
+      modalOverlay.innerHTML = `
+        <div class="modal-content" style="max-width: 420px;">
+          <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <i data-lucide="lock" style="width: 20px; height: 20px; color: var(--accent);"></i>
+              <h2 class="modal-title">Alterar Senha</h2>
+            </div>
+            <button class="modal-close" id="pwd-close-btn">
+              <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+            </button>
+          </div>
+
+          <div class="modal-body" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="pwd-new">Nova Senha</label>
+              <input type="password" id="pwd-new" class="form-input" placeholder="Mínimo de 6 caracteres" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pwd-confirm">Confirmar Nova Senha</label>
+              <input type="password" id="pwd-confirm" class="form-input" placeholder="Repita a nova senha" />
+            </div>
+            <div id="pwd-error-msg" style="display: none; color: var(--danger); font-size: 0.825rem;"></div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="pwd-cancel-btn">Cancelar</button>
+            <button class="btn btn-primary" id="pwd-save-btn">Salvar Senha</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modalOverlay);
+      lucide.createIcons({ node: modalOverlay });
+
+      const closeBtn = modalOverlay.querySelector('#pwd-close-btn');
+      const cancelBtn = modalOverlay.querySelector('#pwd-cancel-btn');
+      const saveBtn = modalOverlay.querySelector('#pwd-save-btn');
+      const newPwdInput = modalOverlay.querySelector('#pwd-new');
+      const confirmPwdInput = modalOverlay.querySelector('#pwd-confirm');
+      const errorMsg = modalOverlay.querySelector('#pwd-error-msg');
+
+      const closeModal = () => modalOverlay.remove();
+
+      closeBtn.addEventListener('click', closeModal);
+      cancelBtn.addEventListener('click', closeModal);
+      modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) closeModal();
+      });
+
+      saveBtn.addEventListener('click', async () => {
+        const newPwd = newPwdInput.value.trim();
+        const confirmPwd = confirmPwdInput.value.trim();
+
+        errorMsg.style.display = 'none';
+
+        if (!newPwd || newPwd.length < 6) {
+          errorMsg.textContent = 'A senha deve ter pelo menos 6 caracteres.';
+          errorMsg.style.display = 'block';
+          return;
+        }
+
+        if (newPwd !== confirmPwd) {
+          errorMsg.textContent = 'As senhas informadas não coincidem.';
+          errorMsg.style.display = 'block';
+          return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="btn-loading-spinner" aria-hidden="true"></span> Salvando...';
+
+        try {
+          await window.CerneApp.Api.changePassword(newPwd);
+          alert('Sua senha foi alterada com sucesso!');
+          closeModal();
+        } catch (err) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Salvar Senha';
+          errorMsg.textContent = err.message || 'Erro ao alterar a senha.';
+          errorMsg.style.display = 'block';
+        }
+      });
+    }
 
     lucide.createIcons();
     return header;

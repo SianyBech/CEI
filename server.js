@@ -920,6 +920,35 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   }
 });
 
+app.post('/api/auth/change-password', requirePermission('view'), async (req, res) => {
+  try {
+    const { newPassword } = req.body || {};
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'A nova senha deve ter no mínimo 6 caracteres.' });
+    }
+
+    const client = getSupabaseClient();
+    if (!client) {
+      return res.status(500).json({ error: 'Serviço de autenticação indisponível.' });
+    }
+
+    // Atualiza a senha do usuário autenticado no Supabase Auth
+    const { error } = await client.auth.admin.updateUserById(req.user.id, {
+      password: newPassword
+    });
+
+    if (error) {
+      return res.status(400).json({ error: error.message || 'Falha ao alterar senha.' });
+    }
+
+    return res.json({ success: true, message: 'Senha alterada com sucesso.' });
+  } catch (error) {
+    console.error('[AUTH] Erro ao alterar senha:', error);
+    return res.status(500).json({ error: 'Erro interno ao alterar senha.' });
+  }
+});
+
 app.get('/api/auth/session', async (req, res) => {
   const authContext = await authenticateRequest(req, res);
   if (!authContext?.user) {
