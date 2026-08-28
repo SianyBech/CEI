@@ -1,77 +1,4 @@
 window.CerneApp.UploadModal = {
-  // Helper to generate mock intelligence metadata based on selected filename
-  generateMockAIResult(fileName) {
-    const nameLower = fileName.toLowerCase();
-    let tipo = 'documento';
-    let categoria = 'Gestão';
-    let evento = 'Reunião de Alinhamento de Metas';
-    let responsavel = 'Gabriela Mendes';
-    let tags = ['CERNE', 'Gestão', 'Incubadora'];
-    let resumo = 'Documento institucional gerado para registro de atividades da incubadora.';
-    let textoExtraido = 'CONTEÚDO EXTRAÍDO VIA OCR:\n\nEste documento contém as informações de registro e conformidade das atividades da incubadora.';
-
-    if (nameLower.endsWith('.pdf')) {
-      tipo = 'pdf';
-    } else if (nameLower.endsWith('.png') || nameLower.endsWith('.jpg') || nameLower.endsWith('.jpeg')) {
-      tipo = 'imagem';
-    }
-
-    if (nameLower.includes('ata') || nameLower.includes('reuniao') || nameLower.includes('reunião')) {
-      categoria = 'Planejamento';
-      evento = 'Reunião de Planejamento de Metas';
-      resumo = `Ata de reunião referente ao planejamento de metas e alinhamento estratégico, formalizada a partir do arquivo '${fileName}'.`;
-      tags = ['Ata', 'Reunião', 'Decisões'];
-      textoExtraido = `ATA DE REUNIÃO DE ALINHAMENTO DE METAS E PROCESSOS\nData de Execução: ${new Date().toLocaleDateString('pt-BR')}\nResponsável: ${responsavel}\nPauta: Discussão sobre o cumprimento dos processos-chave CERNE e alocação de recursos operacionais da incubadora.\nDeliberações: As metas de atendimento de startups para o corrente semestre foram revisadas e aprovadas pela gerência. Fica estabelecida a prioridade nas assessorias tecnológicas.`;
-    } else if (nameLower.includes('workshop') || nameLower.includes('curso') || nameLower.includes('capacitacao') || nameLower.includes('capacitação') || nameLower.includes('palestra')) {
-      categoria = 'Capacitação';
-      evento = 'Workshop de Inteligência Artificial Aplicada';
-      responsavel = 'Carlos Silva';
-      resumo = `Registro do evento de capacitação e formação tecnológica '${fileName}', voltado ao empreendedorismo inovador.`;
-      tags = ['Capacitação', 'Treinamento', 'Workshop', 'IA'];
-      textoExtraido = `REGISTRO DE CAPACITAÇÃO E EVENTOS DE FORMACÃO\nEvento: Workshop Prático de Inteligência Artificial Aplicada a Negócios.\nFacilitador: ${responsavel}\nParticipantes: Startups residentes, pré-incubadas e equipe executiva da incubadora.\nConteúdo Programático: Introdução a Large Language Models (LLMs), automação de processos, boas práticas de engenharia de prompt e casos de uso de IA na gestão de evidências CERNE.`;
-    } else if (nameLower.includes('contrato') || nameLower.includes('termo') || nameLower.includes('acordo') || nameLower.includes('convenio') || nameLower.includes('convênio')) {
-      categoria = 'Assessoria';
-      evento = 'Programa de Assessoria em Propriedade Intelectual';
-      responsavel = 'Marcos Venícius';
-      resumo = `Contrato de parceria e assessoria técnica/jurídica '${fileName}' analisado pelo assistente de IA.`;
-      tags = ['Acordo', 'Contrato', 'Assessoria', 'Jurídico'];
-      textoExtraido = `CONTRATO DE PRESTAÇÃO DE ASSESSORIAS E PARCERIAS\nPartes: Centro de Empreendedorismo e Incubação e startup associada.\nObjeto: Prestação de assessorias especializadas em gestão de tecnologia, modelagem financeira e proteção de propriedade intelectual (patentes e marcas).\nData de validade: Vigente a partir de 2026. Assinaturas confirmadas pelas vias eletrônicas digitais.`;
-    } else if (nameLower.includes('financeiro') || nameLower.includes('relatorio') || nameLower.includes('relatório') || nameLower.includes('contas')) {
-      categoria = 'Gestão';
-      evento = 'Relatório de Prestação de Contas Trimestral';
-      resumo = `Relatório gerencial financeiro contendo faturamento, captação de recursos e custos operacionais extraídos do arquivo '${fileName}'.`;
-      tags = ['Gestão', 'Relatório', 'Financeiro', 'Auditoria'];
-      textoExtraido = `RELATÓRIO FINANCEIRO E ORÇAMENTÁRIO ANUAL\nCompetência: Exercício 2026.\nResumo de Saldo: Apuração de receitas operacionais originadas de taxas de incubação e repasses de editais governamentais (FINEP/CNPq).\nDespesas operacionais: Custos de manutenção do espaço compartilhado (coworking), assessorias externas e serviços gerais em conformidade com as diretrizes do plano de negócios.`;
-    } else if (nameLower.includes('certificado') || nameLower.includes('diploma')) {
-      categoria = 'Qualificação';
-      evento = 'Cerimônia de Qualificação e Certificação';
-      responsavel = 'Ana Paula de Souza';
-      resumo = `Certificado de conclusão de assessoria técnica de startup, validado para comprovação de qualificação do nível CERNE.`;
-      tags = ['Certificado', 'Qualificação', 'Conclusão'];
-      textoExtraido = `CERTIFICADO DE CONFORMIDADE E QUALIFICAÇÃO DE EMPRESAS\nO Centro de Empreendedorismo certifica que a startup participante cumpriu com êxito todas as etapas estabelecidas na trilha de desenvolvimento, mentorias e qualificação tecnológica orientada pelas diretrizes CERNE.\nData de emissão: ${new Date().toLocaleDateString('pt-BR')}. Assinado eletronicamente por Ana Paula de Souza.`;
-    } else if (nameLower.includes('sustentabilidade') || nameLower.includes('ecologico') || nameLower.includes('esg') || nameLower.includes('ambiental')) {
-      categoria = 'Sustentabilidade';
-      evento = 'Implantação do Plano de Gestão Ambiental';
-      responsavel = 'Carlos Silva';
-      resumo = `Plano de práticas ecológicas e sustentabilidade da incubadora extraído do arquivo '${fileName}'.`;
-      tags = ['Sustentabilidade', 'Ecológico', 'ESG', 'Diretrizes'];
-      textoExtraido = `PLANO DE GESTÃO AMBIENTAL - INCUBADORA SUSTENTÁVEL\nElaborado por: Carlos Silva - Comitê de Sustentabilidade.\nDiretrizes Operacionais: Estabelece as metas de descarte correto de resíduos eletroeletrônicos e a redução de papel e descartáveis de plástico no ambiente de coworking da incubadora.`;
-    }
-
-    return {
-      id: "ev-" + Date.now(),
-      nome: fileName,
-      tipo: tipo,
-      data: new Date().toLocaleDateString('pt-BR'),
-      evento: evento,
-      categoria: categoria,
-      responsavel: responsavel,
-      tags: tags,
-      resumo: resumo,
-      textoExtraido: textoExtraido
-    };
-  }, 
-
   render(onClose, onAddEvidence, categories = [], tagsList = []) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -110,19 +37,16 @@ window.CerneApp.UploadModal = {
               </button>
             </div>
 
-            <!-- CAMPO DE LINK -->
+            <!-- ÚNICO CAMPO DE LINK E LEGENDA -->
             <div style="display: flex; align-items: center; text-align: center; gap: 0.75rem; color: var(--text-secondary); font-size: 0.8rem;">
-  <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
-  <span>OU ENVIE UM LINK DA WEB</span>
-  <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
-</div>
-<div style="display: flex; flex-direction: column; gap: 0.75rem;">
-  <input type="url" id="link-input-element" class="form-input" placeholder="https://www.instagram.com/p/..." style="width: 100%;" />
-  <textarea id="link-text-override" class="form-textarea" placeholder="Conteúdo / Legenda do Post (Opcional - Recomendado para redes sociais)" style="width: 100%; min-height: 80px;"></textarea>
-</div>
-
-            <div>
-              <input type="url" id="link-input-element" class="form-input" placeholder="https://exemplo.com/noticia-sobre-o-cei" style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);" />
+              <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
+              <span>OU ENVIE UM LINK DA WEB</span>
+              <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <input type="url" id="link-input-element" class="form-input" placeholder="https://www.instagram.com/p/... ou https://exemplo.com/noticia" style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);" />
+              <textarea id="link-text-override" class="form-textarea" placeholder="Conteúdo / Legenda do Post (Opcional - Recomendado para redes sociais)" style="width: 100%; min-height: 80px; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);"></textarea>
             </div>
           </div>
         </div>
@@ -147,7 +71,6 @@ window.CerneApp.UploadModal = {
 
     let selectedFile = null;
 
-    // Validação do formulário (Arquivo OU Link)
     function checkFormValidity() {
       if (selectedFile || (linkInput && linkInput.value.trim().length > 0)) {
         submitBtn.removeAttribute('disabled');
@@ -231,7 +154,6 @@ window.CerneApp.UploadModal = {
       if (e.target === overlay) doClose();
     });
 
-    // Função de atualização visual dos passos modernos
     function updateUploadStep(stepNumber, progressPercent) {
       const barFill = overlay.querySelector('#upload-progress-bar-fill');
       if (barFill) {
@@ -263,20 +185,19 @@ window.CerneApp.UploadModal = {
       }
     }
 
-// Submit / Processing logic limpo com os novos passos
     submitBtn.addEventListener('click', async () => {
-      const linkInput = overlay.querySelector('#link-input-element');
+      const linkInputEl = overlay.querySelector('#link-input-element');
       const textOverrideInput = overlay.querySelector('#link-text-override');
       
-      const linkValue = linkInput ? linkInput.value.trim() : null;
+      const linkValue = linkInputEl ? linkInputEl.value.trim() : null;
       const customTextValue = textOverrideInput ? textOverrideInput.value.trim() : null;
 
       if (!selectedFile && !linkValue) return;
 
-      // Detecção Inteligente de Redes Sociais sem Legenda
+      // Detecção de Rede Social: Só avisa se for Instagram/LinkedIn, NÃO tiver legenda E NÃO tiver arquivo (foto de capa) anexado
       const isSocialLink = linkValue && (linkValue.includes('instagram.com') || linkValue.includes('linkedin.com'));
       
-      if (isSocialLink && !customTextValue) {
+      if (isSocialLink && !customTextValue && !selectedFile) {
         const selectArea = overlay.querySelector('#upload-step-select');
         if (selectArea) selectArea.style.display = 'none';
         submitBtn.style.display = 'none';
@@ -362,14 +283,12 @@ window.CerneApp.UploadModal = {
       `;
 
       lucide.createIcons({ nameAttr: 'data-lucide', node: modalBody });
-
       updateUploadStep(1, 25);
 
       setTimeout(async () => {
         try {
           updateUploadStep(2, 50);
 
-          // 💡 Atualizado para passar o customTextToSend!
           const uploadedEvidence = await window.CerneApp.Api.uploadEvidence(fileToUpload, linkToSend, customTextToSend, (percentage) => {
             if (percentage > 50) {
               updateUploadStep(3, 75);

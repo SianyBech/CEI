@@ -39,9 +39,9 @@ window.CerneApp.EvidenceDetails = {
       return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
     }
 
+    // Construção dinâmica e limpa dos botões de ação (Suporte Híbrido)
     let actionsHtml = '';
 
-    // 1. Botão de Link Externo (Adiciona sempre que houver Link cadastrado)
     if (evidence.link) {
       const externalUrl = ensureAbsoluteUrl(evidence.link);
       actionsHtml += `
@@ -52,7 +52,6 @@ window.CerneApp.EvidenceDetails = {
       `;
     }
 
-    // 2. Botões de Arquivo (Adiciona se houver arquivo físico atrelado e não for puramente um link)
     if (evidence.downloadUrl && evidence.tipo !== 'link') {
       actionsHtml += `
         <a href="${escapeHtml(evidence.downloadUrl)}" target="_blank" class="btn btn-secondary" id="btn-download-original" style="width: 100%; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
@@ -66,10 +65,32 @@ window.CerneApp.EvidenceDetails = {
       `;
     }
 
+    // Construção correta dos campos de Origem (Arquivo e/ou Link separados)
+    let originalSourceHtml = '';
+    const hasFile = evidence.tipo !== 'link' && evidence.nome && evidence.nome !== evidence.link;
+
+    if (hasFile) {
+      originalSourceHtml += `
+        <div class="detail-item">
+          <label class="detail-label">Arquivo Original</label>
+          <input class="form-input" value="${escapeHtml(evidence.nome)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;" />
+        </div>
+      `;
+    }
+
+    if (evidence.link) {
+      originalSourceHtml += `
+        <div class="detail-item">
+          <label class="detail-label">Link Vinculado</label>
+          <input class="form-input" value="${escapeHtml(evidence.link)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;" />
+        </div>
+      `;
+    }
+
     overlay.innerHTML = `
       <div class="modal-content detail-modal-width" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;">
   
-        <!-- Header da Modal (Altura fixa no topo) -->
+        <!-- Header da Modal -->
         <div class="modal-header" style="flex-shrink: 0;">
           <div style="display: flex; align-items: center; gap: 0.65rem;">
             <i data-lucide="${iconName}" class="file-icon ${iconClass}"></i>
@@ -84,13 +105,11 @@ window.CerneApp.EvidenceDetails = {
           </div>
         </div>
 
-        <!-- Body da Modal (Preenche o restante da altura sem criar scroll global) -->
+        <!-- Body da Modal -->
         <div class="modal-body" style="padding: 1.5rem; flex: 1; min-height: 0; display: flex; overflow: hidden;">
-          
-          <!-- Grid Principal (Esq + Direita) -->
           <div class="details-grid" style="flex: 1; min-height: 0; height: 100%; display: flex; gap: 1.5rem; overflow: hidden; width: 100%;">
             
-            <!-- Left Panel: Metadados Editáveis (Rolagem própria na esquerda) -->
+            <!-- Left Panel: Metadados Editáveis -->
             <div class="details-sidebar" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding-right: 0.5rem;">
               
               <div class="detail-item">
@@ -98,10 +117,8 @@ window.CerneApp.EvidenceDetails = {
                 <input id="detail-title-input" class="form-input" value="${escapeHtml(titleText)}" />
               </div>
 
-              <div class="detail-item">
-                <label class="detail-label" for="detail-file-name">Arquivo / Link Original</label>
-                <input id="detail-file-name" class="form-input" value="${escapeHtml(evidence.nome || evidence.link)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;" />
-              </div>
+              <!-- Renderização condicional correta dos campos de origem -->
+              ${originalSourceHtml}
 
               <div class="detail-item">
                 <label class="detail-label" for="detail-evento-input">Evento de Origem</label>
@@ -111,20 +128,14 @@ window.CerneApp.EvidenceDetails = {
               <div class="detail-item">
                 <label class="detail-label">Categorias CERNE</label>
                 <div class="tags-selector-wrapper">
-                  <div class="selected-tags-display" id="detail-selected-categories-display">
-                    <!-- As badges das categorias selecionadas são inseridas aqui dinamicamente -->
-                  </div>
-                  <select class="form-select" id="detail-add-category-select" style="margin-top: 0.35rem;">
-                    <!-- Dropdown para escolher e adicionar mais uma categoria -->
-                  </select>
+                  <div class="selected-tags-display" id="detail-selected-categories-display"></div>
+                  <select class="form-select" id="detail-add-category-select" style="margin-top: 0.35rem;"></select>
                 </div>
               </div>
 
               <div class="detail-item">
                 <label class="detail-label" for="detail-responsavel-input">Responsável pelo Envio</label>
-                <select id="detail-responsavel-input" class="form-select">
-                  <!-- As opções serão preenchidas dinamicamente via JS -->
-                </select>
+                <select id="detail-responsavel-input" class="form-select"></select>
               </div>
 
               <div class="detail-item">
@@ -135,67 +146,44 @@ window.CerneApp.EvidenceDetails = {
               <div class="detail-item">
                 <label class="detail-label">Tags da Evidência</label>
                 <div class="tags-selector-wrapper">
-                  <div class="selected-tags-display" id="detail-selected-tags-display">
-                    <!-- selected tags will be dynamically generated as pills -->
-                  </div>
-                  <select class="form-select" id="detail-add-tag-select" style="margin-top: 0.35rem;">
-                    <!-- dynamically populated option list -->
-                  </select>
+                  <div class="selected-tags-display" id="detail-selected-tags-display"></div>
+                  <select class="form-select" id="detail-add-tag-select" style="margin-top: 0.35rem;"></select>
                 </div>
               </div>
 
-              <!-- Botões dinâmicos renderizados aqui -->
               <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.5rem;">
                 ${actionsHtml}
               </div>
 
             </div>
 
-            <!-- Right Panel: Resumo IA e OCR/Scraping Divididos em 50%/50% -->
+            <!-- Right Panel: Resumo IA e OCR -->
             <div style="flex: 1.2; min-height: 0; height: 100%; display: flex; flex-direction: column; gap: 1rem; overflow: hidden;">
               
-              <!-- Bloco 1: Resumo da IA (50% da altura) -->
               <div style="flex: 1; min-height: 0; background-color: #fafafa; border-radius: var(--radius-md); padding: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden;">
-                
                 <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--accent); margin-bottom: 0.5rem; flex-shrink: 0;">
                   <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
                   <strong style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Resumo da Inteligência Artificial</strong>
                 </div>
 
-                <!-- Modo Leitura (Renderiza HTML/Negritos e Parágrafos com Scroll Isolado) -->
                 <div id="resumo-display-container" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">
-                  <div 
-                    class="form-textarea-view" 
-                    style="flex: 1; min-height: 0; overflow-y: auto; line-height: 1.6; font-size: 0.9rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff;"
-                  >
+                  <div class="form-textarea-view" style="flex: 1; min-height: 0; overflow-y: auto; line-height: 1.6; font-size: 0.9rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff;">
                     ${(evidence.resumo || 'Nenhum resumo gerado.').replace(/\n/g, '<br>')}
                   </div>
                 </div>
 
-                <!-- Modo Edição (Oculto por padrão para uso em edição) -->
-                <textarea 
-                  id="detail-resumo-input" 
-                  class="form-textarea" 
-                  style="display: none; width: 100%; flex: 1; min-height: 0; line-height: 1.5; font-size: 0.9rem; color: var(--text-secondary); border-color: var(--border-color); resize: none; padding: 0.6rem;"
-                >${escapeHtml(evidence.resumo || '')}</textarea>
-
+                <textarea id="detail-resumo-input" class="form-textarea" style="display: none; width: 100%; flex: 1; min-height: 0; line-height: 1.5; font-size: 0.9rem; color: var(--text-secondary); border-color: var(--border-color); resize: none; padding: 0.6rem;">${escapeHtml(evidence.resumo || '')}</textarea>
               </div>
 
-              <!-- Bloco 2: Conteúdo Extraído OCR / Web Scraping (50% da altura) -->
               <div class="extracted-text-container" style="flex: 1; min-height: 0; background-color: #fafafa; border-radius: var(--radius-md); padding: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden;">
-                
                 <div class="extracted-text-header" style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; flex-shrink: 0;">
                   <i data-lucide="file-digit" style="width: 16px; height: 16px; color: var(--text-secondary);"></i>
                   <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; color: var(--text-secondary);">Conteúdo Extraído (OCR / Web Scraping)</span>
                 </div>
 
-                <div 
-                  class="extracted-text-box" 
-                  style="flex: 1; min-height: 0; overflow-y: auto; line-height: 1.5; font-size: 0.85rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff; white-space: pre-wrap;"
-                >
+                <div class="extracted-text-box" style="flex: 1; min-height: 0; overflow-y: auto; line-height: 1.5; font-size: 0.85rem; color: var(--text-secondary); padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 6px; background-color: #ffffff; white-space: pre-wrap;">
                   ${escapeHtml(evidence.textoExtraido || 'Nenhum conteúdo extraído.')}
                 </div>
-
               </div>
 
             </div>
@@ -203,7 +191,7 @@ window.CerneApp.EvidenceDetails = {
           </div>
         </div>
 
-        <!-- Footer da Modal (Fixo na parte inferior) -->
+        <!-- Footer da Modal -->
         <div class="modal-footer" style="flex-shrink: 0; display: flex; align-items: center; padding: 1rem 1.5rem; border-top: 1px solid var(--border-color);">
           <button class="modal-close" id="details-delete-btn" style="background-color: #ff4757; color: white; border: none; border-radius: var(--radius-sm); padding: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; transition: background-color 0.2s; margin-right: auto;" title="Excluir evidência">
             <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
@@ -224,40 +212,25 @@ window.CerneApp.EvidenceDetails = {
     const dataInput = overlay.querySelector('#detail-data-input');
     const resumoInput = overlay.querySelector('#detail-resumo-input');
 
-    // Evento de abertura segura de link externo
-const openLinkBtn = overlay.querySelector('#btn-open-link');
-if (openLinkBtn) {
-  openLinkBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-
-    // 1. Tenta pegar a URL do campo link ou do nome original (fallback)
-    let rawUrl = evidence.link || evidence.nome || '';
-
-    if (!rawUrl || rawUrl === 'null' || rawUrl === 'undefined') {
-      alert('Não foi possível identificar o endereço do link para esta evidência.');
-      return;
+    // Evento seguro para abrir link externo usando o atributo data-url
+    const openLinkBtn = overlay.querySelector('#btn-open-link');
+    if (openLinkBtn) {
+      openLinkBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetUrl = openLinkBtn.getAttribute('data-url');
+        if (targetUrl && targetUrl !== '#') {
+          window.open(targetUrl, '_blank', 'noopener,noreferrer');
+        } else {
+          alert('Link não disponível.');
+        }
+      });
     }
 
-    let targetUrl = rawUrl.trim();
-
-    // 2. Garante o protocolo https:// se o usuário digitou apenas ufrgs.br/...
-    if (!/^https?:\/\//i.test(targetUrl)) {
-      targetUrl = `https://${targetUrl}`;
-    }
-
-    console.log('[EVIDENCE DETAILS] Abrindo link externo:', targetUrl);
-
-    // 3. Força a abertura da URL na nova aba
-    window.open(targetUrl, '_blank', 'noopener,noreferrer');
-  });
-}
-
-    // Garantir que carregamos um Array (lidando com retrocompatibilidade)
+    // Configuração das categorias
     let selectedCategories = Array.isArray(evidence.categorias) 
       ? [...evidence.categorias] 
       : (evidence.categoria ? [evidence.categoria] : []);
 
-    // Função de renderização dinâmica das badges de categoria
     function renderCategoriesWidget() {
       const displayContainer = overlay.querySelector('#detail-selected-categories-display');
       const selectElement = overlay.querySelector('#detail-add-category-select');
@@ -273,9 +246,7 @@ if (openLinkBtn) {
 
           const badge = document.createElement('span');
           badge.className = `badge ${catClass}`;
-          if (customStyle) {
-            badge.setAttribute('style', customStyle);
-          }
+          if (customStyle) badge.setAttribute('style', customStyle);
           badge.style.display = 'inline-flex';
           badge.style.alignItems = 'center';
           badge.style.gap = '0.35rem';
@@ -326,6 +297,7 @@ if (openLinkBtn) {
       }
     });
 
+    // Configuração das tags
     let selectedTags = [...(evidence.tags || [])];
 
     function renderTagsWidget() {
@@ -354,7 +326,6 @@ if (openLinkBtn) {
       }
 
       selectElement.innerHTML = '';
-      
       const defaultOpt = document.createElement('option');
       defaultOpt.value = '';
       defaultOpt.textContent = 'Adicionar tag...';
@@ -371,12 +342,7 @@ if (openLinkBtn) {
         selectElement.appendChild(opt);
       });
 
-      if (availableTags.length === 0) {
-        defaultOpt.textContent = 'Todas as tags disponíveis já foram adicionadas';
-        selectElement.disabled = true;
-      } else {
-        selectElement.disabled = false;
-      }
+      selectElement.disabled = availableTags.length === 0;
     }
 
     renderTagsWidget();
@@ -384,14 +350,12 @@ if (openLinkBtn) {
     overlay.querySelector('#detail-add-tag-select').addEventListener('change', (e) => {
       const val = e.target.value;
       if (val) {
-        if (!selectedTags.includes(val)) {
-          selectedTags.push(val);
-        }
+        if (!selectedTags.includes(val)) selectedTags.push(val);
         renderTagsWidget();
       }
     });
 
-    // Preenchimento dinâmico dos Responsáveis/Usuários na Edição
+    // Responsáveis
     (async () => {
       const selectResponsavel = overlay.querySelector('#detail-responsavel-input');
       if (!selectResponsavel) return;
@@ -401,7 +365,6 @@ if (openLinkBtn) {
         const responsavelAtual = evidence.responsavel || '';
 
         selectResponsavel.innerHTML = '';
-
         if (responsavelAtual && !listaResponsaveis.includes(responsavelAtual)) {
           listaResponsaveis.unshift(responsavelAtual);
         }
@@ -410,13 +373,10 @@ if (openLinkBtn) {
           const option = document.createElement('option');
           option.value = nome;
           option.textContent = nome;
-          if (nome === responsavelAtual) {
-            option.selected = true;
-          }
+          if (nome === responsavelAtual) option.selected = true;
           selectResponsavel.appendChild(option);
         });
       } catch (error) {
-        console.error('Erro ao carregar lista de responsáveis na edição:', error);
         selectResponsavel.innerHTML = `<option value="${escapeHtml(evidence.responsavel || 'Equipe CEI')}" selected>${escapeHtml(evidence.responsavel || 'Equipe CEI')}</option>`;
       }
     })();
@@ -439,11 +399,7 @@ if (openLinkBtn) {
       toast.className = `app-toast ${type}`;
       toast.textContent = message;
       document.body.appendChild(toast);
-
-      requestAnimationFrame(() => {
-        toast.classList.add('show');
-      });
-
+      requestAnimationFrame(() => toast.classList.add('show'));
       window.setTimeout(() => {
         toast.classList.remove('show');
         window.setTimeout(() => toast.remove(), 220);
@@ -453,9 +409,7 @@ if (openLinkBtn) {
     const doClose = () => {
       if (isSaving) return;
       overlay.remove();
-      if (typeof onClose === 'function') {
-        onClose();
-      }
+      if (typeof onClose === 'function') onClose();
     };
 
     closeBtn.addEventListener('click', doClose);
@@ -470,10 +424,7 @@ if (openLinkBtn) {
       const dataDigitada = dataInput.value.trim() || new Date().toLocaleDateString('pt-BR');
 
       if (window.CerneApp.Utils?.isFutureDate?.(dataDigitada)) {
-        const confirmFuture = confirm(
-          'A data informada é uma data futura.\n\nTem certeza de que deseja salvar a evidência com esta data?'
-        );
-        if (!confirmFuture) {
+        if (!confirm('A data informada é uma data futura.\n\nTem certeza de que deseja salvar a evidência com esta data?')) {
           return;
         }
       }
@@ -497,9 +448,7 @@ if (openLinkBtn) {
         const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
         setSavingState(false);
         showToast('Alterações salvas com sucesso.', 'success');
-        if (typeof onSave === 'function') {
-          onSave(savedEvidence);
-        }
+        if (typeof onSave === 'function') onSave(savedEvidence);
         doClose();
       } catch (error) {
         setSavingState(false);
@@ -507,14 +456,11 @@ if (openLinkBtn) {
       }
     });
 
-    // Eventos de clique condicionados aos elementos de arquivo físico (se existirem na DOM)
     const downloadBtn = overlay.querySelector('#btn-download-original');
     if (downloadBtn) {
       downloadBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        if (evidence.downloadUrl) {
-          window.open(evidence.downloadUrl, '_blank');
-        }
+        if (evidence.downloadUrl) window.open(evidence.downloadUrl, '_blank');
       });
     }
 
@@ -527,12 +473,9 @@ if (openLinkBtn) {
 
     const deleteBtn = overlay.querySelector('#details-delete-btn');
     deleteBtn.addEventListener('click', async () => {
-      const confirmDelete = confirm(`Tem certeza que deseja excluir a evidência "${titleText}"?\n\nEsta ação não pode ser desfeita.`);
-
-      if (!confirmDelete) return;
+      if (!confirm(`Tem certeza que deseja excluir a evidência "${titleText}"?\n\nEsta ação não pode ser desfeita.`)) return;
 
       const originalContent = deleteBtn.innerHTML;
-
       deleteBtn.disabled = true;
       deleteBtn.innerHTML = '<i data-lucide="loader" style="width: 20px; height: 20px; animation: spin 1s linear infinite;"></i>';
 
@@ -540,9 +483,7 @@ if (openLinkBtn) {
         await window.CerneApp.Api.deleteEvidence(evidence.id);
         alert('Evidência excluída com sucesso.');
         doClose();
-        if (typeof onDelete === 'function') {
-          onDelete(evidence.id);
-        }
+        if (typeof onDelete === 'function') onDelete(evidence.id);
       } catch (error) {
         alert(`Não foi possível excluir a evidência: ${error.message}`);
         deleteBtn.disabled = false;

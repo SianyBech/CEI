@@ -110,74 +110,76 @@ window.CerneApp.EvidenceTable = {
     const paginatedEvidences = evidences.slice(startIndex, startIndex + this.itemsPerPage);
 
     // --- MONTAGEM DAS LINHAS DA TABELA (Usando a lista paginada) ---
-    let rowsHTML = '';
-    paginatedEvidences.forEach(evidence => {
-      // Determina ícone e classe baseados no tipo
-      let iconName = 'file';
-      let iconClass = 'file-icon-documento';
-      if (evidence.tipo === 'pdf') {
-        iconName = 'file-text';
-        iconClass = 'file-icon-pdf';
-      } else if (evidence.tipo === 'imagem') {
-        iconName = 'image';
-        iconClass = 'file-icon-imagem';
-      } else if (evidence.tipo === 'link') {
-        iconName = 'globe';
-        iconClass = 'file-icon-link';
-      }
+   let rowsHTML = '';
+paginatedEvidences.forEach(evidence => {
+  const hasLink = !!evidence.link;
+  const hasFile = evidence.tipo !== 'link' && evidence.nome;
+  
+  let iconHtml = '';
+  let displayType = evidence.tipo || 'Desconhecido';
 
-      // Gera HTML das tags
-      const tagsHTML = (evidence.tags || [])
-        .map(tag => `<span class="tag">${escapeHtml(tag)}</span>`)
-        .join('');
+  // Lógica de Ícones e Tipo Híbrido
+  if (hasFile && hasLink) {
+    const capitalizedType = evidence.tipo.charAt(0).toUpperCase() + evidence.tipo.slice(1);
+    displayType = `${capitalizedType} + Link`;
+    const fileIcon = evidence.tipo === 'pdf' ? 'file-text' : (evidence.tipo === 'imagem' ? 'image' : 'file');
+    const fileClass = evidence.tipo === 'pdf' ? 'file-icon-pdf' : (evidence.tipo === 'imagem' ? 'file-icon-imagem' : 'file-icon-documento');
+    
+    iconHtml = `
+      <div style="display: flex; align-items: center; gap: 2px;">
+        <i data-lucide="${fileIcon}" class="file-icon ${fileClass}"></i>
+        <i data-lucide="link" class="file-icon file-icon-link" style="width: 14px; height: 14px;"></i>
+      </div>
+    `;
+  } else if (hasFile) {
+    displayType = evidence.tipo;
+    const fileIcon = evidence.tipo === 'pdf' ? 'file-text' : (evidence.tipo === 'imagem' ? 'image' : 'file');
+    const fileClass = evidence.tipo === 'pdf' ? 'file-icon-pdf' : (evidence.tipo === 'imagem' ? 'file-icon-imagem' : 'file-icon-documento');
+    iconHtml = `<i data-lucide="${fileIcon}" class="file-icon ${fileClass}"></i>`;
+  } else if (hasLink) {
+    displayType = 'Link';
+    iconHtml = `<i data-lucide="globe" class="file-icon file-icon-link"></i>`;
+  }
 
-      // 💡 Passa a lista protegida de responsáveis
-      const nomeFormatado = formatResponsavelName(evidence.responsavel, listaFinalResponsaveis);
+  // Limitador de palavras para o Evento (5 palavras max)
+  const truncateWords = (str, max) => {
+    if (!str) return '';
+    const words = str.split(' ');
+    return words.length > max ? words.slice(0, max).join(' ') + '...' : str;
+  };
+  const truncatedEvento = truncateWords(evidence.evento, 5);
 
-      // Trata array de categorias ou string única
-      const categoriesList = Array.isArray(evidence.categorias) && evidence.categorias.length > 0
-        ? evidence.categorias
-        : (evidence.categoria ? [evidence.categoria] : []);
+  const tagsHTML = (evidence.tags || []).map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
+  const nomeFormatado = formatResponsavelName(evidence.responsavel, listaFinalResponsaveis);
+  
+  const categoriesList = Array.isArray(evidence.categorias) && evidence.categorias.length > 0 ? evidence.categorias : (evidence.categoria ? [evidence.categoria] : []);
+  const categoriesHTML = categoriesList.map(cat => {
+    const customStyle = window.getCategoryStyle ? window.getCategoryStyle(cat) : '';
+    return `<span class="badge" style="${customStyle}">${escapeHtml(cat)}</span>`;
+  }).join(' ');
 
-      const categoriesHTML = categoriesList.map(cat => {
-        const customStyle = window.getCategoryStyle ? window.getCategoryStyle(cat) : '';
-        return `<span class="badge" style="${customStyle}">${escapeHtml(cat)}</span>`;
-      }).join(' ');
-
-      rowsHTML += `
-        <tr data-id="${evidence.id}">
-          <td>
-            <div class="file-name-cell">
-              <i data-lucide="${iconName}" class="file-icon ${iconClass}"></i>
-              <span>${escapeHtml(evidence.titulo || evidence.nome)}</span>
-            </div>
-          </td>
-          <td>
-            <span class="file-type-badge">
-              ${escapeHtml(evidence.tipo)}
-            </span>
-          </td>
-          <td>${escapeHtml(evidence.data)}</td>
-          <td>${escapeHtml(evidence.evento)}</td>
-          <td>
-            <div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">
-              ${categoriesHTML}
-            </div>
-          </td>
-         <td>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <div class="avatar-initial">${escapeHtml(evidence.responsavel ? evidence.responsavel.charAt(0) : 'U')}</div>
-              <span>${escapeHtml(nomeFormatado)}</span>
-            </div>
-          </td>
-          <td>
-            <div class="tags-list">
-              ${tagsHTML}
-            </div>
-          </td>
-        </tr>
-      `;
-    });
+  rowsHTML += `
+    <tr data-id="${evidence.id}">
+      <td>
+        <div class="file-name-cell">
+          ${iconHtml}
+          <span>${escapeHtml(evidence.titulo || evidence.nome)}</span>
+        </div>
+      </td>
+      <td><span class="file-type-badge">${escapeHtml(displayType)}</span></td>
+      <td>${escapeHtml(evidence.data)}</td>
+      <td title="${escapeHtml(evidence.evento)}">${escapeHtml(truncatedEvento)}</td>
+      <td><div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">${categoriesHTML}</div></td>
+      <td>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <div class="avatar-initial">${escapeHtml(evidence.responsavel ? evidence.responsavel.charAt(0) : 'U')}</div>
+          <span>${escapeHtml(nomeFormatado)}</span>
+        </div>
+      </td>
+      <td><div class="tags-list">${tagsHTML}</div></td>
+    </tr>
+  `;
+});
 
     // Estrutura Base da Tabela
     container.innerHTML = `
