@@ -33,26 +33,38 @@ window.CerneApp.EvidenceDetails = {
         .replace(/'/g, '&#39;');
     }
 
+    function ensureAbsoluteUrl(url) {
+      if (!url) return '#';
+      const trimmed = url.trim();
+      return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    }
+
     let actionsHtml = '';
-if (evidence.tipo === 'link' || evidence.link) {
-  actionsHtml = `
-    <button type="button" class="btn btn-secondary" id="btn-open-link" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
-      <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
-      Abrir link
-    </button>
-  `;
-} else {
-  actionsHtml = `
-    <a href="${escapeHtml(evidence.downloadUrl || '#')}" target="_blank" class="btn btn-secondary" id="btn-download-original" style="width: 100%; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
-      <i data-lucide="download" style="width: 15px; height: 15px;"></i>
-      Baixar Arquivo
-    </a>
-    <button class="btn btn-secondary" id="btn-preview-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
-      <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
-      Visualizar Original
-    </button>
-  `;
-}
+
+    // 1. Botão de Link Externo (Adiciona sempre que houver Link cadastrado)
+    if (evidence.link) {
+      const externalUrl = ensureAbsoluteUrl(evidence.link);
+      actionsHtml += `
+        <button type="button" class="btn btn-secondary" id="btn-open-link" data-url="${escapeHtml(externalUrl)}" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
+          <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
+          Abrir link
+        </button>
+      `;
+    }
+
+    // 2. Botões de Arquivo (Adiciona se houver arquivo físico atrelado e não for puramente um link)
+    if (evidence.downloadUrl && evidence.tipo !== 'link') {
+      actionsHtml += `
+        <a href="${escapeHtml(evidence.downloadUrl)}" target="_blank" class="btn btn-secondary" id="btn-download-original" style="width: 100%; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
+          <i data-lucide="download" style="width: 15px; height: 15px;"></i>
+          Baixar Arquivo
+        </a>
+        <button class="btn btn-secondary" id="btn-preview-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+          <i data-lucide="eye" style="width: 15px; height: 15px;"></i>
+          Visualizar Arquivo Original
+        </button>
+      `;
+    }
 
     overlay.innerHTML = `
       <div class="modal-content detail-modal-width" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;">

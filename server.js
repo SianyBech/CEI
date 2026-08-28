@@ -1288,7 +1288,7 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
     }
 
     try {
-      // 3. Preparação das variáveis consolidadas (usadas por ambos os fluxos)
+      // 3. Preparação das variáveis consolidadas
       const responsavel = getResponsavel(req.user);
       const createdAt = new Date().toISOString();
       let dbCategories = [];
@@ -1298,94 +1298,74 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
         dbCategories = await getAppSetting('categories', ['Capacitação', 'Planejamento', 'Gestão', 'Assessoria', 'Sustentabilidade', 'Qualificação']);
         dbTags = await getAppSetting('tags', ['CERNE', 'Gestão', 'Capacitação', 'Assessoria', 'Sustentabilidade', 'Qualificação']);
       } catch (settingsErr) {
-        console.warn('[UPLOAD] Erro ao buscar configurações do banco, usando fallback local:', settingsErr.message);
+        console.warn('[UPLOAD] Erro ao buscar configurações:', settingsErr.message);
       }
+
+      // 💡 Novidade: capturamos o texto manual enviado pelo usuário
+      const linkEnviado = req.body.link ? req.body.link.trim() : null;
+      const textoManual = req.body.customText ? req.body.customText.trim() : null;
 
       let metadata = {};
       let tituloFinal = '';
       let eventoFinal = 'Sem Evento';
-      let originalName = '';
+      let originalName = req.file ? sanitizeFileName(req.file.originalname) : (linkEnviado || 'link');
       let tipo = '';
       let mimeType = null;
       let fileSize = 0;
       let storagePath = null;
-      let textoExtraido = '';
+      let textoExtraido = textoManual || '';
 
-     // ==========================================
-      // FLUXO A: PROCESSAMENTO DE LINK (CORRIGIDO)
       // ==========================================
-      if (linkEnviado && !req.file) {
-        console.log(`[UPLOAD] Iniciando processamento de Link: ${linkEnviado}`);
-        tipo = 'link';
-        originalName = linkEnviado;
-        
-        // 1. Extrai o texto da página via web scraping
+      // A. FONTE DE INTELIGÊNCIA (O que a IA vai ler)
+      // ==========================================
+      if (textoManual) {
+        console.log('[UPLOAD] IA utilizando a legenda manual informada.');
+        const tempTxtPath = path.join(tempDir, `custom-${Date.now()}.txt`);
+        await fs.promises.writeFile(tempTxtPath, textoExtraido, 'utf8');
+        try {
+          metadata = await resumirQualquerDocumento(tempTxtPath, 'txt', dbCategories, dbTags);
+        } catch (e) { console.warn(e.message); }
+        await removeTemporaryFile(tempTxtPath);
+        tituloFinal = metadata.titulo || 'Publicação de Rede Social';
+
+      } else if (req.file) {
+        console.log('[UPLOAD] IA utilizando o arquivo anexado.');
+        const extension = getFileExtension(originalName);
+        metadata = await generateMetadata(req.file.path, originalName, extension, dbCategories, dbTags);
+        textoExtraido = metadata.textoExtraido || '';
+        tituloFinal = metadata.titulo || originalName;
+
+      } else if (linkEnviado) {
+        console.log('[UPLOAD] IA extraindo texto da URL.');
         textoExtraido = await extractTextFromLink(linkEnviado);
-        
-        // 2. Salva o texto em um arquivo .txt temporário para a IA conseguir ler via caminho
         const tempTxtPath = path.join(tempDir, `link-${Date.now()}.txt`);
         await fs.promises.writeFile(tempTxtPath, textoExtraido, 'utf8');
-        
         try {
-          // 3. Passa o caminho do arquivo temporário e a extensão 'txt'
           metadata = await resumirQualquerDocumento(tempTxtPath, 'txt', dbCategories, dbTags);
-        } catch (aiErr) {
-          console.warn('[UPLOAD] IA falhou ao resumir o texto do link, usando fallback:', aiErr.message);
-          metadata = {
-            titulo: 'Página da Web (Link Externo)',
-            evento: 'Registro de Link',
-            resumo: 'Link institucional cadastrado via web.',
-            categoriasSugeridas: ['Gestão'],
-            tagsSugeridas: ['CERNE']
-          };
-        } finally {
-          // 4. Remove o arquivo temporário de texto
-          await removeTemporaryFile(tempTxtPath);
-        }
-        
+        } catch (e) { console.warn(e.message); }
+        await removeTemporaryFile(tempTxtPath);
         tituloFinal = metadata.titulo && metadata.titulo.trim() !== '' ? metadata.titulo : 'Página da Web';
-        eventoFinal = metadata.evento || 'Sem Evento';
-        storagePath = null;
+      }
+
+      // ==========================================
+      // B. ARMAZENAMENTO FÍSICO (O que vai para o Supabase)
+      // ==========================================
+      if (req.file) {
+        const extension = getFileExtension(originalName);
+        tipo = extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento';
+        mimeType = (req.file.mimetype || getMimeType(originalName)).toLowerCase();
+        fileSize = Number(req.file.size || 0);
+        
+        storagePath = buildStoragePath(originalName);
+        await uploadFileToSupabase(req.file.path, storagePath, originalName, mimeType);
+        await removeTemporaryFile(req.file.path);
+      } else {
+        tipo = 'link';
         mimeType = 'text/html';
         fileSize = 0;
       }
       
-      // ==========================================
-      // FLUXO B: PROCESSAMENTO DE ARQUIVO
-      // ==========================================
-      else if (req.file) {
-        const tempPath = req.file.path;
-        originalName = sanitizeFileName(req.file.originalname || 'arquivo');
-        const extension = getFileExtension(originalName);
-        mimeType = (req.file.mimetype || getMimeType(originalName)).toLowerCase();
-        fileSize = Number(req.file.size || 0);
-
-        if (fileSize > 30 * 1024 * 1024) {
-          await removeTemporaryFile(tempPath);
-          return res.status(413).json({ error: 'O tamanho máximo permitido é de 30 MB.' });
-        }
-
-        if (isForbiddenFile(originalName, mimeType)) {
-          await removeTemporaryFile(tempPath);
-          return res.status(400).json({ error: 'Tipo de arquivo não permitido por segurança.' });
-        }
-
-        console.log(`[UPLOAD] Arquivo recebido: ${originalName} (${fileSize} bytes, ${mimeType})`);
-
-        // Extrai metadados do arquivo via IA
-        metadata = await generateMetadata(tempPath, originalName, extension, dbCategories, dbTags);
-        
-        tituloFinal = metadata.titulo && metadata.titulo.trim() !== '' ? metadata.titulo : originalName;
-        eventoFinal = metadata.evento || 'Sem Evento';
-        textoExtraido = metadata.textoExtraido || '';
-        tipo = extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento';
-
-        // Salva no Storage e limpa o temporário
-        storagePath = buildStoragePath(originalName);
-        await uploadFileToSupabase(tempPath, storagePath, originalName, mimeType);
-        await removeTemporaryFile(tempPath);
-      }
-
+      eventoFinal = metadata.evento || 'Sem Evento';
       console.log(`[UPLOAD] Metadados consolidados:`, tituloFinal);
 
       // 4. Mapeamento final dos arrays de IA
@@ -1394,7 +1374,7 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       const primaryCategory = categoriesList.length > 0 ? categoriesList[0] : '';
       const rawTags = metadata.tagsSugeridas || metadata.tags || [];
       const tagsList = Array.isArray(rawTags) ? rawTags : [];
-
+      
       // 5. Query de inserção no banco de dados
       const insertQuery = `
         INSERT INTO public.evidences (

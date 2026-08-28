@@ -112,10 +112,14 @@ window.CerneApp.UploadModal = {
 
             <!-- CAMPO DE LINK -->
             <div style="display: flex; align-items: center; text-align: center; gap: 0.75rem; color: var(--text-secondary); font-size: 0.8rem;">
-              <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
-              <span>OU ENVIE UM LINK DA WEB</span>
-              <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
-            </div>
+  <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
+  <span>OU ENVIE UM LINK DA WEB</span>
+  <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 0.75rem;">
+  <input type="url" id="link-input-element" class="form-input" placeholder="https://www.instagram.com/p/..." style="width: 100%;" />
+  <textarea id="link-text-override" class="form-textarea" placeholder="Conteúdo / Legenda do Post (Opcional - Recomendado para redes sociais)" style="width: 100%; min-height: 80px;"></textarea>
+</div>
 
             <div>
               <input type="url" id="link-input-element" class="form-input" placeholder="https://exemplo.com/noticia-sobre-o-cei" style="width: 100%; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);" />
@@ -259,11 +263,61 @@ window.CerneApp.UploadModal = {
       }
     }
 
-    // Submit / Processing logic limpo com os novos passos
+// Submit / Processing logic limpo com os novos passos
     submitBtn.addEventListener('click', async () => {
+      const linkInput = overlay.querySelector('#link-input-element');
+      const textOverrideInput = overlay.querySelector('#link-text-override');
+      
       const linkValue = linkInput ? linkInput.value.trim() : null;
+      const customTextValue = textOverrideInput ? textOverrideInput.value.trim() : null;
+
       if (!selectedFile && !linkValue) return;
 
+      // Detecção Inteligente de Redes Sociais sem Legenda
+      const isSocialLink = linkValue && (linkValue.includes('instagram.com') || linkValue.includes('linkedin.com'));
+      
+      if (isSocialLink && !customTextValue) {
+        const selectArea = overlay.querySelector('#upload-step-select');
+        if (selectArea) selectArea.style.display = 'none';
+        submitBtn.style.display = 'none';
+        cancelBtn.style.display = 'none';
+        
+        const modalBody = overlay.querySelector('#modal-body-container');
+        const warningDiv = document.createElement('div');
+        warningDiv.id = 'social-warning-box';
+        warningDiv.innerHTML = `
+          <div style="background-color: #fffbeb; border: 1px solid #f59e0b; border-radius: 8px; padding: 1.5rem; text-align: center; display: flex; flex-direction: column; gap: 1rem; margin: 1.5rem;">
+            <i data-lucide="alert-circle" style="width: 32px; height: 32px; color: #f59e0b; margin: 0 auto;"></i>
+            <h3 style="margin:0; font-size:1.1rem; color: #b45309;">Link de Rede Social Detectado</h3>
+            <p style="font-size: 0.9rem; color: #92400e; margin:0; line-height: 1.5;">O Instagram e o LinkedIn bloqueiam a leitura automática da Inteligência Artificial. Para um resumo preciso, sugerimos que você <strong>volte e cole o texto da legenda</strong>.</p>
+            <div style="display: flex; gap: 0.75rem; justify-content: center; margin-top: 0.5rem;">
+              <button class="btn btn-secondary" id="btn-back-to-paste">Voltar e Colar</button>
+              <button class="btn btn-primary" id="btn-force-continue" style="background-color: #f59e0b; border-color: #f59e0b;">Continuar Sem Legenda</button>
+            </div>
+          </div>
+        `;
+        modalBody.prepend(warningDiv);
+        lucide.createIcons({ node: warningDiv });
+        
+        warningDiv.querySelector('#btn-back-to-paste').addEventListener('click', () => {
+          warningDiv.remove();
+          if (selectArea) selectArea.style.display = 'flex';
+          submitBtn.style.display = 'inline-flex';
+          cancelBtn.style.display = 'inline-flex';
+        });
+        
+        warningDiv.querySelector('#btn-force-continue').addEventListener('click', () => {
+          warningDiv.remove();
+          iniciarProcessamento(selectedFile, linkValue, customTextValue);
+        });
+        
+        return;
+      }
+
+      iniciarProcessamento(selectedFile, linkValue, customTextValue);
+    });
+
+    function iniciarProcessamento(fileToUpload, linkToSend, customTextToSend) {
       submitBtn.style.display = 'none';
       cancelBtn.style.display = 'none';
       closeBtn.style.display = 'none';
@@ -315,7 +369,8 @@ window.CerneApp.UploadModal = {
         try {
           updateUploadStep(2, 50);
 
-          const uploadedEvidence = await window.CerneApp.Api.uploadEvidence(selectedFile, linkValue, (percentage) => {
+          // 💡 Atualizado para passar o customTextToSend!
+          const uploadedEvidence = await window.CerneApp.Api.uploadEvidence(fileToUpload, linkToSend, customTextToSend, (percentage) => {
             if (percentage > 50) {
               updateUploadStep(3, 75);
             }
@@ -340,7 +395,7 @@ window.CerneApp.UploadModal = {
           lucide.createIcons({ nameAttr: 'data-lucide', node: modalBody });
         }
       }, 400);
-    });
+    }
 
     function showSuccessScreen(evidence) {
       closeBtn.style.display = 'flex';

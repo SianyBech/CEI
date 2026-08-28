@@ -154,57 +154,39 @@ async changePassword(newPassword) {
   }
 },
 
-uploadEvidence(file, link, onProgress) {
+uploadEvidence(file, link, customText, onProgress) {
     return new Promise((resolve, reject) => {
       const formData = new FormData();
       
-      // Validação flexível: Anexa o que o usuário tiver enviado
-      if (file) {
-        formData.append('file', file);
-      }
-      
-      if (link) {
-        formData.append('link', link.trim());
-      }
+      if (file) formData.append('file', file);
+      if (link) formData.append('link', link.trim());
+      if (customText) formData.append('customText', customText.trim());
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload', true);
       xhr.withCredentials = true;
 
-      // Monitoramento da barra de progresso
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable && typeof onProgress === 'function') {
           onProgress(Math.round((event.loaded * 100) / event.total));
         }
       });
 
-      // Resposta do servidor
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            resolve(JSON.parse(xhr.responseText));
-          } catch (error) {
-            reject(new Error('Resposta inválida do servidor.'));
-          }
+          try { resolve(JSON.parse(xhr.responseText)); } 
+          catch (error) { reject(new Error('Resposta inválida do servidor.')); }
         } else {
           let errorMessage = `Envio falhou: ${xhr.statusText} (${xhr.status})`;
-
           try {
             const errorBody = JSON.parse(xhr.responseText);
-            if (errorBody?.error) {
-              errorMessage = errorBody.error;
-            }
-          } catch (error) {
-            // Mantém a mensagem padrão se a resposta não for JSON.
-          }
-
+            if (errorBody?.error) errorMessage = errorBody.error;
+          } catch (e) {}
           reject(new Error(errorMessage));
         }
       };
 
       xhr.onerror = () => reject(new Error('Erro de rede durante o envio.'));
-      
-      // Dispara a requisição com o arquivo, com o link, ou com ambos.
       xhr.send(formData);
     });
   }
