@@ -6,19 +6,19 @@ window.CerneApp.LoginPage = {
     container.innerHTML = `
       <div class="login-card">
         <div class="login-brand">
-          <div class="login-logo">
-            <i data-lucide="brain-circuit" style="width: 26px; height: 26px;"></i>
+          <div class="login-logo" style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; padding: 8px; display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; margin: 0 auto 1rem;">
+            <img src="/src/logo.png" alt="Logo CEI" style="width: 36px; height: 36px; object-fit: contain;" />
           </div>
           <div>
-            <h1>Gestão de Evidências CERNE</h1>
-            <p>Acesse o painel seguro com sua conta do Supabase Auth.</p>
+            <h1>Gestão de Evidências CEI</h1>
+            <p>Acesse com suas credenciais para gerenciar a plataforma.</p>
           </div>
         </div>
 
         <form class="login-form" id="login-form">
           <div class="form-group">
             <label for="login-email">E-mail</label>
-            <input id="login-email" name="email" type="email" autocomplete="email" required placeholder="seu.email@empresa.com" />
+            <input id="login-email" name="email" type="email" autocomplete="email" required placeholder="seu.email@ufrgs.br" />
           </div>
 
           <div class="form-group">

@@ -29,6 +29,30 @@ window.CerneApp.EvidenceTable = {
         .replace(/'/g, '&#39;');
     }
 
+    function formatResponsavelName(nomeCompleto, listaResponsaveis = []) {
+  if (!nomeCompleto) return 'Equipe CEI';
+
+  const partes = nomeCompleto.trim().split(/\s+/);
+  const primeiroNome = partes[0];
+
+  if (partes.length === 1) return primeiroNome;
+
+  // Verifica se há outra pessoa na lista com o mesmo primeiro nome
+  const temDuplicado = listaResponsaveis.some(outroNome => {
+    if (!outroNome || outroNome === nomeCompleto) return false;
+    const outroPrimeiro = outroNome.trim().split(/\s+/)[0];
+    return outroPrimeiro.toLowerCase() === primeiroNome.toLowerCase();
+  });
+
+  // Se houver dois "Carlos", exibe "Carlos Silva"
+  if (temDuplicado) {
+    const ultimoSobrenome = partes[partes.length - 1];
+    return `${primeiroNome} ${ultimoSobrenome}`;
+  }
+
+  return primeiroNome;
+}
+
     // Tratamento de Estado Vazio
     if (!evidences || evidences.length === 0) {
       container.innerHTML = `
@@ -84,6 +108,8 @@ window.CerneApp.EvidenceTable = {
         .map(tag => `<span class="tag">${escapeHtml(tag)}</span>`)
         .join('');
 
+      const nomeFormatado = formatResponsavelName(evidence.responsavel, listaResponsaveis);
+
       // Trata array de categorias ou string única
       const categoriesList = Array.isArray(evidence.categorias) && evidence.categorias.length > 0
         ? evidence.categorias
@@ -114,10 +140,10 @@ window.CerneApp.EvidenceTable = {
               ${categoriesHTML}
             </div>
           </td>
-          <td>
+         <td>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
               <div class="avatar-initial">${escapeHtml(evidence.responsavel ? evidence.responsavel.charAt(0) : 'U')}</div>
-              <span>${escapeHtml(evidence.responsavel)}</span>
+              <span>${escapeHtml(nomeFormatado)}</span>
             </div>
           </td>
           <td>
