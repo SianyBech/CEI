@@ -163,6 +163,21 @@ export async function resumirQualquerDocumento(caminhoArquivo, extensaoArquivo, 
 }
 
 /**
+ * Função auxiliar interna para tentar novamente em caso de falha de rede/API
+ */
+async function chamarComRetry(fn, maxRetries = 3, delay = 1000) {
+  for (let tentativa = 1; tentativa <= maxRetries; tentativa++) {
+    try {
+      return await fn();
+    } catch (error) {
+      console.warn(`[AI SERVICE] Tentativa ${tentativa} de ${maxRetries} falhou: ${error.message}`);
+      if (tentativa === maxRetries) throw error;
+      await new Promise(resolve => setTimeout(resolve, delay * tentativa));
+    }
+  }
+}
+
+/**
  * Envia o texto extraído para a IA e gera título, evento, resumo, categorias e tags
  */
 export async function resumirTextoSimples(texto, categoriasDoBanco = [], tagsDoBanco = []) {
@@ -196,20 +211,28 @@ REGRAS DE SELEÇÃO DE CATEGORIAS E TAGS:
 Conteúdo para análise:
 ${texto}`;
 
-    const response = await ai.models.generateContent({
-      model: MODELO_PADRAO,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    });
+    // Envolve a chamada da API do Gemini com o mecanismo de Retry
+    const response = await chamarComRetry(async () => {
+      return await ai.models.generateContent({
+        model: MODELO_PADRAO,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      });
+    }, 3, 1200);
 
     const rawText = response.text || '';
     
-    // Captura estritamente o bloco JSON entre chaves para evitar erros de sintaxe
+    // Captura estritamente o bloco JSON entre chaves e limpa formatações Markdown indesejadas
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error(`A IA não retornou uma estrutura JSON válida. Resposta: ${rawText}`);
     }
 
-    return JSON.parse(jsonMatch[0]);
+    const jsonString = jsonMatch[0]
+      .replace(/```json/gi, '')
+      .replace(/```/g, '')
+      .trim();
+
+    return JSON.parse(jsonString);
   } catch (err) {
     console.error('[GEMINI] Erro ao processar ou converter resposta da IA:', err);
     throw new Error(`Falha ao comunicar com a IA: ${err.message}`);
