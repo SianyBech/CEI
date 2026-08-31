@@ -1352,7 +1352,18 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       // ==========================================
       if (req.file) {
         const extension = getFileExtension(originalName);
-        tipo = extension === 'pdf' ? 'pdf' : ['png', 'jpg', 'jpeg'].includes(extension) ? 'imagem' : 'documento';
+        
+        // Classificação inteligente do tipo de arquivo incluindo planilhas
+        if (extension === 'pdf') {
+          tipo = 'pdf';
+        } else if (['png', 'jpg', 'jpeg', 'webp'].includes(extension)) {
+          tipo = 'imagem';
+        } else if (['xlsx', 'xls', 'ods', 'csv'].includes(extension)) {
+          tipo = 'planilha';
+        } else {
+          tipo = 'documento';
+        }
+
         mimeType = (req.file.mimetype || getMimeType(originalName)).toLowerCase();
         fileSize = Number(req.file.size || 0);
         
@@ -1374,7 +1385,7 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
       const primaryCategory = categoriesList.length > 0 ? categoriesList[0] : '';
       const rawTags = metadata.tagsSugeridas || metadata.tags || [];
       const tagsList = Array.isArray(rawTags) ? rawTags : [];
-      
+
       // 5. Query de inserção no banco de dados
       const insertQuery = `
         INSERT INTO public.evidences (

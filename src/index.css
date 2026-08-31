@@ -2490,3 +2490,7 @@ textarea:focus-visible,
   text-align: center;
 }
 
+.file-icon-planilha {
+  color: #107c41; /* Verde elegante para planilhas */
+  background-color: rgba(16, 124, 65, 0.1);
+}

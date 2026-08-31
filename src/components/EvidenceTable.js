@@ -115,30 +115,44 @@ paginatedEvidences.forEach(evidence => {
   const hasLink = !!evidence.link;
   const hasFile = evidence.tipo !== 'link' && evidence.nome;
   
-  let iconHtml = '';
   let displayType = evidence.tipo || 'Desconhecido';
 
-  // Lógica de Ícones e Tipo Híbrido
+  // Helper para mapear ícones, classes e rótulos de cada tipo de arquivo
+  const getTypeConfig = (tipo) => {
+    switch (tipo) {
+      case 'pdf':
+        return { icon: 'file-text', klass: 'file-icon-pdf', label: 'PDF' };
+      case 'imagem':
+        return { icon: 'image', klass: 'file-icon-imagem', label: 'Imagem' };
+      case 'planilha':
+        return { icon: 'file-spreadsheet', klass: 'file-icon-planilha', label: 'Planilha' };
+      case 'link':
+        return { icon: 'link', klass: 'file-icon-link', label: 'Link' };
+      default:
+        return { icon: 'file', klass: 'file-icon-documento', label: 'Documento' };
+    }
+  };
+
+  let iconHtml = '';
+
+  // Lógica de Ícones e Tipo Híbrido ou Isolado
   if (hasFile && hasLink) {
-    const capitalizedType = evidence.tipo.charAt(0).toUpperCase() + evidence.tipo.slice(1);
-    displayType = `${capitalizedType} + Link`;
-    const fileIcon = evidence.tipo === 'pdf' ? 'file-text' : (evidence.tipo === 'imagem' ? 'image' : 'file');
-    const fileClass = evidence.tipo === 'pdf' ? 'file-icon-pdf' : (evidence.tipo === 'imagem' ? 'file-icon-imagem' : 'file-icon-documento');
+    const config = getTypeConfig(evidence.tipo);
+    displayType = `${config.label} + Link`;
     
     iconHtml = `
-      <div style="display: flex; align-items: center; gap: 2px;">
-        <i data-lucide="${fileIcon}" class="file-icon ${fileClass}"></i>
-        <i data-lucide="link" class="file-icon file-icon-link" style="width: 14px; height: 14px;"></i>
+      <div style="display: flex; align-items: center; gap: 4px;">
+        <i data-lucide="${config.icon}" class="file-icon ${config.klass}"></i>
+        <i data-lucide="link" class="file-icon file-icon-link" style="width: 14px; height: 14px;" title="Contém link vinculado"></i>
       </div>
     `;
   } else if (hasFile) {
-    displayType = evidence.tipo;
-    const fileIcon = evidence.tipo === 'pdf' ? 'file-text' : (evidence.tipo === 'imagem' ? 'image' : 'file');
-    const fileClass = evidence.tipo === 'pdf' ? 'file-icon-pdf' : (evidence.tipo === 'imagem' ? 'file-icon-imagem' : 'file-icon-documento');
-    iconHtml = `<i data-lucide="${fileIcon}" class="file-icon ${fileClass}"></i>`;
+    const config = getTypeConfig(evidence.tipo);
+    displayType = config.label;
+    iconHtml = `<i data-lucide="${config.icon}" class="file-icon ${config.klass}"></i>`;
   } else if (hasLink) {
     displayType = 'Link';
-    iconHtml = `<i data-lucide="globe" class="file-icon file-icon-link"></i>`;
+    iconHtml = `<i data-lucide="link" class="file-icon file-icon-link"></i>`;
   }
 
   // Limitador de palavras para o Evento (5 palavras max)
