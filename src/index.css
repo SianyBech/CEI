@@ -132,12 +132,21 @@ textarea:focus-visible,
   min-width: 0;
 }
 
-/* 1. Container que segura os cards verticais */
+/* 1. O elemento PAI externo da coluna direita (quem segura tudo) */
+#right-sidebar,
+.right-sidebar { /* ajuste conforme a classe/ID real do container no seu HTML */
+  position: sticky;
+  top: calc(var(--header-height) + 1.5rem);
+  align-self: flex-start;
+  width: 280px; /* Garante uma largura fixa agradável */
+  flex-shrink: 0;
+}
+
+/* 2. O container interno de cards (apenas layout flex normal) */
 .right-sidebar-cards {
   display: flex;
-  position: sticky;
   flex-direction: column;
-  gap: 1.4rem; /* <--- AUMENTADO: de 0.85rem/1rem para 1.25rem (20px de espaçamento entre cada card) */
+  gap: 1.4rem;
 }
 
 /* 2. Ajuste fino de margem/respiro dos cards verticais */
