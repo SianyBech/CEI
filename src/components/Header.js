@@ -19,7 +19,7 @@ window.CerneApp.Header = {
       <div class="header-brand">
         <!-- Container da logo ajustado para fundo cinza clarinho -->
         <div class="header-logo" style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 4px; display: flex; align-items: center; justify-content: center;">
-          <img src="/src/logo.png" alt="Logo CEI" style="width: 24px; height: 24px; object-fit: contain;" />
+          <img src="/src/logopreta.png" alt="Logo CEI" style="width: 24px; height: 24px; object-fit: contain;" />
         </div>
         <div class="header-title-container">
           <h1 class="header-title">Olá, ${firstName} 👋</h1>

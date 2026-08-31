@@ -45,6 +45,18 @@ window.CerneApp.EvidenceDetails = {
       return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
     }
 
+    function formatDateForInput(dateString) {
+        if (!dateString) {
+          const today = new Date();
+          return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        }
+        if (dateString.includes('/')) {
+          const [dd, mm, yyyy] = dateString.split('/');
+          if (dd && mm && yyyy) return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+        }
+        return dateString;
+      }
+
     // Construção dinâmica e limpa dos botões de ação (Suporte Híbrido)
     let actionsHtml = '';
 
@@ -145,9 +157,9 @@ window.CerneApp.EvidenceDetails = {
               </div>
 
               <div class="detail-item">
-                <label class="detail-label" for="detail-data-input">Data do Registro</label>
-                <input id="detail-data-input" class="form-input" value="${escapeHtml(evidence.data)}" />
-              </div>
+            <label class="detail-label" for="detail-data-input">Data do Registro</label>
+            <input type="date" id="detail-data-input" class="form-input" value="${formatDateForInput(evidence.data)}" />
+          </div>
 
               <div class="detail-item">
                 <label class="detail-label">Tags da Evidência</label>

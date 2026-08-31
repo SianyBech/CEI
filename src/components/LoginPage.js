@@ -7,7 +7,7 @@ window.CerneApp.LoginPage = {
       <div class="login-card">
         <div class="login-brand">
           <div class="login-logo" style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; padding: 8px; display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; margin: 0 auto 1rem;">
-            <img src="/src/logo.png" alt="Logo CEI" style="width: 36px; height: 36px; object-fit: contain;" />
+            <img src="/src/logopreta.png" alt="Logo CEI" style="width: 36px; height: 36px; object-fit: contain;" />
           </div>
           <div>
             <h1>Gestão de Evidências CEI</h1>
