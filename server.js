@@ -324,7 +324,7 @@ function normalizeTags(value) {
   return [];
 }
 
-function normalizeCategories(value, fallbackCategory = 'Geral') {
+function normalizeCategories(value, fallbackCategory = '') {
   if (Array.isArray(value)) {
     const list = value
       .filter((item) => typeof item === 'string' && item.trim())
@@ -340,13 +340,13 @@ function normalizeCategories(value, fallbackCategory = 'Geral') {
     }
     return [value.trim()];
   }
-  return fallbackCategory ? [fallbackCategory] : ['Geral'];
+  return fallbackCategory ? [fallbackCategory] : [];
 }
 
 function serializeRow(row, req) {
   if (!row) return null;
 
-   const categoriesList = normalizeCategories(row.categorias, row.categoria);
+  const categoriesList = normalizeCategories(row.categorias, row.categoria);
 
   return {
     id: row.id,
@@ -355,8 +355,8 @@ function serializeRow(row, req) {
     tipo: row.tipo,
     data: row.data,
     evento: row.evento,
-    categoria: categoriesList[0] || row.categoria || 'Geral', // Mantém retrocompatibilidade
-    categorias: categoriesList,                               // Novo campo com array
+    categoria: categoriesList[0] || row.categoria || '', // Remove o fallback 'Geral'
+    categorias: categoriesList,                               
     responsavel: row.responsavel,
     tags: normalizeTags(row.tags),
     resumo: row.resumo,
@@ -1354,15 +1354,19 @@ app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
         const extension = getFileExtension(originalName);
         
         // Classificação inteligente do tipo de arquivo incluindo planilhas
-        if (extension === 'pdf') {
-          tipo = 'pdf';
-        } else if (['png', 'jpg', 'jpeg', 'webp'].includes(extension)) {
-          tipo = 'imagem';
-        } else if (['xlsx', 'xls', 'ods', 'csv'].includes(extension)) {
-          tipo = 'planilha';
-        } else {
-          tipo = 'documento';
-        }
+    if (extension === 'pdf') {
+      tipo = 'pdf';
+    } else if (['png', 'jpg', 'jpeg', 'webp'].includes(extension)) {
+      tipo = 'imagem';
+    } else if (['xlsx', 'xls', 'ods', 'csv'].includes(extension)) {
+      tipo = 'planilha';
+    } else if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(extension)) {
+      tipo = 'video';
+    } else if (!req.file && linkEnviado) {
+      tipo = 'link';
+    } else {
+      tipo = 'documento';
+    }
 
         mimeType = (req.file.mimetype || getMimeType(originalName)).toLowerCase();
         fileSize = Number(req.file.size || 0);

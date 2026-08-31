@@ -126,6 +126,8 @@ paginatedEvidences.forEach(evidence => {
         return { icon: 'image', klass: 'file-icon-imagem', label: 'Imagem' };
       case 'planilha':
         return { icon: 'file-spreadsheet', klass: 'file-icon-planilha', label: 'Planilha' };
+      case 'video':
+      return { icon: 'video', klass: 'file-icon-video', label: 'Vídeo' };
       case 'link':
         return { icon: 'link', klass: 'file-icon-link', label: 'Link' };
       default:
@@ -155,24 +157,33 @@ paginatedEvidences.forEach(evidence => {
     iconHtml = `<i data-lucide="link" class="file-icon file-icon-link"></i>`;
   }
 
-  // Limitador de palavras para o Evento (5 palavras max)
+  // Limitador de palavras para o Evento (5 palavras max), com fallback para traço se vazio
   const truncateWords = (str, max) => {
-    if (!str) return '';
-    const words = str.split(' ');
+    if (!str || str.trim() === '' || str.trim().toLowerCase() === 'sem evento') return '';
+    const words = str.trim().split(/\s+/);
     return words.length > max ? words.slice(0, max).join(' ') + '...' : str;
   };
-  const truncatedEvento = truncateWords(evidence.evento, 5);
+  
+  const eventoFormatado = truncateWords(evidence.evento, 5);
+  const eventoHTML = eventoFormatado 
+    ? escapeHtml(eventoFormatado) 
+    : '<span style="color: var(--text-tertiary); font-style: italic; font-size: 0.8rem;">—</span>';
 
   const tagsHTML = (evidence.tags || []).map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
   const nomeFormatado = formatResponsavelName(evidence.responsavel, listaFinalResponsaveis);
   
-  const categoriesList = Array.isArray(evidence.categorias) && evidence.categorias.length > 0 ? evidence.categorias : (evidence.categoria ? [evidence.categoria] : []);
-  const categoriesHTML = categoriesList.map(cat => {
-    const customStyle = window.getCategoryStyle ? window.getCategoryStyle(cat) : '';
-    return `<span class="badge" style="${customStyle}">${escapeHtml(cat)}</span>`;
-  }).join(' ');
+const categoriesList = Array.isArray(evidence.categorias) && evidence.categorias.length > 0 
+  ? evidence.categorias 
+  : (evidence.categoria ? [evidence.categoria] : []);
 
-  rowsHTML += `
+const categoriesHTML = categoriesList.length > 0 
+  ? categoriesList.map(cat => {
+      const customStyle = window.getCategoryStyle ? window.getCategoryStyle(cat) : '';
+      return `<span class="badge" style="${customStyle}">${escapeHtml(cat)}</span>`;
+    }).join(' ')
+  : '<span style="color: var(--text-tertiary); font-style: italic; font-size: 0.8rem;">—</span>';
+
+rowsHTML += `
     <tr data-id="${evidence.id}">
       <td>
         <div class="file-name-cell">
@@ -182,7 +193,7 @@ paginatedEvidences.forEach(evidence => {
       </td>
       <td><span class="file-type-badge">${escapeHtml(displayType)}</span></td>
       <td>${escapeHtml(evidence.data)}</td>
-      <td title="${escapeHtml(evidence.evento)}">${escapeHtml(truncatedEvento)}</td>
+      <td title="${escapeHtml(evidence.evento || '')}">${eventoHTML}</td>
       <td><div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">${categoriesHTML}</div></td>
       <td>
         <div style="display: flex; align-items: center; gap: 0.5rem;">

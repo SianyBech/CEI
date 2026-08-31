@@ -11,14 +11,20 @@ window.CerneApp.EvidenceDetails = {
     // Determine file icon
     let iconName = 'file';
     let iconClass = 'file-icon-documento';
-    if (evidence.tipo === 'pdf') {
+   if (evidence.tipo === 'pdf') {
       iconName = 'file-text';
       iconClass = 'file-icon-pdf';
     } else if (evidence.tipo === 'imagem') {
       iconName = 'image';
       iconClass = 'file-icon-imagem';
+    } else if (evidence.tipo === 'planilha') {
+      iconName = 'file-spreadsheet';
+      iconClass = 'file-icon-planilha';
+    } else if (evidence.tipo === 'video') {
+      iconName = 'video';
+      iconClass = 'file-icon-video';
     } else if (evidence.tipo === 'link') {
-      iconName = 'globe';
+      iconName = 'link';
       iconClass = 'file-icon-link';
     }
 
