@@ -730,7 +730,7 @@ async function generateMetadata(tempPath, originalName, extension, dbCategories,
   if (!extensoesSuportadas.includes(extension)) {
     return {
       titulo: originalName,
-      evento: 'Registro Interno',
+      evento: '',
       resumo: 'Formato não suportado para processamento automático de texto pela IA.',
       categoriasSugeridas: [],
       tagsSugeridas: [],
@@ -1197,7 +1197,7 @@ app.patch('/api/evidences/:id', requirePermission('edit'), async (req, res, next
 
     const categoriesList = normalizeCategories(categorias, categoria);
 
-    const primaryCategory = categoriesList[0] || 'Geral';
+    const primaryCategory = categoriesList[0] || '';
 
     const tagsList = normalizeTags(tags);
 
