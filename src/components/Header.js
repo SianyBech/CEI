@@ -79,6 +79,95 @@ window.CerneApp.Header = {
       }
     });
 
+     // Função interna para construir e exibir o Modal de Alteração de Senha
+    function openChangePasswordModal() {
+      const modalOverlay = document.createElement('div');
+      modalOverlay.className = 'modal-overlay';
+      modalOverlay.id = 'change-password-modal-overlay';
+
+      modalOverlay.innerHTML = `
+        <div class="modal-content" style="max-width: 420px;">
+          <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <i data-lucide="lock" style="width: 20px; height: 20px; color: var(--accent);"></i>
+              <h2 class="modal-title">Alterar Senha</h2>
+            </div>
+            <button class="modal-close" id="pwd-close-btn">
+              <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+            </button>
+          </div>
+
+          <div class="modal-body" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label" for="pwd-new">Nova Senha</label>
+              <input type="password" id="pwd-new" class="form-input" placeholder="Mínimo de 6 caracteres" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pwd-confirm">Confirmar Nova Senha</label>
+              <input type="password" id="pwd-confirm" class="form-input" placeholder="Repita a nova senha" />
+            </div>
+            <div id="pwd-error-msg" style="display: none; color: var(--danger); font-size: 0.825rem;"></div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="pwd-cancel-btn">Cancelar</button>
+            <button class="btn btn-primary" id="pwd-save-btn">Salvar Senha</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modalOverlay);
+      lucide.createIcons({ node: modalOverlay });
+
+      const closeBtn = modalOverlay.querySelector('#pwd-close-btn');
+      const cancelBtn = modalOverlay.querySelector('#pwd-cancel-btn');
+      const saveBtn = modalOverlay.querySelector('#pwd-save-btn');
+      const newPwdInput = modalOverlay.querySelector('#pwd-new');
+      const confirmPwdInput = modalOverlay.querySelector('#pwd-confirm');
+      const errorMsg = modalOverlay.querySelector('#pwd-error-msg');
+
+      const closeModal = () => modalOverlay.remove();
+
+      closeBtn.addEventListener('click', closeModal);
+      cancelBtn.addEventListener('click', closeModal);
+      modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) closeModal();
+      });
+
+      saveBtn.addEventListener('click', async () => {
+        const newPwd = newPwdInput.value.trim();
+        const confirmPwd = confirmPwdInput.value.trim();
+
+        errorMsg.style.display = 'none';
+
+        if (!newPwd || newPwd.length < 6) {
+          errorMsg.textContent = 'A senha deve ter pelo menos 6 caracteres.';
+          errorMsg.style.display = 'block';
+          return;
+        }
+
+        if (newPwd !== confirmPwd) {
+          errorMsg.textContent = 'As senhas informadas não coincidem.';
+          errorMsg.style.display = 'block';
+          return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="btn-loading-spinner" aria-hidden="true"></span> Salvando...';
+
+        try {
+          await window.CerneApp.Api.changePassword(newPwd);
+          alert('Sua senha foi alterada com sucesso!');
+          closeModal();
+        } catch (err) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Salvar Senha';
+          errorMsg.textContent = err.message || 'Erro ao alterar a senha.';
+          errorMsg.style.display = 'block';
+        }
+      });
+    } 
+
     lucide.createIcons();
     return header;
   }
