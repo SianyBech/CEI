@@ -5,7 +5,7 @@ window.CerneApp.EvidenceDetails = {
     overlay.id = 'details-modal-overlay';
 
     // Match CERNE category badge color
-    const primaryCat = evidence.categoria || (evidence.categorias && evidence.categorias[0]) || 'Geral';
+    const primaryCat = evidence.categoria || (evidence.categorias && evidence.categorias[0]) || '';
     const categoryClass = `badge-${primaryCat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
 
     // Determine file icon
@@ -441,7 +441,7 @@ window.CerneApp.EvidenceDetails = {
         titulo: titleInput.value.trim() || evidence.nome,
         evento: eventoInput.value.trim() || 'Sem Evento',
         categorias: selectedCategories,
-        categoria: selectedCategories.length > 0 ? selectedCategories[0] : 'Geral',
+        categoria: selectedCategories.length > 0 ? selectedCategories[0] : '',
         responsavel: responsavelInput ? responsavelInput.value.trim() : (evidence.responsavel || 'Não especificado'),
         data: dataDigitada,
         resumo: resumoInput.value.trim() || 'Sem resumo disponível.',
