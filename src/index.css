@@ -135,6 +135,7 @@ textarea:focus-visible,
 /* 1. Container que segura os cards verticais */
 .right-sidebar-cards {
   display: flex;
+  position: sticky;
   flex-direction: column;
   gap: 1.4rem; /* <--- AUMENTADO: de 0.85rem/1rem para 1.25rem (20px de espaçamento entre cada card) */
 }
@@ -155,6 +156,7 @@ textarea:focus-visible,
 }
 
 .sidebar {
+  position: sticky;
   width: 240px;
   flex-shrink: 0;
   min-width: 0;
