@@ -2512,3 +2512,36 @@ textarea:focus-visible,
 .file-icon-video {
   color: #d97706; /* Tom âmbar/laranja para vídeos */
 }
+
+/* Estilos para o cabeçalho ordenável da tabela */
+.evidence-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-fast);
+}
+
+.evidence-table th.sortable:hover {
+  background-color: #f1f5f9;
+}
+
+.th-sort-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sort-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0.35;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.evidence-table th.sortable:hover .sort-icon {
+  opacity: 0.75;
+}
+
+.evidence-table th.sortable.active .sort-icon {
+  opacity: 1;
+  color: var(--success);
+}
