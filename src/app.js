@@ -650,7 +650,7 @@ function setupSidebarEvents() {
 
   if (isSidebarEventsSetup) return;
   isSidebarEventsSetup = true;
-  
+
   // Delegação de eventos: escuta o clique no nível do documento
   document.addEventListener('click', (event) => {
     // 1. Verifica se o clique foi em um botão de fechar o card da sidebar
@@ -723,6 +723,17 @@ async function openSettings() {
 
     document.body.appendChild(settingsNode);
     if (window.lucide) lucide.createIcons();
+  }
+}
+
+// Exemplo de chamada no seu controller/app.js após carregar os dados:
+async function carregarFiltrosEBarraPesquisa() {
+  const responsaveis = await window.CerneApp.Api.fetchResponsaveis();
+  const searchBarContainer = document.querySelector('#search-bar-container');
+
+  // Atualiza e ordena os responsáveis dinamicamente na SearchBar
+  if (window.CerneApp.SearchBar?.updateResponsaveis) {
+    window.CerneApp.SearchBar.updateResponsaveis(searchBarContainer, responsaveis);
   }
 }
 

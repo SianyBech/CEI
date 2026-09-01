@@ -35,7 +35,6 @@ window.CerneApp.SearchBar = {
 
     // Mapeamento e Ordenação Alfabética dos Tipos de Mídia Atualizados
     const mediaTypes = [
-      { value: 'documento', label: 'Documento' },
       { value: 'imagem', label: 'Imagem' },
       { value: 'link', label: 'Link' },
       { value: 'pdf', label: 'PDF' },
