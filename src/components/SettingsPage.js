@@ -74,11 +74,25 @@
     const userName = userProfile?.nome || 'Gestor CEI';
     const userEmail = userProfile?.email || '';
     const userRole = userProfile?.cargo || 'Analista CEI';
+    const userSelectedColor = userProfile?.cor || '#0066cc'; // Cor padrão CEI
     const userConfigs = userProfile?.configuracoes || {};
     const defaultView = userConfigs.defaultView || 'table';
     const itemsPerPage = userConfigs.itemsPerPage || 10;
 
-    // Preenche a modal com os campos
+    // Paleta de cores para o avatar
+    const userColorPalette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+    // Renderiza as bolinhas da paleta usando userSelectedColor
+    const colorOptionsHtml = userColorPalette.map(color => `
+      <button 
+        type="button" 
+        class="color-picker-dot ${userSelectedColor === color ? 'selected' : ''}" 
+        data-color="${color}" 
+        style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50%; border: 2px solid ${userSelectedColor === color ? 'var(--text-primary)' : 'transparent'}; cursor: pointer; transition: transform 0.15s ease;"
+      ></button>
+    `).join('');
+
+    // Preenche a modal com as seções organizadas
     const modalBody = backdrop.querySelector('#settings-modal-body');
     modalBody.innerHTML = `
       <!-- Seção 1: Perfil da Conta -->
@@ -100,26 +114,20 @@
           </div>
 
           <div>
-            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-tertiary); background-color: var(--bg-tertiary); display: block; margin-bottom: 0.25rem;">Cargo / Função na Incubadora</label>
-            <input type="text" id="set-user-role" class="form-input" value="${userRole}" disabled style="width: 100%; padding: 0.45rem 0.65rem; font-size: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-primary);" />
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Cargo / Função na Incubadora</label>
+            <input type="text" id="set-user-role" class="form-input" value="${userRole}" disabled style="width: 100%; padding: 0.45rem 0.65rem; font-size: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;" />
+            <small style="font-size: 0.72rem; color: var(--text-tertiary); margin-top: 2px; display: block;">Gerenciado pela administração do CEI.</small>
+          </div>
+
+          <!-- Seletor de Cor de Destaque -->
+          <div style="margin-top: 0.5rem;">
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-primary); display: block; margin-bottom: 0.4rem;">Cor de Identificação (Avatar)</label>
+            <div id="set-color-picker" style="display: flex; gap: 0.6rem; align-items: center;">
+              ${colorOptionsHtml}
+            </div>
           </div>
         </div>
       </div>
-
-      ` 
-      // Opções de paleta executiva/moderna
-const userColorPalette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-
-// No HTML da modal de configurações:
-const colorOptionsHtml = userColorPalette.map(color => `
-  <button 
-    type="button" 
-    class="color-picker-dot ${user.color === color ? 'selected' : ''}" 
-    data-color="${color}" 
-    style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50%; border: 2px solid ${user.color === color ? 'var(--text-primary)' : 'transparent'}; cursor: pointer;"
-  ></button>
-`).join('');
-      `
 
       <!-- Seção 2: Preferências do Sistema -->
       <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; background-color: var(--bg-secondary, #f9fafb);">
@@ -159,6 +167,20 @@ const colorOptionsHtml = userColorPalette.map(color => `
       </div>
     `;
 
+    // Lógica para alternar a seleção de cores ao clicar nas bolinhas
+    let currentColorSelected = userSelectedColor;
+    modalBody.querySelectorAll('.color-picker-dot').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        modalBody.querySelectorAll('.color-picker-dot').forEach(b => {
+          b.style.borderColor = 'transparent';
+          b.classList.remove('selected');
+        });
+        btn.style.borderColor = 'var(--text-primary)';
+        btn.classList.add('selected');
+        currentColorSelected = btn.getAttribute('data-color');
+      });
+    });
+
     const saveBtn = backdrop.querySelector('#set-save-btn');
     saveBtn.removeAttribute('disabled');
 
@@ -170,6 +192,7 @@ const colorOptionsHtml = userColorPalette.map(color => `
       const payload = {
         nome: backdrop.querySelector('#set-user-name').value.trim(),
         cargo: backdrop.querySelector('#set-user-role').value.trim(),
+        cor: currentColorSelected,
         configuracoes: {
           defaultView: backdrop.querySelector('#set-view-select').value,
           itemsPerPage: perPage
