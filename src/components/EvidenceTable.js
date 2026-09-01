@@ -93,29 +93,43 @@ window.CerneApp.EvidenceTable = {
         .replace(/'/g, '&#39;');
     }
 
-    // Helper para gerar/obter uma cor consistente baseada no nome ou propriedade do usuário
-function getAvatarStyle(responsavelName, customColor) {
-  // Se o objeto já trouxer uma cor definida nas configurações
-  if (customColor) {
-    return `background-color: ${customColor}; color: #ffffff; font-weight: 600;`;
-  }
+// Helper para obter a cor consistente do avatar
+    function getAvatarStyle(responsavelName, customColor) {
+      // 1. Busca dados do usuário atualmente logado
+      let localProfile = {};
+      try {
+        localProfile = JSON.parse(localStorage.getItem('cerne:userProfile') || '{}');
+      } catch(e) {}
 
-  // Paleta executiva do CEI
-  const palette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#0284c7'];
-  
-  if (!responsavelName) {
-    return `background-color: var(--primary); color: #ffffff; font-weight: 600;`;
-  }
+      const currentUserName = localProfile.nome || '';
+      const currentUserColor = localProfile.cor;
 
-  // Gera um índice numérico simples a partir da soma dos caracteres do nome
-  let hash = 0;
-  for (let i = 0; i < responsavelName.length; i++) {
-    hash = responsavelName.charCodeAt(i) + ((hash << 5) - hash);
-  }
+      // Se a linha for do próprio usuário logado e ele tiver definido uma cor
+      if (currentUserColor && responsavelName && currentUserName && 
+          responsavelName.trim().toLowerCase() === currentUserName.trim().toLowerCase()) {
+        return `background-color: ${currentUserColor}; color: #ffffff; font-weight: 600;`;
+      }
 
-  const index = Math.abs(hash) % palette.length;
-  return `background-color: ${palette[index]}; color: #ffffff; font-weight: 600;`;
-}
+      // Se o objeto da evidência trouxer cor customizada explícita
+      if (customColor) {
+        return `background-color: ${customColor}; color: #ffffff; font-weight: 600;`;
+      }
+
+      // 2. Paleta fallback consistente por hash do nome para outros membros
+      const palette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#0284c7'];
+      
+      if (!responsavelName) {
+        return `background-color: var(--primary); color: #ffffff; font-weight: 600;`;
+      }
+
+      let hash = 0;
+      for (let i = 0; i < responsavelName.length; i++) {
+        hash = responsavelName.charCodeAt(i) + ((hash << 5) - hash);
+      }
+
+      const index = Math.abs(hash) % palette.length;
+      return `background-color: ${palette[index]}; color: #ffffff; font-weight: 600;`;
+    }
 
     function formatResponsavelName(nomeCompleto, lista = []) {
       if (!nomeCompleto) return 'Equipe CEI';
@@ -259,7 +273,7 @@ function getAvatarStyle(responsavelName, customColor) {
         : '<span style="color: var(--text-tertiary); font-style: italic; font-size: 0.8rem;">—</span>';
 
         const avatarStyle = getAvatarStyle(evidence.responsavel, evidence.responsavelColor);
-        
+
       rowsHTML += `
         <tr data-id="${evidence.id}">
           <td>

@@ -1,13 +1,19 @@
 window.CerneApp.Header = {
   render(onNewEvidenceClick, onSettingsClick, onLogout, user = null) {
     const currentUser = user || window.CerneApp.Auth?.getCurrentUser?.() || null;
+    
+    // Tenta ler do localStorage o perfil onde foi salva a cor do usuário
+    let localProfile = {};
+    try {
+      localProfile = JSON.parse(localStorage.getItem('cerne:userProfile') || '{}');
+    } catch(e) {}
+
+    const userColor = localProfile.cor || currentUser?.user_metadata?.cor || '#0066cc';
+    const avatarStyle = `background-color: ${userColor}; color: #ffffff; font-weight: 600;`;
+
     const role = String(currentUser?.app_metadata?.role || currentUser?.role || currentUser?.user_metadata?.role || 'user').toLowerCase();
     
-    const normalizedRole = ['authenticated', 'user', 'member', 'standard'].includes(role)
-      ? 'user'
-      : (['admin', 'administrator', 'owner'].includes(role) ? 'admin' : role);
-
-    const rawName = currentUser?.user_metadata?.nome || currentUser?.user_metadata?.full_name;
+    const rawName = localProfile.nome || currentUser?.user_metadata?.nome || currentUser?.user_metadata?.full_name;
     const displayName = rawName || (currentUser?.email ? currentUser.email.split('@')[0] : 'Usuário');
     
     // Extrai apenas o primeiro nome para a saudação
@@ -33,7 +39,7 @@ window.CerneApp.Header = {
         </button>
         <div class="user-menu">
           <button class="user-menu-trigger" id="user-menu-trigger" type="button">
-            <div class="user-avatar">${firstName.charAt(0).toUpperCase()}</div>
+            <div class="user-avatar" style="${avatarStyle}">${firstName.charAt(0).toUpperCase()}</div>
             <div class="user-menu-summary">
               <strong>${displayName}</strong>
               <span>${currentUser?.email ? currentUser.email : ''}</span>

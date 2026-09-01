@@ -725,17 +725,27 @@ async function openSettings() {
     const settingsNode = await window.CerneApp.SettingsPage.render(
       () => restoreSidebarActive('evidences'),
       async (updatedUser) => {
+        // 1. Atualiza as configurações de visualização do sistema
         if (updatedUser?.configuracoes) {
           state.viewMode = updatedUser.configuracoes.defaultView || 'table';
           state.itemsPerPage = updatedUser.configuracoes.itemsPerPage || 10;
           
-          // 💡 Reseta para a primeira página para evitar cair em página inexistente
           if (window.CerneApp.EvidenceTable) {
             window.CerneApp.EvidenceTable.resetPage();
           }
-
-          renderList(); // Re-renderiza a lista aplicando as novas preferências
         }
+
+        // 2. Re-renderiza o Header para atualizar o avatar e o nome na hora
+        const headerContainer = document.querySelector('#header-container');
+        if (headerContainer && window.CerneApp.Header) {
+          headerContainer.innerHTML = '';
+          headerContainer.appendChild(
+            window.CerneApp.Header.render(handleNewEvidence, openSettings, handleLogout, updatedUser)
+          );
+        }
+
+        // 3. Re-renderiza a lista principal (tabela/grid) aplicando a nova cor do usuário
+        renderList();
       }
     );
 
