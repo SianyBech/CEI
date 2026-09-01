@@ -61,18 +61,20 @@
     const totalResponsaveis = new Set(evidences.map(e => e.responsavel).filter(Boolean)).size;
     const chartColors = ['#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#64748b'];
 
-    // Helper para extrair a cor FORTE (cor do texto) definida para a categoria
-    function getCategoryBarColor(categoryName) {
-      if (window.getCategoryStyle) {
-        const styleString = window.getCategoryStyle(categoryName);
-        // Busca a propriedade 'color:' (texto forte) em vez do 'background-color:' (fundo pastel)
-        const match = styleString.match(/(?:^|;)\s*color:\s*([^;]+)/i);
-        if (match && match[1]) {
-          return match[1].trim();
-        }
-      }
-      return 'var(--success, #16a34a)'; // Fallback verde forte caso não encontre
+// Helper para extrair a cor do texto e aplicar 75% de opacidade (ficando vívida, porém suave)
+function getCategoryBarColor(categoryName) {
+  if (window.getCategoryStyle) {
+    const styleString = window.getCategoryStyle(categoryName);
+    const match = styleString.match(/(?:^|;)\s*color:\s*([^;]+)/i);
+    
+    if (match && match[1]) {
+      const baseColor = match[1].trim();
+      // Aplica mistura nativa do CSS mantendo 75% da cor e 25% de transparência
+      return `color-mix(in srgb, ${baseColor} 75%, transparent)`;
     }
+  }
+  return 'rgba(22, 163, 74, 0.8)'; // Fallback verde equilibrado
+}
 
     // Generator de SVG para os Gráficos de Rosca
     function generateInteractiveDonutSvg(dataEntries, totalSum, chartId) {
