@@ -69,8 +69,8 @@ function getCategoryBarColor(categoryName) {
     
     if (match && match[1]) {
       const baseColor = match[1].trim();
-      // Aplica mistura nativa do CSS mantendo 75% da cor e 25% de transparência
-      return `color-mix(in srgb, ${baseColor} 75%, transparent)`;
+      // Aplica mistura nativa do CSS mantendo 70% da cor e 30% de transparência
+      return `color-mix(in srgb, ${baseColor} 70%, transparent)`;
     }
   }
   return 'rgba(22, 163, 74, 0.8)'; // Fallback verde equilibrado

@@ -1,3 +1,5 @@
+window.CerneApp = window.CerneApp || {};
+
 window.CerneApp.SearchBar = {
   render(currentQuery, currentViewMode, categories, tags, onSearchChange, onFilterChange, onViewModeChange, onDateFilterChange, onClearFilters) {
     const escapeHtml = (str) => String(str || '')
@@ -13,15 +15,39 @@ window.CerneApp.SearchBar = {
     container.style.gap = '0.75rem';
     container.style.width = '100%';
 
-    const categoriesOptions = Array.isArray(categories)
-      ? categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('')
-      : '';
+    // Ordenação Alfabética e Sanitização de Categorias
+    const sortedCategories = Array.isArray(categories)
+      ? [...categories].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      : [];
 
-    const tagsOptions = Array.isArray(tags)
-      ? tags.map((tag) => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`).join('')
-      : '';
+    const categoriesOptions = sortedCategories
+      .map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+      .join('');
 
-   // Search input, Date Range Picker and layout toggler row (Primeira linha alinhada)
+    // Ordenação Alfabética e Sanitização de Tags
+    const sortedTags = Array.isArray(tags)
+      ? [...tags].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      : [];
+
+    const tagsOptions = sortedTags
+      .map((tag) => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`)
+      .join('');
+
+    // Mapeamento e Ordenação Alfabética dos Tipos de Mídia Atualizados
+    const mediaTypes = [
+      { value: 'documento', label: 'Documento' },
+      { value: 'imagem', label: 'Imagem' },
+      { value: 'link', label: 'Link' },
+      { value: 'pdf', label: 'PDF' },
+      { value: 'planilha', label: 'Planilha' },
+      { value: 'video', label: 'Vídeo' }
+    ].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+
+    const mediaTypesOptions = mediaTypes
+      .map((type) => `<option value="${type.value}">${type.label}</option>`)
+      .join('');
+
+    // 1. Search input e Layout Toggle
     const searchRow = document.createElement('div');
     searchRow.className = 'search-filter-row';
     searchRow.innerHTML = `
@@ -32,13 +58,10 @@ window.CerneApp.SearchBar = {
         </div>
       </div>
 
-      <!-- NOVO LOCAL: Período da Evidência colocado ao lado da barra de pesquisa -->
       <div class="header-date-filter-wrapper">
         <div class="custom-date-range-container">
+          <span class="date-separator">Período</span>
 
-        <span class="date-separator">Período</span>
-
-          <!-- Campo De -->
           <div class="date-input-field" id="date-from-trigger">
             <i data-lucide="calendar"></i>
             <span id="date-from-text" class="placeholder">De</span>
@@ -46,7 +69,6 @@ window.CerneApp.SearchBar = {
 
           <span class="date-separator">Até</span>
 
-          <!-- Campo Até -->
           <div class="date-input-field" id="date-to-trigger">
             <i data-lucide="calendar"></i>
             <span id="date-to-text" class="placeholder">Até</span>
@@ -69,7 +91,6 @@ window.CerneApp.SearchBar = {
               <button type="button" class="calendar-nav-btn" id="cal-next-btn">&gt;</button>
             </div>
 
-            <!-- Conteúdo Dinâmico do Calendário (Dias / Meses / Anos) -->
             <div id="calendar-body"></div>
 
             <div class="calendar-footer">
@@ -90,7 +111,7 @@ window.CerneApp.SearchBar = {
       </div>
     `;
 
-    // 2. Advanced filters row
+    // 2. Painel de Filtros Avançados
     const filtersRow = document.createElement('div');
     filtersRow.className = 'filters-panel';
     filtersRow.innerHTML = `
@@ -100,7 +121,7 @@ window.CerneApp.SearchBar = {
           <span>Filtros</span>
         </div>
         <button type="button" id="clear-date-filters" class="filters-panel-clear-btn">Limpar filtros
-        <i data-lucide="filter-x" style="width: 14px; height: 14px;"></i>
+          <i data-lucide="filter-x" style="width: 14px; height: 14px;"></i>
         </button>
       </div>
 
@@ -109,9 +130,7 @@ window.CerneApp.SearchBar = {
           <span class="filter-label">Tipo</span>
           <select class="filter-select" id="filter-tipo">
             <option value="todos">Todos os tipos</option>
-            <option value="pdf">PDF</option>
-            <option value="imagem">Imagem</option>
-            <option value="documento">Documento</option>
+            ${mediaTypesOptions}
           </select>
         </div>
 
@@ -137,78 +156,19 @@ window.CerneApp.SearchBar = {
             ${tagsOptions}
           </select>
         </div>
-
+      </div>
     `;
 
     container.appendChild(searchRow);
     container.appendChild(filtersRow);
 
-  /*  // 3. Dashboard Cards (Com aspas corrigidas no counter-novas-mes)
-    const cardsRow = document.createElement('div');
-    cardsRow.className = 'dashboard-cards';
-    cardsRow.innerHTML = `
-      <div class="dashboard-card">
-        <div class="dashboard-card-icon" style="color: var(--success);">
-          <i data-lucide="file-text"></i>
-        </div>
-        <div>
-          <div class="dashboard-card-counter" id="counter-total">0</div>
-          <div class="dashboard-card-title">Evidências</div>
-          <div class="dashboard-card-subtitle">Total cadastradas</div>
-        </div>
-      </div>
-      <div class="dashboard-card">
-        <div class="dashboard-card-icon" style="color: var(--success);">
-          <i data-lucide="folder"></i>
-        </div>
-        <div>
-          <div class="dashboard-card-counter" id="counter-categorias">0</div>
-          <div class="dashboard-card-title">Categorias</div>
-          <div class="dashboard-card-subtitle">Organizadas</div>
-        </div>
-      </div>
-      <div class="dashboard-card">
-        <div class="dashboard-card-icon" style="color: var(--success);">
-          <i data-lucide="users"></i>
-        </div>
-        <div>
-          <div class="dashboard-card-counter" id="counter-responsaveis">0</div>
-          <div class="dashboard-card-title">Responsáveis</div>
-          <div class="dashboard-card-subtitle">Ativos</div>
-        </div>
-      </div>
-      <div class="dashboard-card">
-        <div class="dashboard-card-icon" style="color: var(--success);">
-          <i data-lucide="tag"></i>
-        </div>
-        <div>
-          <div class="dashboard-card-counter" id="counter-tags">0</div>
-          <div class="dashboard-card-title">Tags</div>
-          <div class="dashboard-card-subtitle">Em uso</div>
-        </div>
-      </div>
-      <div class="dashboard-card">
-        <div class="dashboard-card-icon" style="color: var(--success);">
-          <i data-lucide="calendar"></i>
-        </div>
-        <div>
-          <div class="dashboard-card-counter" id="counter-novas-mes">0</div>
-          <div class="dashboard-card-title">Este mês</div>
-          <div class="dashboard-card-subtitle">Adicionadas</div>
-        </div> 
-      </div> 
-    `; 
-
-    container.appendChild(cardsRow); */
-
-    // 4. Event listeners do Search Input e Toggles de Visualização
+    // 3. Listeners
     const input = searchRow.querySelector('#search-input');
     input.addEventListener('input', (e) => onSearchChange(e.target.value));
 
     searchRow.querySelector('#toggle-table').addEventListener('click', () => onViewModeChange('table'));
     searchRow.querySelector('#toggle-grid').addEventListener('click', () => onViewModeChange('grid'));
 
-    // Listeners dos selects simples (Tipo, Categoria, Responsável, Tag)
     filtersRow.querySelectorAll('.filter-select').forEach(select => {
       select.addEventListener('change', (e) => {
         const filterId = e.target.id.replace('filter-', '');
@@ -216,22 +176,22 @@ window.CerneApp.SearchBar = {
       });
     });
 
-    // 5. Estado e Manipulação do Calendário estilo Cia Aérea
-    let activeInputTarget = 'from'; // 'from' ou 'to'
+    // 4. Lógica de Calendário
+    let activeInputTarget = 'from';
     let selectedFromDate = null;
     let selectedToDate = null;
 
     const today = new Date();
     let viewMonth = today.getMonth();
     let viewYear = today.getFullYear();
-    let pickerMode = 'days'; // 'days', 'months', 'years'
+    let pickerMode = 'days';
 
     const monthNames = [
       'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
       'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
     ];
 
-const popover = searchRow.querySelector('#calendar-popover');
+    const popover = searchRow.querySelector('#calendar-popover');
     const dateFromTrigger = searchRow.querySelector('#date-from-trigger');
     const dateToTrigger = searchRow.querySelector('#date-to-trigger');
     const dateFromText = searchRow.querySelector('#date-from-text');
@@ -323,7 +283,6 @@ const popover = searchRow.querySelector('#calendar-popover');
         return;
       }
 
-      // Grade de Dias
       const grid = document.createElement('div');
       grid.className = 'calendar-grid';
 
@@ -468,7 +427,7 @@ const popover = searchRow.querySelector('#calendar-popover');
       closePopover();
     });
 
-    // 6. Listener global do botão "Limpar Filtros" principal
+    // 5. Limpar Filtros
     const clearFiltersBtn = filtersRow.querySelector('.filters-panel-clear-btn');
     if (clearFiltersBtn) {
       clearFiltersBtn.addEventListener('click', () => {
@@ -488,7 +447,6 @@ const popover = searchRow.querySelector('#calendar-popover');
       });
     }
 
-    // Fechar popover ao clicar fora
     document.addEventListener('click', (e) => {
       if (!popover.contains(e.target) && !dateFromTrigger.contains(e.target) && !dateToTrigger.contains(e.target)) {
         closePopover();
@@ -498,5 +456,32 @@ const popover = searchRow.querySelector('#calendar-popover');
     popover.addEventListener('click', (e) => e.stopPropagation());
 
     return container;
+  },
+
+  // Método público para atualizar e ordenar os responsáveis dinamicamente quando a API responder
+  updateResponsaveis(containerElement, responsaveisList) {
+    if (!containerElement) return;
+    const select = containerElement.querySelector('#filter-responsavel');
+    if (!select) return;
+
+    const currentValue = select.value;
+    const escapeHtml = (str) => String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const sortedResponsaveis = Array.isArray(responsaveisList)
+      ? [...responsaveisList].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      : [];
+
+    let optionsHtml = '<option value="todos">Todos os responsáveis</option>';
+    optionsHtml += sortedResponsaveis
+      .map(resp => `<option value="${escapeHtml(resp)}">${escapeHtml(resp)}</option>`)
+      .join('');
+
+    select.innerHTML = optionsHtml;
+    select.value = currentValue;
   }
 };
