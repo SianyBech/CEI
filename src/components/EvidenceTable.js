@@ -93,6 +93,30 @@ window.CerneApp.EvidenceTable = {
         .replace(/'/g, '&#39;');
     }
 
+    // Helper para gerar/obter uma cor consistente baseada no nome ou propriedade do usuário
+function getAvatarStyle(responsavelName, customColor) {
+  // Se o objeto já trouxer uma cor definida nas configurações
+  if (customColor) {
+    return `background-color: ${customColor}; color: #ffffff; font-weight: 600;`;
+  }
+
+  // Paleta executiva do CEI
+  const palette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#0284c7'];
+  
+  if (!responsavelName) {
+    return `background-color: var(--primary); color: #ffffff; font-weight: 600;`;
+  }
+
+  // Gera um índice numérico simples a partir da soma dos caracteres do nome
+  let hash = 0;
+  for (let i = 0; i < responsavelName.length; i++) {
+    hash = responsavelName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  const index = Math.abs(hash) % palette.length;
+  return `background-color: ${palette[index]}; color: #ffffff; font-weight: 600;`;
+}
+
     function formatResponsavelName(nomeCompleto, lista = []) {
       if (!nomeCompleto) return 'Equipe CEI';
 
@@ -234,6 +258,8 @@ window.CerneApp.EvidenceTable = {
           }).join(' ')
         : '<span style="color: var(--text-tertiary); font-style: italic; font-size: 0.8rem;">—</span>';
 
+        const avatarStyle = getAvatarStyle(evidence.responsavel, evidence.responsavelColor);
+        
       rowsHTML += `
         <tr data-id="${evidence.id}">
           <td>
@@ -247,11 +273,13 @@ window.CerneApp.EvidenceTable = {
           <td title="${escapeHtml(evidence.evento || '')}">${eventoHTML}</td>
           <td><div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">${categoriesHTML}</div></td>
           <td>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <div class="avatar-initial">${escapeHtml(evidence.responsavel ? evidence.responsavel.charAt(0) : 'U')}</div>
-              <span>${escapeHtml(nomeFormatado)}</span>
-            </div>
-          </td>
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <div class="avatar-initial" style="${avatarStyle}">
+        ${escapeHtml(evidence.responsavel ? evidence.responsavel.charAt(0) : 'U')}
+      </div>
+      <span>${escapeHtml(nomeFormatado)}</span>
+    </div>
+  </td>
           <td><div class="tags-list">${tagsHTML}</div></td>
         </tr>
       `;

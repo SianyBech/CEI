@@ -35,3 +35,9 @@ function generateCategoryStyle(categoryName) {
 window.CerneApp.Utils = window.CerneApp.Utils || {};
 window.CerneApp.Utils.getCategoryStyle = generateCategoryStyle;
 window.getCategoryStyle = generateCategoryStyle;
+
+// Exemplo no seu arquivo de utilitários ou globals:
+window.getUserAvatarStyle = function(userColor) {
+  const color = userColor || '#0066cc'; // Cor padrão CEI caso não tenha cor salva
+  return `background-color: ${color}; color: #ffffff; font-weight: 600;`;
+};

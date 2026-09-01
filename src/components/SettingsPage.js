@@ -100,11 +100,26 @@
           </div>
 
           <div>
-            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-primary); display: block; margin-bottom: 0.25rem;">Cargo / Função na Incubadora</label>
-            <input type="text" id="set-user-role" class="form-input" value="${userRole}" placeholder="Ex: Gestor CERNE, Bolsista, etc." style="width: 100%; padding: 0.45rem 0.65rem; font-size: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-primary);" />
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-tertiary); background-color: var(--bg-tertiary); display: block; margin-bottom: 0.25rem;">Cargo / Função na Incubadora</label>
+            <input type="text" id="set-user-role" class="form-input" value="${userRole}" disabled style="width: 100%; padding: 0.45rem 0.65rem; font-size: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-primary);" />
           </div>
         </div>
       </div>
+
+      ` 
+      // Opções de paleta executiva/moderna
+const userColorPalette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+// No HTML da modal de configurações:
+const colorOptionsHtml = userColorPalette.map(color => `
+  <button 
+    type="button" 
+    class="color-picker-dot ${user.color === color ? 'selected' : ''}" 
+    data-color="${color}" 
+    style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50%; border: 2px solid ${user.color === color ? 'var(--text-primary)' : 'transparent'}; cursor: pointer;"
+  ></button>
+`).join('');
+      `
 
       <!-- Seção 2: Preferências do Sistema -->
       <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; background-color: var(--bg-secondary, #f9fafb);">
