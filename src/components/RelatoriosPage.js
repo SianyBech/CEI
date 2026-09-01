@@ -61,16 +61,17 @@
     const totalResponsaveis = new Set(evidences.map(e => e.responsavel).filter(Boolean)).size;
     const chartColors = ['#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#64748b'];
 
-    // Helper para extrair a cor de fundo (background-color) definida para a categoria
+    // Helper para extrair a cor FORTE (cor do texto) definida para a categoria
     function getCategoryBarColor(categoryName) {
       if (window.getCategoryStyle) {
         const styleString = window.getCategoryStyle(categoryName);
-        const match = styleString.match(/background-color:\s*([^;]+)/i) || styleString.match(/background:\s*([^;]+)/i);
+        // Busca a propriedade 'color:' (texto forte) em vez do 'background-color:' (fundo pastel)
+        const match = styleString.match(/(?:^|;)\s*color:\s*([^;]+)/i);
         if (match && match[1]) {
           return match[1].trim();
         }
       }
-      return 'var(--success, #16a34a)'; // Fallback para a cor padrão do sistema
+      return 'var(--success, #16a34a)'; // Fallback verde forte caso não encontre
     }
 
     // Generator de SVG para os Gráficos de Rosca
