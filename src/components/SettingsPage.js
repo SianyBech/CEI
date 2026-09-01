@@ -62,20 +62,30 @@
     backdrop.querySelector('#set-close-bottom-btn').addEventListener('click', closeModal);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
 
-    // Busca dados reais do perfil no banco
+// 1. Busca dados do perfil com fallback inteligente do localStorage
     let userProfile = null;
+    let localData = {};
+    
+    try {
+      localData = JSON.parse(localStorage.getItem('cerne:userProfile') || '{}');
+    } catch (e) {
+      localData = {};
+    }
+
     try {
       userProfile = await window.CerneApp.Api.fetchUserProfile();
     } catch (err) {
       console.warn('Falha ao carregar perfil via API, usando fallback local:', err);
-      userProfile = JSON.parse(localStorage.getItem('cerne:userProfile') || '{}');
+      userProfile = localData;
     }
 
-    const userName = userProfile?.nome || 'Gestor CEI';
-    const userEmail = userProfile?.email || '';
-    const userRole = userProfile?.cargo || 'Analista CEI';
-    const userSelectedColor = userProfile?.cor || '#0066cc'; // Cor padrão CEI
-    const userConfigs = userProfile?.configuracoes || {};
+    // Garante que se o perfil da API vier sem cor, usamos a do localStorage ou a padrão
+    const userName = userProfile?.nome || localData.nome || 'Gestor CEI';
+    const userEmail = userProfile?.email || localData.email || '';
+    const userRole = userProfile?.cargo || localData.cargo || 'Analista CEI';
+    const userSelectedColor = userProfile?.cor || localData.cor || '#0066cc'; // <--- Lê a cor do localData se a API não trouxer
+    
+    const userConfigs = userProfile?.configuracoes || localData.configuracoes || {};
     const defaultView = userConfigs.defaultView || 'table';
     const itemsPerPage = userConfigs.itemsPerPage || 10;
 
@@ -184,7 +194,7 @@
     const saveBtn = backdrop.querySelector('#set-save-btn');
     saveBtn.removeAttribute('disabled');
 
-    // Ação do botão salvar
+    // 2. Ação de Salvar Atualizada
     saveBtn.addEventListener('click', async () => {
       const rawPerPage = parseInt(backdrop.querySelector('#set-per-page-input').value, 10);
       const perPage = (!isNaN(rawPerPage) && rawPerPage > 0) ? rawPerPage : 10;
@@ -192,7 +202,7 @@
       const payload = {
         nome: backdrop.querySelector('#set-user-name').value.trim(),
         cargo: backdrop.querySelector('#set-user-role').value.trim(),
-        cor: currentColorSelected,
+        cor: currentColorSelected, // <--- Cor selecionada pelas bolinhas
         configuracoes: {
           defaultView: backdrop.querySelector('#set-view-select').value,
           itemsPerPage: perPage
@@ -203,13 +213,26 @@
         saveBtn.disabled = true;
         saveBtn.textContent = 'Salvando...';
 
-        const updatedUser = await window.CerneApp.Api.updateUserProfile(payload);
+        let updatedUser = null;
+        try {
+          updatedUser = await window.CerneApp.Api.updateUserProfile(payload);
+        } catch (apiErr) {
+          console.warn('API não respondeu, salvando localmente:', apiErr);
+        }
+
+        // Se a API não retornar a cor salva, garantimos que o objeto final tenha a cor escolhida
+        const finalUserProfile = {
+          ...localData,
+          ...(updatedUser || {}),
+          ...payload // Garante que 'cor', 'nome' e 'configuracoes' persistam no localStorage
+        };
         
-        localStorage.setItem('cerne:userProfile', JSON.stringify(updatedUser));
-        localStorage.setItem('cerne:settings', JSON.stringify(updatedUser.configuracoes));
+        // Persiste o perfil completo com a cor atualizada
+        localStorage.setItem('cerne:userProfile', JSON.stringify(finalUserProfile));
+        localStorage.setItem('cerne:settings', JSON.stringify(finalUserProfile.configuracoes));
 
         if (typeof onSaveCallback === 'function') {
-          onSaveCallback(updatedUser);
+          onSaveCallback(finalUserProfile);
         }
 
         closeModal();
@@ -219,7 +242,6 @@
         saveBtn.textContent = 'Salvar Alterações';
       }
     });
-
     if (window.lucide) lucide.createIcons();
 
     return backdrop;
