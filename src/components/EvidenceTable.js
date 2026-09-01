@@ -24,7 +24,7 @@ window.CerneApp.EvidenceTable = {
     return new Date(dateStr);
   },
 
-  // Função interna para ordenar a lista de evidências
+// Função interna para ordenar a lista de evidências
   sortEvidences(evidences) {
     const field = this.sortField;
     const isAsc = this.sortDirection === 'asc';
@@ -33,13 +33,14 @@ window.CerneApp.EvidenceTable = {
       let valA = '';
       let valB = '';
 
-      // Tratamento por tipo de campo
+      // Ordenação especial para campo de Data
       if (field === 'data') {
         const dateA = this.parseDate(a.data);
         const dateB = this.parseDate(b.data);
         return isAsc ? dateA - dateB : dateB - dateA;
       }
 
+      // Extração de valores conforme o campo
       if (field === 'titulo') {
         valA = a.titulo || a.nome || '';
         valB = b.titulo || b.nome || '';
@@ -56,7 +57,16 @@ window.CerneApp.EvidenceTable = {
         return 0;
       }
 
-      // Ordenação de texto insensível a acentos e maiúsculas
+      // Identifica se os valores estão vazios ou contêm o traço de fallback
+      const aIsEmpty = !valA || valA.trim() === '' || valA === '—' || valA.trim().toLowerCase() === 'sem evento';
+      const bIsEmpty = !valB || valB.trim() === '' || valB === '—' || valB.trim().toLowerCase() === 'sem evento';
+
+      // Trata a posição dos vazios dependendo da direção (Ascendente vs Decrescente)
+      if (aIsEmpty && !bIsEmpty) return isAsc ? 1 : -1;
+      if (!aIsEmpty && bIsEmpty) return isAsc ? -1 : 1;
+      if (aIsEmpty && bIsEmpty) return 0;
+
+      // Ordenação normal por texto para itens com conteúdo real
       const comparison = valA.localeCompare(valB, 'pt-BR', { sensitivity: 'base' });
       return isAsc ? comparison : -comparison;
     });
