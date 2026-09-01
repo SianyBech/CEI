@@ -15,14 +15,16 @@ window.CerneApp.SearchBar = {
     container.style.gap = '0.75rem';
     container.style.width = '100%';
 
-    // Ordenação Alfabética e Sanitização de Categorias
-    const sortedCategories = Array.isArray(categories)
-      ? [...categories].sort((a, b) => a.localeCompare(b, 'pt-BR'))
-      : [];
+    // Filtra itens nulos/vazios, ordena de A a Z respeitando acentuação em PT-BR
+const sortedCategories = Array.isArray(categories)
+  ? [...categories]
+      .filter(cat => cat && cat.trim() !== '')
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  : [];
 
-    const categoriesOptions = sortedCategories
-      .map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
-      .join('');
+const categoriesOptions = sortedCategories
+  .map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+  .join('');
 
     // Ordenação Alfabética e Sanitização de Tags
     const sortedTags = Array.isArray(tags)
@@ -199,6 +201,8 @@ window.CerneApp.SearchBar = {
     const monthLabel = searchRow.querySelector('#cal-month-label');
     const yearLabel = searchRow.querySelector('#cal-year-label');
 
+    
+
     function formatDateBR(dateObj) {
       if (!dateObj) return '';
       const day = String(dateObj.getDate()).padStart(2, '0');
@@ -206,6 +210,8 @@ window.CerneApp.SearchBar = {
       const year = dateObj.getFullYear();
       return `${day}/${month}/${year}`;
     }
+
+    
 
     function updateTriggerTexts() {
       if (selectedFromDate) {
@@ -456,6 +462,35 @@ window.CerneApp.SearchBar = {
 
     return container;
   },
+
+  // Método público para atualizar e ordenar as categorias dinamicamente
+updateCategorias(containerElement, categoriesList) {
+  if (!containerElement) return;
+  const select = containerElement.querySelector('#filter-categoria');
+  if (!select) return;
+
+  const currentValue = select.value;
+  const escapeHtml = (str) => String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const sortedCategories = Array.isArray(categoriesList)
+    ? [...categoriesList]
+        .filter(c => c && c.trim() !== '')
+        .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    : [];
+
+  let optionsHtml = '<option value="todos">Todas as categorias</option>';
+  optionsHtml += sortedCategories
+    .map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`)
+    .join('');
+
+  select.innerHTML = optionsHtml;
+  select.value = currentValue;
+},
 
   // Método público para atualizar e ordenar os responsáveis dinamicamente quando a API responder
   updateResponsaveis(containerElement, responsaveisList) {

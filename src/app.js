@@ -393,48 +393,66 @@ function getPaginatedEvidences(filteredEvidences, currentPage = 1) {
     }
   }
 
-  // Populate dynamic dropdown options from current evidence database
-  function populateFilterOptions() {
-    const responsibles = [...new Set(state.evidences.map(e => e.responsavel))].sort();
-    const categories = Array.isArray(state.appSettings.categories) ? state.appSettings.categories : [];
-    const tags = Array.isArray(state.appSettings.tags) ? state.appSettings.tags : [];
+function populateFilterOptions() {
+    // 1. Ordena Responsáveis de A a Z
+    const responsibles = [...new Set(state.evidences.map(e => e.responsavel))]
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
-    // Populate Categoria
+    // 2. Garante array e Ordena Categorias de A a Z (com suporte a acentos)
+    const categoriesRaw = Array.isArray(state.appSettings.categories) ? state.appSettings.categories : [];
+    const categories = [...categoriesRaw]
+      .filter(c => c && c.trim() !== '')
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+    // 3. Garante array e Ordena Tags de A a Z
+    const tagsRaw = Array.isArray(state.appSettings.tags) ? state.appSettings.tags : [];
+    const tags = [...tagsRaw]
+      .filter(t => t && t.trim() !== '')
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+    // Populate Categoria CERNE
     const categorySelect = searchBarElement.querySelector('#filter-categoria');
-    const prevCategory = categorySelect.value;
-    categorySelect.innerHTML = '<option value="todos">Todas as categorias</option>';
-    categories.forEach(category => {
-      const opt = document.createElement('option');
-      opt.value = category;
-      opt.textContent = category;
-      if (category === prevCategory) opt.selected = true;
-      categorySelect.appendChild(opt);
-    });
+    if (categorySelect) {
+      const prevCategory = categorySelect.value;
+      categorySelect.innerHTML = '<option value="todos">Todas as categorias</option>';
+      categories.forEach(category => {
+        const opt = document.createElement('option');
+        opt.value = category;
+        opt.textContent = category;
+        if (category === prevCategory) opt.selected = true;
+        categorySelect.appendChild(opt);
+      });
+    }
 
-    // Populate Responsável
+    // Populate Responsável (Se você tiver a injeção do select de responsável aqui abaixo)
     const respSelect = searchBarElement.querySelector('#filter-responsavel');
-    const prevResp = respSelect.value;
-    respSelect.innerHTML = '<option value="todos">Todos os responsáveis</option>';
-    responsibles.forEach(resp => {
-      const opt = document.createElement('option');
-      opt.value = resp;
-      opt.textContent = resp;
-      if (resp === prevResp) opt.selected = true;
-      respSelect.appendChild(opt);
-    });
+    if (respSelect) {
+      const prevResp = respSelect.value;
+      respSelect.innerHTML = '<option value="todos">Todos os responsáveis</option>';
+      responsibles.forEach(resp => {
+        const opt = document.createElement('option');
+        opt.value = resp;
+        opt.textContent = resp;
+        if (resp === prevResp) opt.selected = true;
+        respSelect.appendChild(opt);
+      });
+    }
 
-    // Populate Tag
+    // Populate Tags
     const tagSelect = searchBarElement.querySelector('#filter-tag');
-    const prevTag = tagSelect.value;
-    tagSelect.innerHTML = '<option value="todos">Todas as tags</option>';
-    tags.forEach(tag => {
-      const opt = document.createElement('option');
-      opt.value = tag;
-      opt.textContent = tag;
-      if (tag === prevTag) opt.selected = true;
-      tagSelect.appendChild(opt);
-    });
-  }
+    if (tagSelect) {
+      const prevTag = tagSelect.value;
+      tagSelect.innerHTML = '<option value="todos">Todas as tags</option>';
+      tags.forEach(tag => {
+        const opt = document.createElement('option');
+        opt.value = tag;
+        opt.textContent = tag;
+        if (tag === prevTag) opt.selected = true;
+        tagSelect.appendChild(opt);
+      });
+    }
+}
 
   // Helper to normalize strings for accent-insensitive search
   function normalizeString(str) {
