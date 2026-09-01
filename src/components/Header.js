@@ -2,18 +2,21 @@ window.CerneApp.Header = {
   render(onNewEvidenceClick, onSettingsClick, onLogout, user = null) {
     const currentUser = user || window.CerneApp.Auth?.getCurrentUser?.() || null;
     
-    // Tenta ler do localStorage o perfil onde foi salva a cor do usuário
+    // Tenta ler do localStorage como fallback
     let localProfile = {};
     try {
       localProfile = JSON.parse(localStorage.getItem('cerne:userProfile') || '{}');
     } catch(e) {}
 
-    const userColor = localProfile.cor || currentUser?.user_metadata?.cor || '#0066cc';
-    const avatarStyle = `background-color: ${userColor}; color: #ffffff; font-weight: 600;`;
+    // Dá prioridade para o 'user' recebido via parâmetro (dados recém-salvos)
+    const userColor = currentUser?.cor || localProfile.cor || currentUser?.user_metadata?.cor || '#0066cc';
+    
+    // Força o estilo inline com !important para sobrescrever qualquer CSS global
+    const avatarStyle = `background-color: ${userColor} !important; color: #ffffff !important; font-weight: 600;`;
 
     const role = String(currentUser?.app_metadata?.role || currentUser?.role || currentUser?.user_metadata?.role || 'user').toLowerCase();
     
-    const rawName = localProfile.nome || currentUser?.user_metadata?.nome || currentUser?.user_metadata?.full_name;
+    const rawName = currentUser?.nome || localProfile.nome || currentUser?.user_metadata?.nome || currentUser?.user_metadata?.full_name;
     const displayName = rawName || (currentUser?.email ? currentUser.email.split('@')[0] : 'Usuário');
     
     // Extrai apenas o primeiro nome para a saudação
@@ -23,7 +26,6 @@ window.CerneApp.Header = {
     header.className = 'header';
     header.innerHTML = `
       <div class="header-brand">
-        <!-- Container da logo ajustado para fundo cinza clarinho -->
         <div class="header-logo" style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 4px; display: flex; align-items: center; justify-content: center;">
           <img src="/src/logopreta.png" alt="Logo CEI" style="width: 24px; height: 24px; object-fit: contain;" />
         </div>
