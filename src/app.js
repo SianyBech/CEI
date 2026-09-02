@@ -36,7 +36,7 @@
   let authView = null;
   let isAuthenticatedUser = false;
 
-// 2. Initialization Function
+  // 2. Initialization Function
   async function init() {
     appContainer = document.getElementById('app');
     appContainer.innerHTML = '';
@@ -51,23 +51,30 @@
       return;
     }
 
-    // 💡 ADICIONE AQUI: Carrega as preferências personalizadas do usuário
-try {
-  const profile = await window.CerneApp.Api.fetchUserProfile();
-  if (profile?.configuracoes) {
-    state.viewMode = profile.configuracoes.defaultView || 'table';
-    state.itemsPerPage = profile.configuracoes.itemsPerPage || 10;
-  }
-} catch (e) {
-  console.warn('Não foi possível carregar as preferências do usuário:', e);
-}
+    // Carrega as preferências personalizadas do usuário
+    try {
+      const profile = await window.CerneApp.Api.fetchUserProfile();
+      if (profile?.configuracoes) {
+        state.viewMode = profile.configuracoes.defaultView || 'table';
+        state.itemsPerPage = profile.configuracoes.itemsPerPage || 10;
+      }
+    } catch (e) {
+      console.warn('Não foi possível carregar as preferências do usuário:', e);
+    }
   
     isAuthenticatedUser = true;
     await loadSettings();
 
+    // 1. Cria o container pai com a ID correta para podermos atualizar o Header depois
+    const headerContainer = document.createElement('div');
+    headerContainer.id = 'header-container';
+
     // Render Header
     const headerNode = window.CerneApp.Header.render(openUploadModal, openSettings, handleLogout);
-    appContainer.appendChild(headerNode);
+    headerContainer.appendChild(headerNode);
+
+    // 3. Adiciona o container no app
+    appContainer.appendChild(headerContainer);
 
     const bodyWrapper = document.createElement('div');
     bodyWrapper.className = 'app-shell-body';
@@ -136,11 +143,9 @@ try {
 
     bodyWrapper.appendChild(sidebar);
 
-    // Create Main Content Wrapper
     mainContent = document.createElement('main');
     mainContent.className = 'main-content';
 
-    // Render SearchBar (Rendered once so input focus is never lost)
     searchBarElement = window.CerneApp.SearchBar.render(
       state.searchQuery,
       state.viewMode,
@@ -161,39 +166,28 @@ try {
 
     bodyWrapper.appendChild(mainContent);
 
-    // 3. Painel Lateral Direito (Sidebar Direita)
     const rightSidebar = document.createElement('aside');
     rightSidebar.className = 'right-sidebar';
     rightSidebar.id = 'right-sidebar-stats';
     bodyWrapper.appendChild(rightSidebar);
 
-    // 4. Injeta a estrutura completa no DOM
     appContainer.appendChild(bodyWrapper);
 
-    // 5. Configura eventos e carrega as evidências
     setupSidebarEvents();
     await loadEvidences();
 
-    // 6. Atualiza ícones Lucide
     lucide.createIcons();
   }
 
-  // Exemplo prático de como aplicar na renderização da lista no app.js:
-function getPaginatedEvidences(filteredEvidences, currentPage = 1) {
-  const settings = JSON.parse(localStorage.getItem('cerne:settings') || '{}');
-  const itemsPerPage = parseInt(settings.itemsPerPage, 10) || 10;
-
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-
-  // Retorna apenas a fatia referente à página atual
-  return filteredEvidences.slice(startIndex, endIndex);
-}
-
   function renderAppShell() {
     appContainer.innerHTML = '';
+    
+    // Ajustado: usa o container pai do Header
+    const headerContainer = document.createElement('div');
+    headerContainer.id = 'header-container';
     const headerNode = window.CerneApp.Header.render(openUploadModal, openSettings, handleLogout);
-    appContainer.appendChild(headerNode);
+    headerContainer.appendChild(headerNode);
+    appContainer.appendChild(headerContainer);
 
     const bodyWrapper = document.createElement('div');
     bodyWrapper.className = 'app-shell-body';
@@ -241,7 +235,7 @@ function getPaginatedEvidences(filteredEvidences, currentPage = 1) {
             <span>Relatórios</span>
           </div>
           <div class="sidebar-item" data-nav="settings" id="sidebar-settings-item">
-            <i data-lucide="settings-2" style="color: var(--success);"></i>
+            <i data-lucide="settings" style="color: var(--success);"></i>
             <span>Configurações</span>
           </div>
         </div>
@@ -288,19 +282,13 @@ function getPaginatedEvidences(filteredEvidences, currentPage = 1) {
 
     bodyWrapper.appendChild(mainContent);
     
-    // =========================================================================
-    // NOVO: Painel Lateral Direito
-    // =========================================================================
     const rightSidebar = document.createElement('aside');
     rightSidebar.className = 'right-sidebar';
     rightSidebar.id = 'right-sidebar-stats';
     
     bodyWrapper.appendChild(rightSidebar);
-
-    // Adiciona o bodyWrapper no container do app
     appContainer.appendChild(bodyWrapper);
 
-    // Renderiza as métricas
     renderRightSidebarStats();
   }
 
@@ -337,7 +325,6 @@ function getPaginatedEvidences(filteredEvidences, currentPage = 1) {
       const evidences = await window.CerneApp.Api.fetchEvidences();
       state.evidences = evidences;
       
-      // Add mock evidence if no evidences exist (for demo purposes)
       if (state.evidences.length === 0) {
         state.evidences.push(createMockEvidence());
       }
@@ -349,28 +336,8 @@ function getPaginatedEvidences(filteredEvidences, currentPage = 1) {
       console.error('Erro ao carregar evidências:', error);
       state.evidences = [];
       
-      // Add mock evidence on error (for demo purposes)
       state.evidences.push(createMockEvidence2());
       state.evidences.push(createMockEvidence());
-      state.evidences.push(createMockEvidence());
-      state.evidences.push(createMockEvidence());
-      state.evidences.push(createMockEvidence2());
-      state.evidences.push(createMockEvidence2());
-      state.evidences.push(createMockEvidence());
-      state.evidences.push(createMockEvidence());
-      state.evidences.push(createMockEvidence());
-      state.evidences.push(createMockEvidence()); //10
-      state.evidences.push(createMockEvidence2());
-      state.evidences.push(createMockEvidence());
-      state.evidences.push(createMockEvidence());
-      state.evidences.push(createMockEvidence());
-      state.evidences.push(createMockEvidence());
-      state.evidences.push(createMockEvidence2());
-      state.evidences.push(createMockEvidence());
-      state.evidences.push(createMockEvidence());
-      state.evidences.push(createMockEvidence());
-      state.evidences.push(createMockEvidence2()); //20
-
       
       populateFilterOptions();
       renderList();
@@ -393,25 +360,21 @@ function getPaginatedEvidences(filteredEvidences, currentPage = 1) {
     }
   }
 
-function populateFilterOptions() {
-    // 1. Ordena Responsáveis de A a Z
+  function populateFilterOptions() {
     const responsibles = [...new Set(state.evidences.map(e => e.responsavel))]
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
-    // 2. Garante array e Ordena Categorias de A a Z (com suporte a acentos)
     const categoriesRaw = Array.isArray(state.appSettings.categories) ? state.appSettings.categories : [];
     const categories = [...categoriesRaw]
       .filter(c => c && c.trim() !== '')
       .sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
-    // 3. Garante array e Ordena Tags de A a Z
     const tagsRaw = Array.isArray(state.appSettings.tags) ? state.appSettings.tags : [];
     const tags = [...tagsRaw]
       .filter(t => t && t.trim() !== '')
       .sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
-    // Populate Categoria CERNE
     const categorySelect = searchBarElement.querySelector('#filter-categoria');
     if (categorySelect) {
       const prevCategory = categorySelect.value;
@@ -425,7 +388,6 @@ function populateFilterOptions() {
       });
     }
 
-    // Populate Responsável (Se você tiver a injeção do select de responsável aqui abaixo)
     const respSelect = searchBarElement.querySelector('#filter-responsavel');
     if (respSelect) {
       const prevResp = respSelect.value;
@@ -439,7 +401,6 @@ function populateFilterOptions() {
       });
     }
 
-    // Populate Tags
     const tagSelect = searchBarElement.querySelector('#filter-tag');
     if (tagSelect) {
       const prevTag = tagSelect.value;
@@ -452,9 +413,8 @@ function populateFilterOptions() {
         tagSelect.appendChild(opt);
       });
     }
-}
+  }
 
-  // Helper to normalize strings for accent-insensitive search
   function normalizeString(str) {
     if (!str) return '';
     return str
@@ -463,53 +423,47 @@ function populateFilterOptions() {
       .replace(/[\u0300-\u036f]/g, '');
   }
 
-  // 3. Render list component dynamically based on search filters and viewMode
   function renderList() {
-    // A. Filter evidences based on searchQuery and advanced filters
     const query = normalizeString(state.searchQuery);
     
     const filteredEvidences = state.evidences.filter(item => {
-      // 1. Text Search Filter (cumulative match)
-        if (query) {
-      const nome = normalizeString(item.nome);
-      const evento = normalizeString(item.evento);
-      const responsavel = normalizeString(item.responsavel);
-      const resumo = normalizeString(item.resumo);
-      
-      // Trata categorias (array ou string)
-      const itemCats = Array.isArray(item.categorias) && item.categorias.length > 0
-        ? item.categorias
-        : (item.categoria ? [item.categoria] : []);
-      const categoriasStr = itemCats.map(c => normalizeString(c));
+      if (query) {
+        const nome = normalizeString(item.nome);
+        const evento = normalizeString(item.evento);
+        const responsavel = normalizeString(item.responsavel);
+        const resumo = normalizeString(item.resumo);
+        
+        const itemCats = Array.isArray(item.categorias) && item.categorias.length > 0
+          ? item.categorias
+          : (item.categoria ? [item.categoria] : []);
+        const categoriasStr = itemCats.map(c => normalizeString(c));
 
-      const tags = (item.tags || []).map(t => normalizeString(t));
+        const tags = (item.tags || []).map(t => normalizeString(t));
 
-      const matchesQuery = (
-        nome.includes(query) ||
-        evento.includes(query) ||
-        categoriasStr.some(cat => cat.includes(query)) ||
-        responsavel.includes(query) ||
-        resumo.includes(query) ||
-        tags.some(tag => tag.includes(query))
-      );
-      
-      if (!matchesQuery) return false;
-    }
+        const matchesQuery = (
+          nome.includes(query) ||
+          evento.includes(query) ||
+          categoriasStr.some(cat => cat.includes(query)) ||
+          responsavel.includes(query) ||
+          resumo.includes(query) ||
+          tags.some(tag => tag.includes(query))
+        );
+        
+        if (!matchesQuery) return false;
+      }
 
-      // 2. Select Dropdowns Filters
       if (state.filters.tipo !== 'todos' && item.tipo !== state.filters.tipo) {
         return false;
       }
-      // 2. Select Dropdowns Filters
-          if (state.filters.categoria !== 'todos') {
-            const itemCats = Array.isArray(item.categorias) && item.categorias.length > 0 
-              ? item.categorias 
-              : [item.categoria];
-              
-            if (!itemCats.includes(state.filters.categoria)) {
-              return false;
-            }
-          }
+      if (state.filters.categoria !== 'todos') {
+        const itemCats = Array.isArray(item.categorias) && item.categorias.length > 0 
+          ? item.categorias 
+          : [item.categoria];
+          
+        if (!itemCats.includes(state.filters.categoria)) {
+          return false;
+        }
+      }
       if (state.filters.responsavel !== 'todos' && item.responsavel !== state.filters.responsavel) {
         return false;
       }
@@ -517,31 +471,25 @@ function populateFilterOptions() {
         return false;
       }
 
-      // 3. Date Filter (intelligent date parsing)
       if (state.dateFilters.dayFrom || state.dateFilters.monthFrom || state.dateFilters.yearFrom ||
           state.dateFilters.dayTo || state.dateFilters.monthTo || state.dateFilters.yearTo) {
         
-        const itemDate = parseDate(item.data); // Convert DD/MM/YYYY to Date object
+        const itemDate = parseDate(item.data);
         let isInRange = true;
 
-        // Calculate "De" (from) date
         if (state.dateFilters.yearFrom || state.dateFilters.monthFrom || state.dateFilters.dayFrom) {
-          let fromDate;
           const yearFrom = state.dateFilters.yearFrom || '1900';
           const monthFrom = state.dateFilters.monthFrom || '1';
           const dayFrom = state.dateFilters.dayFrom || '1';
           
-          fromDate = new Date(parseInt(yearFrom), parseInt(monthFrom) - 1, parseInt(dayFrom));
+          const fromDate = new Date(parseInt(yearFrom), parseInt(monthFrom) - 1, parseInt(dayFrom));
           if (itemDate < fromDate) isInRange = false;
         }
 
-        // Calculate "Até" (to) date
-        if (state.dateFilters.yearTo || state.dateFilters.monthTo || state.dateFilters.dayTo) {
-          let toDate;
+        if (state.dateFilters.yearTo || state.dateFilters.monthTo || state.dateFilters.yearTo) {
           const yearTo = state.dateFilters.yearTo || '9999';
           const monthTo = state.dateFilters.monthTo || '12';
           
-          // If only month/year specified, get last day of that month
           let dayTo = state.dateFilters.dayTo;
           if (!dayTo && monthTo) {
             const lastDay = new Date(parseInt(yearTo), parseInt(monthTo), 0).getDate();
@@ -550,7 +498,7 @@ function populateFilterOptions() {
             dayTo = '31';
           }
           
-          toDate = new Date(parseInt(yearTo), parseInt(monthTo) - 1, parseInt(dayTo));
+          const toDate = new Date(parseInt(yearTo), parseInt(monthTo) - 1, parseInt(dayTo));
           if (itemDate > toDate) isInRange = false;
         }
 
@@ -560,7 +508,6 @@ function populateFilterOptions() {
       return true;
     });
 
-    // Helper to parse DD/MM/YYYY date format
     function parseDate(dateStr) {
       if (!dateStr) return new Date(0);
       const parts = dateStr.split('/');
@@ -570,10 +517,8 @@ function populateFilterOptions() {
       return new Date(0);
     }
 
-    // B. Clear previous list elements
     listContainer.innerHTML = '';
 
-    // C. Render corresponding component
     let renderedComponent = null;
     if (state.viewMode === 'table') {
       renderedComponent = window.CerneApp.EvidenceTable.render(
@@ -589,15 +534,10 @@ function populateFilterOptions() {
     }
 
     listContainer.appendChild(renderedComponent);
-
-    // Atualiza os dados do painel lateral direito
     renderRightSidebarStats();
-
-    // D. Re-compile Lucide Icons for the newly injected HTML components
     lucide.createIcons();
   }
 
-  // 4. Action Handlers
   function handleSearchChange(newQuery) {
     state.searchQuery = newQuery;
     renderList();
@@ -625,7 +565,6 @@ function populateFilterOptions() {
     
     state.viewMode = newMode;
 
-    // Toggle active state classes on buttons directly to avoid redrawing search input
     const toggleTableBtn = searchBarElement.querySelector('#toggle-table');
     const toggleGridBtn = searchBarElement.querySelector('#toggle-grid');
 
@@ -640,77 +579,55 @@ function populateFilterOptions() {
     renderList();
   }
 
+  function handleClearFilters() {
+    state.searchQuery = '';
+    state.filters = { tipo: 'todos', categoria: 'todos', responsavel: 'todos', tag: 'todos' };
+    state.dateFilters = { dayFrom: '', monthFrom: '', yearFrom: '', dayTo: '', monthTo: '', yearTo: '' };
+    renderList();
+  }
 
-  // Adicione a função de limpeza no app.js:
-function handleClearFilters() {
-  state.searchQuery = '';
-  state.filters = {
-    tipo: 'todos',
-    categoria: 'todos',
-    responsavel: 'todos',
-    tag: 'todos'
-  };
-  state.dateFilters = {
-    dayFrom: '',
-    monthFrom: '',
-    yearFrom: '',
-    dayTo: '',
-    monthTo: '',
-    yearTo: ''
-  };
+  let isSidebarEventsSetup = false;
 
-  renderList();
-}
+  function setupSidebarEvents() {
+    if (isSidebarEventsSetup) return;
+    isSidebarEventsSetup = true;
 
-let isSidebarEventsSetup = false;
-
-function setupSidebarEvents() {
-
-  if (isSidebarEventsSetup) return;
-  isSidebarEventsSetup = true;
-
-  // Delegação de eventos: escuta o clique no nível do documento
-  document.addEventListener('click', (event) => {
-    // 1. Verifica se o clique foi em um botão de fechar o card da sidebar
-    const closeBtn = event.target.closest('#sidebar-card-close-btn');
-    if (closeBtn) {
-      localStorage.setItem('cerne:sidebar-card-closed', 'true');
-      state.showSidebarCard = false;
-      const card = document.getElementById('sidebar-info-card');
-      if (card) {
-        card.style.animation = 'fadeOut 0.3s ease-in-out';
-        setTimeout(() => card.remove(), 300);
+    document.addEventListener('click', (event) => {
+      const closeBtn = event.target.closest('#sidebar-card-close-btn');
+      if (closeBtn) {
+        localStorage.setItem('cerne:sidebar-card-closed', 'true');
+        state.showSidebarCard = false;
+        const card = document.getElementById('sidebar-info-card');
+        if (card) {
+          card.style.animation = 'fadeOut 0.3s ease-in-out';
+          setTimeout(() => card.remove(), 300);
+        }
+        return;
       }
-      return;
-    }
 
-    // 2. Verifica se o clique foi em algum item do menu lateral (.sidebar-item[data-nav])
-    const navItem = event.target.closest('.sidebar-item[data-nav]');
-    if (navItem) {
-      const navTarget = navItem.getAttribute('data-nav');
-      handleSidebarNavigation(navTarget);
+      const navItem = event.target.closest('.sidebar-item[data-nav]');
+      if (navItem) {
+        const navTarget = navItem.getAttribute('data-nav');
+        handleSidebarNavigation(navTarget);
 
-      // Atualiza a classe 'active' do menu visualmente
-      document.querySelectorAll('.sidebar-item[data-nav]').forEach(i => i.classList.remove('active'));
-      navItem.classList.add('active');
-      return;
-    }
-
-    // 3. Verifica se o clique foi no botão de configurações do Header
-    const headerSettingsBtn = event.target.closest('#btn-settings');
-    if (headerSettingsBtn) {
-      const settingsItem = document.querySelector('.sidebar-item[data-nav="settings"]');
-      if (settingsItem) {
         document.querySelectorAll('.sidebar-item[data-nav]').forEach(i => i.classList.remove('active'));
-        settingsItem.classList.add('active');
+        navItem.classList.add('active');
+        return;
       }
-      openSettings();
-      return;
-    }
-  });
-}
 
-  // Função auxiliar para restaurar o item ativo visualmente na barra lateral
+      const headerSettingsBtn = event.target.closest('#btn-settings');
+      if (headerSettingsBtn) {
+        const settingsItem = document.querySelector('.sidebar-item[data-nav="settings"]');
+        if (settingsItem) {
+          document.querySelectorAll('.sidebar-item[data-nav]').forEach(i => i.classList.remove('active'));
+          settingsItem.classList.add('active');
+        }
+        openSettings();
+        return;
+      }
+    });
+  }
+
   function restoreSidebarActive(targetNav = 'evidences') {
     const defaultItem = document.querySelector(`.sidebar-item[data-nav="${targetNav}"]`);
     if (defaultItem) {
@@ -719,63 +636,47 @@ function setupSidebarEvents() {
     }
   }
 
- // ✅ 1. Torne a função openSettings assíncrona (async)
-async function openSettings() {
-  if (window.CerneApp && window.CerneApp.SettingsPage) {
-    const settingsNode = await window.CerneApp.SettingsPage.render(
-      () => restoreSidebarActive('evidences'),
-      async (updatedUser) => {
-        // 1. Atualiza as configurações de visualização do sistema
-        if (updatedUser?.configuracoes) {
-          state.viewMode = updatedUser.configuracoes.defaultView || 'table';
-          state.itemsPerPage = updatedUser.configuracoes.itemsPerPage || 10;
-          
-          if (window.CerneApp.EvidenceTable) {
-            window.CerneApp.EvidenceTable.resetPage();
+  // Única declaração de openSettings (limpa e assíncrona)
+  async function openSettings() {
+    if (window.CerneApp && window.CerneApp.SettingsPage) {
+      const settingsNode = await window.CerneApp.SettingsPage.render(
+        () => restoreSidebarActive('evidences'),
+        async (updatedUser) => {
+          if (updatedUser?.configuracoes) {
+            state.viewMode = updatedUser.configuracoes.defaultView || 'table';
+            state.itemsPerPage = updatedUser.configuracoes.itemsPerPage || 10;
+            
+            if (window.CerneApp.EvidenceTable) {
+              window.CerneApp.EvidenceTable.resetPage();
+            }
           }
+
+          const headerContainer = document.querySelector('#header-container');
+          if (headerContainer && window.CerneApp.Header) {
+            headerContainer.innerHTML = '';
+            headerContainer.appendChild(
+              window.CerneApp.Header.render(openUploadModal, openSettings, handleLogout, updatedUser)
+            );
+          }
+
+          renderList();
         }
+      );
 
-        // 2. Re-renderiza o Header para atualizar o avatar e o nome na hora
-        const headerContainer = document.querySelector('#header-container');
-        if (headerContainer && window.CerneApp.Header) {
-          headerContainer.innerHTML = '';
-          headerContainer.appendChild(
-            window.CerneApp.Header.render(handleNewEvidence, openSettings, handleLogout, updatedUser)
-          );
-        }
-
-        // 3. Re-renderiza a lista principal (tabela/grid) aplicando a nova cor do usuário
-        renderList();
-      }
-    );
-
-    document.body.appendChild(settingsNode);
-    if (window.lucide) lucide.createIcons();
+      document.body.appendChild(settingsNode);
+      if (window.lucide) lucide.createIcons();
+    }
   }
-}
 
-// Exemplo de chamada no seu controller/app.js após carregar os dados:
-async function carregarFiltrosEBarraPesquisa() {
-  const responsaveis = await window.CerneApp.Api.fetchResponsaveis();
-  const searchBarContainer = document.querySelector('#search-bar-container');
-
-  // Atualiza e ordena os responsáveis dinamicamente na SearchBar
-  if (window.CerneApp.SearchBar?.updateResponsaveis) {
-    window.CerneApp.SearchBar.updateResponsaveis(searchBarContainer, responsaveis);
-  }
-}
-
-  // Navegação da Barra Lateral (SPA)
   async function handleSidebarNavigation(target) {
     switch (target) {
       case 'evidences':
-        // Reseta os filtros e exibe a listagem completa
         state.filters = { tipo: 'todos', categoria: 'todos', responsavel: 'todos', tag: 'todos' };
         state.dateFilters = { dayFrom: '', monthFrom: '', yearFrom: '', dayTo: '', monthTo: '', yearTo: '' };
         renderList();
         break;
 
-    case 'categories':
+      case 'categories':
         if (window.CerneApp && window.CerneApp.CategoriesPage) {
           const categoriesNode = window.CerneApp.CategoriesPage.render(() => restoreSidebarActive('evidences'));
           document.body.appendChild(categoriesNode);
@@ -791,15 +692,14 @@ async function carregarFiltrosEBarraPesquisa() {
         }
         break;
 
-     case 'responsaveis':
+      case 'responsaveis':
         try {
-          // Busca o perfil para verificar o papel (role) do usuário
           const userProfile = await window.CerneApp.Api.fetchUserProfile();
           const isAdmin = userProfile?.role === 'admin';
 
           if (window.CerneApp && window.CerneApp.ResponsaveisPage) {
             const responsaveisNode = await window.CerneApp.ResponsaveisPage.render(
-              isAdmin, // Passa a flag se é admin ou não
+              isAdmin,
               () => restoreSidebarActive('evidences')
             );
             document.body.appendChild(responsaveisNode);
@@ -818,9 +718,6 @@ async function carregarFiltrosEBarraPesquisa() {
           );
           document.body.appendChild(calendarioNode);
           if (window.lucide) lucide.createIcons();
-        } else {
-          console.error('[ERRO] CalendarioPage não está carregado no window.CerneApp.');
-          alert('Não foi possível carregar o Calendário. Verifique o console.');
         }
         break;
 
@@ -834,29 +731,26 @@ async function carregarFiltrosEBarraPesquisa() {
           if (window.lucide) lucide.createIcons();
         }
         break;
-// ✅ 2. No switch/case do handleSidebarNavigation:
-case 'settings':
-  await openSettings(); // 💡 Adicione o await aqui também
-  break;
+
+      case 'settings':
+        await openSettings();
+        break;
     }
   }
 
-  // Função responsável por calcular e renderizar os cards laterais à direita
   function renderRightSidebarStats() {
     const rightSidebar = document.getElementById('right-sidebar-stats');
-    if (!rightSidebar) return; // Trava de segurança contra erros de inicialização
+    if (!rightSidebar) return;
 
     const evidences = state.evidences || [];
     const totalEvidences = evidences.length;
 
-    // Métricas calculadas dinamicamente
     const totalCategories = new Set(evidences.map(e => e.categoria).filter(Boolean)).size;
     const totalResponsaveis = new Set(evidences.map(e => e.responsavel).filter(Boolean)).size;
     
     const allTags = evidences.flatMap(e => Array.isArray(e.tags) ? e.tags : []);
     const totalTags = new Set(allTags).size;
 
-    // Cálculo de evidências adicionadas no mês atual
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
@@ -877,18 +771,10 @@ case 'settings':
       return false;
     }).length;
 
-    rightSidebar.innerHTML = /*
-      <div class="right-sidebar-header">
-        <i data-lucide="bar-chart-2" style="width: 18px; height: 18px; color: var(--success);"></i>
-        <span>Resumo Geral</span>
-      </div>  */
-`
+    rightSidebar.innerHTML = `
       <div class="right-sidebar-cards">
-        <!-- Card 1: Evidências -->
         <div class="dashboard-card vertical-card">
-          <div class="dashboard-card-icon">
-            <i data-lucide="folder"></i>
-          </div>
+          <div class="dashboard-card-icon"><i data-lucide="folder"></i></div>
           <div class="dashboard-card-content">
             <div class="dashboard-card-counter">${totalEvidences}</div>
             <div class="dashboard-card-title">Evidências</div>
@@ -896,11 +782,8 @@ case 'settings':
           </div>
         </div>
 
-        <!-- Card 2: Categorias -->
         <div class="dashboard-card vertical-card">
-          <div class="dashboard-card-icon">
-            <i data-lucide="grid"></i>
-          </div>
+          <div class="dashboard-card-icon"><i data-lucide="grid"></i></div>
           <div class="dashboard-card-content">
             <div class="dashboard-card-counter">${totalCategories}</div>
             <div class="dashboard-card-title">Categorias</div>
@@ -908,11 +791,8 @@ case 'settings':
           </div>
         </div>
 
-        <!-- Card 3: Responsáveis -->
         <div class="dashboard-card vertical-card">
-          <div class="dashboard-card-icon">
-            <i data-lucide="users"></i>
-          </div>
+          <div class="dashboard-card-icon"><i data-lucide="users"></i></div>
           <div class="dashboard-card-content">
             <div class="dashboard-card-counter">${totalResponsaveis}</div>
             <div class="dashboard-card-title">Responsáveis</div>
@@ -920,11 +800,8 @@ case 'settings':
           </div>
         </div>
 
-        <!-- Card 4: Tags -->
         <div class="dashboard-card vertical-card">
-          <div class="dashboard-card-icon">
-            <i data-lucide="tag"></i>
-          </div>
+          <div class="dashboard-card-icon"><i data-lucide="tag"></i></div>
           <div class="dashboard-card-content">
             <div class="dashboard-card-counter">${totalTags}</div>
             <div class="dashboard-card-title">Tags</div>
@@ -932,11 +809,8 @@ case 'settings':
           </div>
         </div>
 
-        <!-- Card 5: Novas do Mês -->
         <div class="dashboard-card vertical-card">
-          <div class="dashboard-card-icon">
-            <i data-lucide="sparkles"></i>
-          </div>
+          <div class="dashboard-card-icon"><i data-lucide="sparkles"></i></div>
           <div class="dashboard-card-content">
             <div class="dashboard-card-counter">${newThisMonth}</div>
             <div class="dashboard-card-title">Novas do Mês</div>
@@ -951,9 +825,8 @@ case 'settings':
     }
   }
 
-  // Create mock evidence for demo purposes
   function createMockEvidence() {
-    const mockEvidence = {
+    return {
       id: 'mock-' + Date.now(),
       nome: 'Documento de Demonstração CERNE',
       tipo: 'documento',
@@ -965,11 +838,10 @@ case 'settings':
       resumo: 'Este é um documento de demonstração do sistema CERNE para visualização da interface com dados.',
       textoExtraido: 'CONTEÚDO EXTRAÍDO:\n\nEste documento apresenta os processos-chave do CERNE e demonstra como as evidências são organizadas, categorizadas e disponibilizadas no sistema de gestão.'
     };
-    return mockEvidence;
   }
 
-    function createMockEvidence2() {
-    const mockEvidence = {
+  function createMockEvidence2() {
+    return {
       nome: 'Comprovante de Pitch no Demo Day UFRGS',
       tipo: 'apresentacao',
       data: '15/08/2026',
@@ -980,7 +852,6 @@ case 'settings':
       resumo: 'Apresentação de pitch de vendas e modelo de negócios realizada para banca de investidores anjo.',
       textoExtraido: 'CONTEÚDO EXTRAÍDO:\n\nPitch Deck v3. Estrutura: Problema, Solução, TAM/SAM/SOM, Tração de Mercado e Necessidade de Aporte ($200k).'
     };
-    return mockEvidence;
   }
 
   function openUploadModal() {
@@ -989,13 +860,8 @@ case 'settings':
       return;
     }
     const modalNode = window.CerneApp.UploadModal.render(
-      // onClose callback
-      () => {
-        // Nothing special to clean up
-      },
-      // onAddEvidence callback
+      () => {},
       (newEvidence) => {
-        // Remove mock evidence if it's the first entry
         if (state.evidences.length === 1 && state.evidences[0].id.startsWith('mock-')) {
           state.evidences = [];
         }
@@ -1011,124 +877,85 @@ case 'settings':
     lucide.createIcons();
   }
 
-  // ✅ Versão Assíncrona e Limpa de openSettings
-  async function openSettings() {
-    if (window.CerneApp && window.CerneApp.SettingsPage) {
-      const settingsNode = await window.CerneApp.SettingsPage.render(
-        () => restoreSidebarActive('evidences'),
-        async (updatedUser) => {
-          // Callback executado ao salvar o perfil do usuário
-          if (updatedUser?.configuracoes) {
-            state.viewMode = updatedUser.configuracoes.defaultView || 'table';
-            state.itemsPerPage = updatedUser.configuracoes.itemsPerPage || 10;
-            renderList();
-          }
-        }
-      );
+  function updateDashboardCounters() {
+    const evidences = state.evidences || [];
 
-      document.body.appendChild(settingsNode);
-      if (window.lucide) lucide.createIcons();
-    }
+    const total = evidences.length;
+    const categoriasUnicas = new Set(evidences.map(e => e.categoria).filter(Boolean)).size;
+    const tagsUnicas = new Set(evidences.flatMap(e => Array.isArray(e.tags) ? e.tags : [])).size;
+    const responsaveisUnicos = new Set(evidences.map(e => e.responsavel).filter(Boolean)).size;
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const novasNoMes = evidences.filter(e => {
+      if (e.criadoEm) {
+        const date = new Date(e.criadoEm);
+        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+      }
+      
+      if (e.data && typeof e.data === 'string') {
+        const parts = e.data.split('/');
+        if (parts.length === 3) {
+          const month = parseInt(parts[1], 10) - 1;
+          const year = parseInt(parts[2], 10);
+          return month === currentMonth && year === currentYear;
+        }
+      }
+      return false;
+    }).length;
+
+    const elTotal = document.getElementById('counter-total');
+    const elCategorias = document.getElementById('counter-categorias');
+    const elTags = document.getElementById('counter-tags');
+    const elResponsaveis = document.getElementById('counter-responsaveis');
+    const elNovasMes = document.getElementById('counter-novas-mes');
+
+    if (elTotal) elTotal.textContent = total;
+    if (elCategorias) elCategorias.textContent = categoriasUnicas;
+    if (elTags) elTags.textContent = tagsUnicas;
+    if (elResponsaveis) elResponsaveis.textContent = responsaveisUnicos;
+    if (elNovasMes) elNovasMes.textContent = novasNoMes;
   }
 
-function updateDashboardCounters() {
-  const evidences = state.evidences || [];
+  function openEvidenceDetails(evidenceId) {
+    const evidence = state.evidences.find(item => item.id === evidenceId);
+    if (!evidence) return;
 
-  // 1. Total de Evidências
-  const total = evidences.length;
+    const detailsNode = window.CerneApp.EvidenceDetails.render(
+      evidence,
+      () => {},
+      (updatedEvidence) => {
+        state.evidences = state.evidences.map(item => {
+          if (item.id === updatedEvidence.id) {
+            return {
+              ...item,
+              ...updatedEvidence,
+              categorias: Array.isArray(updatedEvidence.categorias) && updatedEvidence.categorias.length > 0
+                ? updatedEvidence.categorias
+                : (updatedEvidence.categoria ? [updatedEvidence.categoria] : [])
+            };
+          }
+          return item;
+        });
 
-  // 2. Categorias Únicas
-  const categoriasUnicas = new Set(
-    evidences.map(e => e.categoria).filter(Boolean)
-  ).size;
-
-  // 3. Tags Únicas (achata a lista de arrays de tags)
-  const tagsUnicas = new Set(
-    evidences.flatMap(e => Array.isArray(e.tags) ? e.tags : [])
-  ).size;
-
-  // 4. Responsáveis Únicos
-  const responsaveisUnicos = new Set(
-    evidences.map(e => e.responsavel).filter(Boolean)
-  ).size;
-
-  // 5. Novas Adicionadas no Mês Atual
-  const now = new Date();
-  const currentMonth = now.getMonth(); // 0-indexed (0 = Jan)
-  const currentYear = now.getFullYear();
-
-  const novasNoMes = evidences.filter(e => {
-    // Tenta validar pela coluna de criação ou do formato de data em string "DD/MM/YYYY"
-    if (e.criadoEm) {
-      const date = new Date(e.criadoEm);
-      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    }
-    
-    if (e.data && typeof e.data === 'string') {
-      const parts = e.data.split('/');
-      if (parts.length === 3) {
-        const month = parseInt(parts[1], 10) - 1;
-        const year = parseInt(parts[2], 10);
-        return month === currentMonth && year === currentYear;
+        populateFilterOptions();
+        renderList();
+        updateDashboardCounters();
+      },
+      state.appSettings.categories,
+      state.appSettings.tags,
+      (deletedId) => {
+        state.evidences = state.evidences.filter(item => item.id !== deletedId);
+        populateFilterOptions();
+        renderList();
+        updateDashboardCounters();
       }
-    }
-    
-    return false;
-  }).length;
+    );
+    document.body.appendChild(detailsNode);
+    lucide.createIcons();
+  }
 
-  // Atualizar elementos no DOM
-  const elTotal = document.getElementById('counter-total');
-  const elCategorias = document.getElementById('counter-categorias');
-  const elTags = document.getElementById('counter-tags');
-  const elResponsaveis = document.getElementById('counter-responsaveis');
-  const elNovasMes = document.getElementById('counter-novas-mes');
-
-  if (elTotal) elTotal.textContent = total;
-  if (elCategorias) elCategorias.textContent = categoriasUnicas;
-  if (elTags) elTags.textContent = tagsUnicas;
-  if (elResponsaveis) elResponsaveis.textContent = responsaveisUnicos;
-  if (elNovasMes) elNovasMes.textContent = novasNoMes;
-}
-
-function openEvidenceDetails(evidenceId) {
-  const evidence = state.evidences.find(item => item.id === evidenceId);
-  if (!evidence) return;
-
-  const detailsNode = window.CerneApp.EvidenceDetails.render(
-    evidence,
-    () => {},
-    (updatedEvidence) => {
-      // Callback de salvar edição
-      state.evidences = state.evidences.map(item => {
-        if (item.id === updatedEvidence.id) {
-          return {
-            ...item,
-            ...updatedEvidence,
-            // Garante que a lista de categorias seja mantida no estado global
-            categorias: Array.isArray(updatedEvidence.categorias) && updatedEvidence.categorias.length > 0
-              ? updatedEvidence.categorias
-              : (updatedEvidence.categoria ? [updatedEvidence.categoria] : [])
-          };
-        }
-        return item;
-      });
-
-      populateFilterOptions();
-      renderList();
-      updateDashboardCounters();
-    },
-    state.appSettings.categories,
-    state.appSettings.tags,
-    (deletedId) => {
-      state.evidences = state.evidences.filter(item => item.id !== deletedId);
-      populateFilterOptions();
-      renderList();
-      updateDashboardCounters();
-    }
-  );
-  document.body.appendChild(detailsNode);
-  lucide.createIcons();
-}
   document.addEventListener('DOMContentLoaded', init);
-  
-  })();
+})();

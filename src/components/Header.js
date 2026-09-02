@@ -7,8 +7,7 @@ window.CerneApp.Header = {
     const avatarStyle = `background-color: ${userColor} !important; color: #ffffff !important; font-weight: 600;`;
 
     const role = String(currentUser?.app_metadata?.role || currentUser?.role || currentUser?.user_metadata?.role || 'user').toLowerCase();
-    
-    const rawName = currentUser?.nome || localProfile.nome || currentUser?.user_metadata?.nome || currentUser?.user_metadata?.full_name;
+    const rawName = currentUser?.nome || currentUser?.user_metadata?.nome || currentUser?.user_metadata?.full_name;
     const displayName = rawName || (currentUser?.email ? currentUser.email.split('@')[0] : 'Usuário');
     
     // Extrai apenas o primeiro nome para a saudação
