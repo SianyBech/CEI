@@ -765,7 +765,7 @@ try {
 app.get('/api/admin/users', requirePermission('view'), async (req, res) => {
   try {
     const rows = await dbClient.many(`
-      SELECT "id", "nome", "email", "cargo", "role", "created_at"
+      SELECT "id", "nome", "email", "cargo", "role", "cor", "created_at"
       FROM public.usuarios 
       ORDER BY "nome" ASC
     `);
@@ -848,28 +848,25 @@ app.delete('/api/admin/users/:id', requirePermission('settings'), async (req, re
   }
 });
 
-// No seu server.js, atualize a rota PATCH de usuários:
 app.patch('/api/admin/users/:id', requirePermission('settings'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { nome, cargo, role } = req.body; // <--- ADICIONAMOS role AQUI
+    const { nome, cargo, role, cor } = req.body; 
 
     if (!nome || !cargo) {
       return res.status(400).json({ error: 'Nome e cargo são obrigatórios.' });
     }
 
-    // 1. Atualiza no PostgreSQL incluindo a coluna role
     const result = await dbClient.run(`
       UPDATE public.usuarios 
-      SET "nome" = $1, "cargo" = $2, "role" = $3
-      WHERE "id" = $4
-    `, [nome, cargo, role || 'membro', id]);
+      SET "nome" = $1, "cargo" = $2, "role" = $3, "cor" = $4
+      WHERE "id" = $5
+    `, [nome, cargo, role || 'membro', cor || null, id]); 
 
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Membro não encontrado.' });
     }
 
-    // 2. Atualiza os metadados silenciosamente no Supabase Auth
     const client = getSupabaseClient();
     if (client) {
       await client.auth.admin.updateUserById(id, { user_metadata: { nome, cargo } }).catch(() => {});
@@ -1035,7 +1032,7 @@ app.get('/api/user/profile', requirePermission('view'), async (req, res) => {
     // 1. Tenta buscar o usuário no banco sem estourar exceção se ele não existir
     try {
       const result = await dbClient.query(
-        `SELECT "id", "nome", "email", "cargo", "role", "configuracoes" FROM public.usuarios WHERE "id" = $1`,
+        `SELECT "id", "nome", "email", "cargo", "role", "cor", "configuracoes" FROM public.usuarios WHERE "id" = $1`,
         [userId]
       );
       user = result.rows ? result.rows[0] : (Array.isArray(result) ? result[0] : result);
@@ -1072,6 +1069,7 @@ app.get('/api/user/profile', requirePermission('view'), async (req, res) => {
       email: user?.email || req.user.email || '',
       cargo: user?.cargo || 'Analista CEI',
       role: user?.role || req.user.role || 'membro',
+      cor: user?.cor || null,
       configuracoes: user?.configuracoes || { defaultView: 'table', itemsPerPage: 8 }
     });
 
@@ -1094,7 +1092,7 @@ app.get('/api/user/profile', requirePermission('view'), async (req, res) => {
 app.patch('/api/user/profile', requirePermission('view'), async (req, res) => {
   try {
     const userId = req.user?.id;
-    const { nome, cargo, configuracoes } = req.body;
+    const { nome, cargo, configuracoes, cor } = req.body;
 
     if (!userId) {
       return res.status(401).json({ error: 'Usuário não autenticado.' });
@@ -1105,17 +1103,19 @@ app.patch('/api/user/profile', requirePermission('view'), async (req, res) => {
        SET "nome" = COALESCE($1, "nome"),
            "cargo" = COALESCE($2, "cargo"),
            "configuracoes" = COALESCE($3::jsonb, "configuracoes")
+           "cor" = COALESCE($4, "cor")
        WHERE "id" = $4`,
       [
         nome || null,
         cargo || null,
         configuracoes ? JSON.stringify(configuracoes) : null,
+        cor || null,
         userId
       ]
     );
 
     const updatedUser = await dbClient.one(
-      `SELECT "id", "nome", "email", "cargo", "role", "configuracoes" FROM public.usuarios WHERE "id" = $1`,
+      `SELECT "id", "nome", "email", "cargo", "role", "cor", "configuracoes" FROM public.usuarios WHERE "id" = $1`,
       [userId]
     );
 
