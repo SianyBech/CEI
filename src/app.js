@@ -322,35 +322,35 @@
 
 // No app.js, crie ou ajuste a função que carrega as evidências para cruzar com os usuários:
 async function loadEvidences() {
-  try {
-    const [evidences, users] = await Promise.all([
-      window.CerneApp.Api.fetchEvidences(),
-      window.CerneApp.Api.fetchAllUsers().catch(() => [])
-    ]);
+    try {
+      const [evidences, users] = await Promise.all([
+        window.CerneApp.Api.fetchEvidences(),
+        window.CerneApp.Api.fetchAllUsers().catch(() => [])
+      ]);
 
-    // Cria um mapa de cores por nome de usuário
-    const userColorMap = {};
-    users.forEach(u => {
-      if (u.nome && u.cor) {
-        userColorMap[u.nome.trim().toLowerCase()] = u.cor;
-      }
-    });
+      // Cria um mapa de cores por nome de usuário
+      const userColorMap = {};
+      users.forEach(u => {
+        if (u.nome && u.cor) {
+          userColorMap[u.nome.trim().toLowerCase()] = u.cor;
+        }
+      });
 
-    // Injeta a cor correspondente em cada evidência com base no responsável
-    state.evidences = evidences.map(e => ({
-      ...e,
-      responsavelColor: userColorMap[(e.responsavel || '').trim().toLowerCase()] || null
-    }));
+      // Injeta a cor correspondente em cada evidência com base no responsável
+      state.evidences = evidences.map(e => ({
+        ...e,
+        responsavelColor: userColorMap[(e.responsavel || '').trim().toLowerCase()] || null
+      }));
 
-    populateFilterOptions();
-    renderList();
-    updateDashboardCounters();
-  } catch (error) {
-    console.error('Erro ao carregar evidências:', error);
-    state.evidences = [];
-    renderList();
+      populateFilterOptions();
+      renderList();
+      updateDashboardCounters();
+    } catch (error) {
+      console.error('Erro ao carregar evidências:', error);
+      state.evidences = [];
+      renderList();
+    }
   }
-}
 
   async function loadSettings() {
     try {
@@ -659,6 +659,15 @@ async function loadEvidences() {
             }
           }
 
+          if (updatedUser?.nome && updatedUser?.cor) {
+          state.evidences = state.evidences.map(e => {
+            if (e.responsavel && e.responsavel.trim().toLowerCase() === updatedUser.nome.trim().toLowerCase()) {
+              return { ...e, responsavelColor: updatedUser.cor };
+            }
+            return e;
+          });
+        }
+
           const headerContainer = document.querySelector('#header-container');
           if (headerContainer && window.CerneApp.Header) {
             headerContainer.innerHTML = '';
@@ -677,74 +686,74 @@ async function loadEvidences() {
   }
 
   async function handleSidebarNavigation(target) {
-    switch (target) {
-      case 'evidences':
-        state.filters = { tipo: 'todos', categoria: 'todos', responsavel: 'todos', tag: 'todos' };
-        state.dateFilters = { dayFrom: '', monthFrom: '', yearFrom: '', dayTo: '', monthTo: '', yearTo: '' };
-        renderList();
-        break;
+  switch (target) {
+    case 'evidences':
+      state.filters = { tipo: 'todos', categoria: 'todos', responsavel: 'todos', tag: 'todos' };
+      state.dateFilters = { dayFrom: '', monthFrom: '', yearFrom: '', dayTo: '', monthTo: '', yearTo: '' };
+      renderList();
+      break;
 
-      case 'categories':
-        if (window.CerneApp && window.CerneApp.CategoriesPage) {
-          const categoriesNode = window.CerneApp.CategoriesPage.render(() => restoreSidebarActive('evidences'));
-          document.body.appendChild(categoriesNode);
-          if (window.lucide) lucide.createIcons();
-        }
-        break;
+    case 'categories':
+      if (window.CerneApp && window.CerneApp.CategoriesPage) {
+        const categoriesNode = window.CerneApp.CategoriesPage.render(() => restoreSidebarActive('evidences'));
+        document.body.appendChild(categoriesNode);
+        if (window.lucide) lucide.createIcons();
+      }
+      break;
 
-      case 'tags':
-        if (window.CerneApp && window.CerneApp.TagsPage) {
-          const tagsNode = window.CerneApp.TagsPage.render(() => restoreSidebarActive('evidences'));
-          document.body.appendChild(tagsNode);
-          if (window.lucide) lucide.createIcons();
-        }
-        break;
+    case 'tags':
+      if (window.CerneApp && window.CerneApp.TagsPage) {
+        const tagsNode = window.CerneApp.TagsPage.render(() => restoreSidebarActive('evidences'));
+        document.body.appendChild(tagsNode);
+        if (window.lucide) lucide.createIcons();
+      }
+      break;
 
-      case 'responsaveis':
-        try {
-          const userProfile = await window.CerneApp.Api.fetchUserProfile();
-          const isAdmin = userProfile?.role === 'admin';
+    case 'responsaveis':
+      try {
+        const userProfile = await window.CerneApp.Api.fetchUserProfile();
+        const isAdmin = userProfile?.role === 'admin';
 
-          if (window.CerneApp && window.CerneApp.ResponsaveisPage) {
-            const responsaveisNode = await window.CerneApp.ResponsaveisPage.render(
-              isAdmin,
-              () => restoreSidebarActive('evidences')
-            );
-            document.body.appendChild(responsaveisNode);
-            if (window.lucide) lucide.createIcons();
-          }
-        } catch (err) {
-          console.error('[NAV] Erro ao abrir Responsáveis:', err);
-        }
-        break;
-
-      case 'calendario':
-        if (window.CerneApp && window.CerneApp.CalendarioPage) {
-          const calendarioNode = await window.CerneApp.CalendarioPage.render(
-            state.evidences,
+        if (window.CerneApp && window.CerneApp.ResponsaveisPage) {
+          const responsaveisNode = await window.CerneApp.ResponsaveisPage.render(
+            isAdmin,
             () => restoreSidebarActive('evidences')
           );
-          document.body.appendChild(calendarioNode);
+          document.body.appendChild(responsaveisNode);
           if (window.lucide) lucide.createIcons();
         }
-        break;
+      } catch (err) {
+        console.error('[NAV] Erro ao abrir Responsáveis:', err);
+      }
+      break;
 
-      case 'relatorios':
-        if (window.CerneApp && window.CerneApp.RelatoriosPage) {
-          const relatoriosNode = await window.CerneApp.RelatoriosPage.render(
-            state.evidences,
-            () => restoreSidebarActive('evidences')
-          );
-          document.body.appendChild(relatoriosNode);
-          if (window.lucide) lucide.createIcons();
-        }
-        break;
+    case 'calendario':
+      if (window.CerneApp && window.CerneApp.CalendarioPage) {
+        const calendarioNode = await window.CerneApp.CalendarioPage.render(
+          state.evidences,
+          () => restoreSidebarActive('evidences')
+        );
+        document.body.appendChild(calendarioNode);
+        if (window.lucide) lucide.createIcons();
+      }
+      break;
 
-      case 'settings':
-        await openSettings();
-        break;
-    }
+    case 'relatorios':
+      if (window.CerneApp && window.CerneApp.RelatoriosPage) {
+        const relatoriosNode = await window.CerneApp.RelatoriosPage.render(
+          state.evidences,
+          () => restoreSidebarActive('evidences')
+        );
+        document.body.appendChild(relatoriosNode);
+        if (window.lucide) lucide.createIcons();
+      }
+      break;
+
+    case 'settings':
+      await openSettings();
+      break;
   }
+}
 
   function renderRightSidebarStats() {
     const rightSidebar = document.getElementById('right-sidebar-stats');
