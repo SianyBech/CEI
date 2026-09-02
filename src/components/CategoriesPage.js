@@ -188,20 +188,41 @@ function renderList() {
     });
 
 async function saveToDatabase() {
+  const saveBtn = backdrop.querySelector('#cat-save-btn');
+  const cancelBtn = backdrop.querySelector('#cat-cancel-btn');
+  
   const filtered = categories.map(c => c.trim()).filter(Boolean);
+  
   try {
+    // 1. Bloqueia os botões e altera o texto para "Salvando..."
+    saveBtn.disabled = true;
+    cancelBtn.disabled = true;
+    saveBtn.textContent = 'Salvando...';
+
     if (window.CerneApp?.Api?.updateSettings) {
       const updatedSettings = await window.CerneApp.Api.updateSettings({ ...settingsData, categories: filtered });
       
-      // 🚀 Atualiza no estado com o nome exato da sua chave: appSettings
       if (window.CerneApp?.state) {
         window.CerneApp.state.appSettings = updatedSettings || { ...settingsData, categories: filtered };
       }
     }
-    closeModal();
+
+    // 2. Feedback visual de sucesso antes de fechar
+    saveBtn.textContent = 'Categorias atualizadas com sucesso!';
+    saveBtn.style.backgroundColor = '#10b981'; // Cor verde de sucesso opcional
+    
+    setTimeout(() => {
+      closeModal();
+    }, 700); // Pequeno delay de 0.7s para o usuário ler a mensagem
+
   } catch (err) {
     console.error('Erro ao salvar categorias:', err);
     alert('Erro ao salvar alterações no banco de dados.');
+    
+    // Restaura o estado original do botão em caso de erro
+    saveBtn.disabled = false;
+    cancelBtn.disabled = false;
+    saveBtn.textContent = 'Salvar Alterações';
   }
 }
 

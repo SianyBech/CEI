@@ -163,20 +163,41 @@
     });
 
 async function saveToDatabase() {
+  const saveBtn = backdrop.querySelector('#tag-save-btn');
+  const cancelBtn = backdrop.querySelector('#tag-cancel-btn');
+  
   const filtered = tags.map(t => t.trim()).filter(Boolean);
+  
   try {
+    // 1. Bloqueia os botões e exibe estado de carregamento
+    saveBtn.disabled = true;
+    cancelBtn.disabled = true;
+    saveBtn.textContent = 'Salvando...';
+
     if (window.CerneApp?.Api?.updateSettings) {
       const updatedSettings = await window.CerneApp.Api.updateSettings({ ...settingsData, tags: filtered });
       
-      // 🚀 Atualiza no estado com o nome exato da sua chave: appSettings
       if (window.CerneApp?.state) {
         window.CerneApp.state.appSettings = updatedSettings || { ...settingsData, tags: filtered };
       }
     }
-    closeModal();
+
+    // 2. Mensagem de sucesso
+    saveBtn.textContent = 'Tags atualizadas com sucesso!';
+    saveBtn.style.backgroundColor = '#10b981';
+
+    setTimeout(() => {
+      closeModal();
+    }, 700);
+
   } catch (err) {
     console.error('Erro ao salvar tags:', err);
     alert('Erro ao salvar alterações no banco de dados.');
+    
+    // Restaura o botão se falhar
+    saveBtn.disabled = false;
+    cancelBtn.disabled = false;
+    saveBtn.textContent = 'Salvar Alterações';
   }
 }
 
