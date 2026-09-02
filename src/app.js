@@ -644,7 +644,6 @@ async function loadEvidences() {
     }
   }
 
-  // Única declaração de openSettings (limpa e assíncrona)
   async function openSettings() {
     if (window.CerneApp && window.CerneApp.SettingsPage) {
       const settingsNode = await window.CerneApp.SettingsPage.render(
@@ -659,22 +658,21 @@ async function loadEvidences() {
             }
           }
 
+          // Atualiza a cor em tempo real nas evidências carregadas na memória
           if (updatedUser?.nome && updatedUser?.cor) {
-          state.evidences = state.evidences.map(e => {
-            if (e.responsavel && e.responsavel.trim().toLowerCase() === updatedUser.nome.trim().toLowerCase()) {
-              return { ...e, responsavelColor: updatedUser.cor };
-            }
-            return e;
-          });
-        }
+            state.evidences = state.evidences.map(e => {
+              if (e.responsavel && e.responsavel.trim().toLowerCase() === updatedUser.nome.trim().toLowerCase()) {
+                return { ...e, responsavelColor: updatedUser.cor };
+              }
+              return e;
+            });
+          }
 
-        // No callback de sucesso do openSettings (dentro do app.js):
-        const updatedUser = await window.CerneApp.Api.updateUserProfile(payload);
-        
-        // ---> ADICIONE ESTA LINHA PARA ATUALIZAR O CACHE GLOBAL <---
-        window.CerneApp.Auth = window.CerneApp.Auth || {};
-        window.CerneApp.Auth.currentUserProfile = updatedUser;
+          // Atualiza o cache global do perfil do usuário logado sem duplicar variáveis
+          window.CerneApp.Auth = window.CerneApp.Auth || {};
+          window.CerneApp.Auth.currentUserProfile = updatedUser;
 
+          // Re-renderiza o Header passando o usuário atualizado
           const headerContainer = document.querySelector('#header-container');
           if (headerContainer && window.CerneApp.Header) {
             headerContainer.innerHTML = '';
