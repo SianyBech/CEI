@@ -1088,7 +1088,7 @@ app.get('/api/user/profile', requirePermission('view'), async (req, res) => {
   }
 });
 
-// PATCH: Atualiza o nome, cargo e configurações visuais do usuário
+// PATCH: Atualiza o nome, cargo, cor e configurações visuais do próprio usuário logado
 app.patch('/api/user/profile', requirePermission('view'), async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -1102,9 +1102,9 @@ app.patch('/api/user/profile', requirePermission('view'), async (req, res) => {
       `UPDATE public.usuarios 
        SET "nome" = COALESCE($1, "nome"),
            "cargo" = COALESCE($2, "cargo"),
-           "configuracoes" = COALESCE($3::jsonb, "configuracoes")
+           "configuracoes" = COALESCE($3::jsonb, "configuracoes"),
            "cor" = COALESCE($4, "cor")
-       WHERE "id" = $4`,
+       WHERE "id" = $5`,
       [
         nome || null,
         cargo || null,
