@@ -52,15 +52,15 @@
     }
 
     // Carrega as preferências personalizadas do usuário
-    try {
-      const profile = await window.CerneApp.Api.fetchUserProfile();
-      if (profile?.configuracoes) {
-        state.viewMode = profile.configuracoes.defaultView || 'table';
-        state.itemsPerPage = profile.configuracoes.itemsPerPage || 10;
-      }
-    } catch (e) {
-      console.warn('Não foi possível carregar as preferências do usuário:', e);
-    }
+  try {
+  const profile = await window.CerneApp.Api.fetchUserProfile();
+  if (profile) {
+    // Mescla a cor e os dados do banco no objeto de sessão global se necessário
+    window.CerneApp.Auth.currentUserProfile = profile; 
+  }
+} catch (e) {
+  console.warn('Erro ao carregar perfil:', e);
+}
   
     isAuthenticatedUser = true;
     await loadSettings();
@@ -320,29 +320,37 @@
     showLoginView();
   }
 
-  async function loadEvidences() {
-    try {
-      const evidences = await window.CerneApp.Api.fetchEvidences();
-      state.evidences = evidences;
-      
-      if (state.evidences.length === 0) {
-        state.evidences.push(createMockEvidence());
+// No app.js, crie ou ajuste a função que carrega as evidências para cruzar com os usuários:
+async function loadEvidences() {
+  try {
+    const [evidences, users] = await Promise.all([
+      window.CerneApp.Api.fetchEvidences(),
+      window.CerneApp.Api.fetchAllUsers().catch(() => [])
+    ]);
+
+    // Cria um mapa de cores por nome de usuário
+    const userColorMap = {};
+    users.forEach(u => {
+      if (u.nome && u.cor) {
+        userColorMap[u.nome.trim().toLowerCase()] = u.cor;
       }
-      
-      populateFilterOptions();
-      renderList();
-      updateDashboardCounters();
-    } catch (error) {
-      console.error('Erro ao carregar evidências:', error);
-      state.evidences = [];
-      
-      state.evidences.push(createMockEvidence2());
-      state.evidences.push(createMockEvidence());
-      
-      populateFilterOptions();
-      renderList();
-    }
+    });
+
+    // Injeta a cor correspondente em cada evidência com base no responsável
+    state.evidences = evidences.map(e => ({
+      ...e,
+      responsavelColor: userColorMap[(e.responsavel || '').trim().toLowerCase()] || null
+    }));
+
+    populateFilterOptions();
+    renderList();
+    updateDashboardCounters();
+  } catch (error) {
+    console.error('Erro ao carregar evidências:', error);
+    state.evidences = [];
+    renderList();
   }
+}
 
   async function loadSettings() {
     try {

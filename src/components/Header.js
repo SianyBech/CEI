@@ -1,9 +1,11 @@
 window.CerneApp.Header = {
   render(onNewEvidenceClick, onSettingsClick, onLogout, user = null) {
     const currentUser = user || window.CerneApp.Auth?.getCurrentUser?.() || null;
+
+    const userProfile = window.CerneApp.Auth?.currentUserProfile || {};
     
     // Lê a cor direto da coluna do Banco de Dados (vinda no perfil do usuário da sessão)
-    const userColor = currentUser?.cor || currentUser?.user_metadata?.cor || '#0066cc';
+    const userColor = userProfile?.cor || currentUser?.cor || currentUser?.user_metadata?.cor || '#0066cc';
     const avatarStyle = `background-color: ${userColor} !important; color: #ffffff !important; font-weight: 600;`;
 
     const role = String(currentUser?.app_metadata?.role || currentUser?.role || currentUser?.user_metadata?.role || 'user').toLowerCase();
