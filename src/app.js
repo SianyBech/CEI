@@ -115,7 +115,7 @@ try {
             <span>Relatórios</span>
           </div>
           <div class="sidebar-item" data-nav="settings">
-            <i data-lucide="settings-2"></i>
+            <i data-lucide="settings"></i>
             <span>Configurações</span>
           </div>
         </div>

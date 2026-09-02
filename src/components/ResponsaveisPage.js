@@ -66,6 +66,30 @@
       if (typeof onCloseCallback === 'function') onCloseCallback();
     }
 
+    // Helper para extrair/gerar a cor do avatar do membro
+    function getUserAvatarStyle(user) {
+      const customColor = user?.cor || user?.color;
+      
+      if (customColor) {
+        return `background-color: ${customColor} !important; color: #ffffff !important; font-weight: 600;`;
+      }
+
+      const palette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#0284c7'];
+      const userName = user?.nome || '';
+      
+      if (!userName) {
+        return `background-color: var(--primary, #0066cc) !important; color: #ffffff !important; font-weight: 600;`;
+      }
+
+      let hash = 0;
+      for (let i = 0; i < userName.length; i++) {
+        hash = userName.charCodeAt(i) + ((hash << 5) - hash);
+      }
+
+      const index = Math.abs(hash) % palette.length;
+      return `background-color: ${palette[index]} !important; color: #ffffff !important; font-weight: 600;`;
+    }
+
     backdrop.querySelector('#resp-close-btn').addEventListener('click', closeModal);
     backdrop.querySelector('#resp-close-bottom-btn').addEventListener('click', closeModal);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
@@ -81,7 +105,7 @@
           return;
         }
 
-        modalBody.innerHTML = ''; // Limpa o container antes de renderizar
+        modalBody.innerHTML = '';
         const listContainer = document.createElement('div');
         listContainer.style.cssText = 'display: flex; flex-direction: column; gap: 0.75rem;';
 
@@ -90,19 +114,23 @@
             ? '<span style="font-size:0.7rem; background:#0066cc15; color:#0066cc; padding: 2px 8px; border-radius:12px; font-weight:600;">Admin</span>' 
             : '';
 
+          const avatarStyle = getUserAvatarStyle(u);
+
           const itemRow = document.createElement('div');
           itemRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-secondary);';
 
+          // Layout ajustado: E-mail em uma linha, Cargo na linha de baixo
           itemRow.innerHTML = `
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <div style="width: 36px; height: 36px; border-radius: 50%; background-color: var(--primary, #0066cc); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">
+              <div style="width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.95rem; flex-shrink: 0; ${avatarStyle}">
                 ${(u.nome || 'U').charAt(0).toUpperCase()}
               </div>
               <div>
-                <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
+                <div style="font-size: 0.875rem; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
                   ${u.nome} ${roleLabel}
                 </div>
-                <div style="font-size: 0.75rem; color: var(--text-secondary);">${u.email} • ${u.cargo || 'Analista'}</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 1px;">${u.email}</div>
+                <div style="font-size: 0.73rem; color: var(--text-tertiary); font-weight: 500; margin-top: 1px;">${u.cargo || 'Analista'}</div>
               </div>
             </div>
 
@@ -118,19 +146,16 @@
             ` : ''}
           `;
 
-          // Handlers de exclusão e edição
           if (isAdmin) {
-            // Edição
             const editBtn = itemRow.querySelector('.btn-edit-member');
             if (editBtn) {
               editBtn.addEventListener('click', () => {
                 openEditUserSubmodal(u, async () => {
-                  await loadMembersList(); // Recarrega a lista sem F5
+                  await loadMembersList();
                 });
               });
             }
 
-            // Exclusão
             const deleteBtn = itemRow.querySelector('.btn-delete-member');
             if (deleteBtn) {
               deleteBtn.addEventListener('click', async () => {
@@ -163,13 +188,12 @@
 
     await loadMembersList();
 
-    // Evento para abrir a submodal de criação de membro (se for Admin)
     if (isAdmin) {
       const addBtn = backdrop.querySelector('#btn-add-new-member');
       if (addBtn) {
         addBtn.addEventListener('click', () => {
           openCreateUserSubmodal(async () => {
-            await loadMembersList(); // Recarrega a lista após cadastrar
+            await loadMembersList();
           });
         });
       }
@@ -258,7 +282,7 @@
   }
 
   // ==========================================
-  // MODAL DE EDIÇÃO
+  // MODAL DE EDIÇÃO (COM SELETOR DE COR)
   // ==========================================
   function openEditUserSubmodal(user, onSuccess) {
     const subBackdrop = document.createElement('div');
@@ -271,12 +295,33 @@
       z-index: 100000 !important;
     `;
 
+    // Paleta de cores para edição do admin
+    const userColorPalette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+    let selectedColor = user.cor || user.color || '#0066cc';
+
+    const colorDotsHTML = userColorPalette.map(c => `
+      <button 
+        type="button" 
+        class="admin-color-picker-dot" 
+        data-color="${c}" 
+        style="
+          background-color: ${c}; 
+          width: 26px; 
+          height: 26px; 
+          border-radius: 50%; 
+          border: 2px solid ${selectedColor === c ? 'var(--text-primary, #0f172a)' : 'transparent'}; 
+          cursor: pointer;
+          transition: transform 0.15s ease;
+        "
+      ></button>
+    `).join('');
+
     subBackdrop.innerHTML = `
       <div class="modal-content" style="max-width: 480px; width: 90%; background-color: var(--bg-primary); border-radius: 12px; padding: 1.5rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
         <h3 style="margin-top: 0; font-size: 1.05rem; font-weight: 600;">Editar Membro</h3>
         <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Você está editando: <strong>${user.email}</strong></p>
         
-        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
           <div>
             <label style="font-size: 0.8rem; font-weight: 600;">Nome Completo</label>
             <input type="text" id="edit-user-nome" class="form-input" style="width: 100%; padding: 0.4rem;" value="${user.nome || ''}" />
@@ -286,15 +331,23 @@
             <label style="font-size: 0.8rem; font-weight: 600;">Cargo / Função</label>
             <input type="text" id="edit-user-cargo" class="form-input" style="width: 100%; padding: 0.4rem;" value="${user.cargo || ''}" />
           </div>
-        </div>
 
-        <div>
-  <label style="font-size: 0.8rem; font-weight: 600;">Nível de Acesso</label>
-  <select id="edit-user-role" class="form-select" style="width: 100%; padding: 0.4rem;">
-    <option value="membro" ${user.role !== 'admin' ? 'selected' : ''}>Membro da Equipe</option>
-    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Administrador</option>
-  </select>
-</div>
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600;">Nível de Acesso</label>
+            <select id="edit-user-role" class="form-select" style="width: 100%; padding: 0.4rem;">
+              <option value="membro" ${user.role !== 'admin' ? 'selected' : ''}>Membro da Equipe</option>
+              <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Administrador</option>
+            </select>
+          </div>
+
+          <!-- Seletor de Cor do Avatar -->
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.35rem;">Cor de Identificação (Avatar)</label>
+            <div id="admin-color-picker" style="display: flex; gap: 0.5rem; align-items: center;">
+              ${colorDotsHTML}
+            </div>
+          </div>
+        </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
           <button class="btn btn-secondary" id="cancel-edit-btn">Cancelar</button>
@@ -305,12 +358,21 @@
 
     document.body.appendChild(subBackdrop);
 
+    // Event listener para seleção da cor
+    subBackdrop.querySelectorAll('.admin-color-picker-dot').forEach(dot => {
+      dot.addEventListener('click', () => {
+        subBackdrop.querySelectorAll('.admin-color-picker-dot').forEach(d => d.style.borderColor = 'transparent');
+        dot.style.borderColor = 'var(--text-primary, #0f172a)';
+        selectedColor = dot.getAttribute('data-color');
+      });
+    });
+
     subBackdrop.querySelector('#cancel-edit-btn').addEventListener('click', () => subBackdrop.remove());
 
     subBackdrop.querySelector('#save-edit-btn').addEventListener('click', async () => {
       const nome = subBackdrop.querySelector('#edit-user-nome').value.trim();
       const cargo = subBackdrop.querySelector('#edit-user-cargo').value.trim();
-      const role = subBackdrop.querySelector('#edit-user-role').value; // <--- PEGA O VALOR
+      const role = subBackdrop.querySelector('#edit-user-role').value;
 
       if (!nome) {
         alert('O nome não pode ficar em branco.');
@@ -322,7 +384,13 @@
       saveBtn.textContent = 'Salvando...';
 
       try {
-       await window.CerneApp.Api.updateUserByAdmin(user.id, { nome, cargo, role });
+        await window.CerneApp.Api.updateUserByAdmin(user.id, { 
+          nome, 
+          cargo, 
+          role, 
+          cor: selectedColor 
+        });
+        
         subBackdrop.remove();
         if (typeof onSuccess === 'function') onSuccess();
       } catch (err) {
