@@ -465,6 +465,27 @@ window.CerneApp.EvidenceDetails = {
       try {
         const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
         setSavingState(false);
+
+        if (window.CerneApp?.state?.appSettings) {
+          if (Array.isArray(savedEvidence.categorias)) {
+            savedEvidence.categorias.forEach(cat => {
+              if (cat && !window.CerneApp.state.appSettings.categories.includes(cat)) {
+                window.CerneApp.state.appSettings.categories.push(cat);
+              }
+            });
+          }
+          if (Array.isArray(savedEvidence.tags)) {
+            savedEvidence.tags.forEach(tag => {
+              if (tag && !window.CerneApp.state.appSettings.tags.includes(tag)) {
+                window.CerneApp.state.appSettings.tags.push(tag);
+              }
+            });
+          }
+          if (typeof populateFilterOptions === 'function') {
+            populateFilterOptions();
+          }
+        }
+        
         showToast('Alterações salvas com sucesso.', 'success');
         if (typeof onSave === 'function') onSave(savedEvidence);
         doClose();

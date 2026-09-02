@@ -633,6 +633,29 @@ window.CerneApp.UploadModal = {
           const savedEvidence = await window.CerneApp.Api.updateEvidence(evidence.id, updatedMetadata);
           wasSaved = true;
 
+          if (window.CerneApp?.state?.appSettings) {
+            // Sincroniza novas categorias cadastradas ou selecionadas
+            if (Array.isArray(savedEvidence.categorias)) {
+              savedEvidence.categorias.forEach(cat => {
+                if (cat && !window.CerneApp.state.appSettings.categories.includes(cat)) {
+                  window.CerneApp.state.appSettings.categories.push(cat);
+                }
+              });
+            }
+            // Sincroniza novas tags cadastradas ou selecionadas
+            if (Array.isArray(savedEvidence.tags)) {
+              savedEvidence.tags.forEach(tag => {
+                if (tag && !window.CerneApp.state.appSettings.tags.includes(tag)) {
+                  window.CerneApp.state.appSettings.tags.push(tag);
+                }
+              });
+            }
+            // Atualiza os selects de filtro da tela principal instantaneamente
+            if (typeof populateFilterOptions === 'function') {
+              populateFilterOptions();
+            }
+          }
+
           if (typeof onAddEvidence === 'function') {
             onAddEvidence(savedEvidence);
           }

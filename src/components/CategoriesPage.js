@@ -259,6 +259,22 @@ async function saveToDatabase() {
     cancelBtn.disabled = false;
     saveBtn.textContent = 'Salvar Alterações';
   }
+
+  // Dentro de saveToDatabase() em CategoriesPage.js e TagsPage.js:
+if (window.CerneApp?.Api?.updateSettings) {
+  const updatedSettings = await window.CerneApp.Api.updateSettings({ ...settingsData, categories: filtered }); // ou tags: filtered
+  
+  // Atualiza o estado global se houver referência
+  if (window.CerneApp?.state) {
+    window.CerneApp.state.appSettings = updatedSettings;
+  }
+
+  // Se a função global de popular filtros existir no escopo da aplicação, atualiza na hora
+  if (typeof populateFilterOptions === 'function') {
+    populateFilterOptions();
+  }
+}
+
 }
 
     function closeModal() {
