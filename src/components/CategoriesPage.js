@@ -75,7 +75,7 @@
 
     const listContainer = backdrop.querySelector('#cat-items-list');
 
-    function renderList() {
+function renderList() {
       listContainer.innerHTML = '';
 
       if (categories.length === 0) {
@@ -84,16 +84,18 @@
       }
 
       categories.forEach((cat, index) => {
+        // Busca a cor e estilo dinâmicos da categoria cadastrados no sistema
+        const dynamicStyle = window.getCategoryStyle ? window.getCategoryStyle(cat) : '';
+
         const itemRow = document.createElement('div');
         itemRow.style.cssText = `
           display: flex; 
           align-items: center; 
           gap: 0.75rem; 
-          padding: 0.4rem 0.4rem 0.4rem 0.85rem; 
-          background-color: var(--bg-secondary, #f8fafc); 
-          border: 1px solid var(--border-color); 
+          padding: 0.45rem 0.5rem 0.45rem 0.85rem; 
           border-radius: 8px;
-          transition: border-color 0.15s ease;
+          transition: all 0.15s ease;
+          ${dynamicStyle} /* Aplica a cor de fundo e do texto da categoria */
         `;
 
         itemRow.innerHTML = `
@@ -108,8 +110,8 @@
               border: none; 
               outline: none; 
               font-size: 0.875rem; 
-              font-weight: 500; 
-              color: var(--text-primary);
+              font-weight: 600; 
+              color: inherit; /* Herda a cor do texto definida pelo getCategoryStyle */
               padding: 0.2rem 0;
             " 
           />
@@ -117,18 +119,17 @@
             class="cat-delete-btn" 
             data-index="${index}" 
             style="
-              background-color: #ffffff; 
-              border: 1px solid var(--border-color); 
+              background-color: rgba(255, 255, 255, 0.8); 
+              border: 1px solid rgba(0, 0, 0, 0.08); 
               border-radius: 6px; 
-              width: 32px; 
-              height: 32px; 
+              width: 30px; 
+              height: 30px; 
               display: flex; 
               align-items: center; 
               justify-content: center; 
               color: #ef4444; 
               cursor: pointer; 
               transition: all 0.15s ease;
-              box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             " 
             title="Excluir categoria"
           >
@@ -138,6 +139,15 @@
 
         itemRow.querySelector('.cat-item-input').addEventListener('input', (e) => {
           categories[index] = e.target.value;
+          
+          // Opcional: Re-aplica a cor dinamicamente se a pessoa mudar o nome digitando
+          if (window.getCategoryStyle) {
+            itemRow.style.cssText = `
+              display: flex; align-items: center; gap: 0.75rem; 
+              padding: 0.45rem 0.5rem 0.45rem 0.85rem; border-radius: 8px;
+              ${window.getCategoryStyle(e.target.value)}
+            `;
+          }
         });
 
         itemRow.querySelector('.cat-delete-btn').addEventListener('click', () => {
