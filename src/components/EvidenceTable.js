@@ -93,31 +93,14 @@ window.CerneApp.EvidenceTable = {
         .replace(/'/g, '&#39;');
     }
 
-// Helper para obter a cor consistente do avatar
-    function getAvatarStyle(responsavelName, customColor) {
-      // 1. Busca dados do usuário atualmente logado
-      let localProfile = {};
-      try {
-        localProfile = JSON.parse(localStorage.getItem('cerne:userProfile') || '{}');
-      } catch(e) {}
-
-      const currentUserName = localProfile.nome || '';
-      const currentUserColor = localProfile.cor;
-
-      // Se a linha for do próprio usuário logado e ele tiver definido uma cor
-      if (currentUserColor && responsavelName && currentUserName && 
-          responsavelName.trim().toLowerCase() === currentUserName.trim().toLowerCase()) {
-        return `background-color: ${currentUserColor}; color: #ffffff; font-weight: 600;`;
-      }
-
-      // Se o objeto da evidência trouxer cor customizada explícita
+function getAvatarStyle(responsavelName, customColor) {
+      // Se a evidência veio do banco trazendo a cor do responsável
       if (customColor) {
-        return `background-color: ${customColor}; color: #ffffff; font-weight: 600;`;
+        return `background-color: ${customColor} !important; color: #ffffff !important; font-weight: 600;`;
       }
 
-      // 2. Paleta fallback consistente por hash do nome para outros membros
+      // Paleta fallback apenas para evidências antigas sem cor vinculada
       const palette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#0284c7'];
-      
       if (!responsavelName) {
         return `background-color: var(--primary); color: #ffffff; font-weight: 600;`;
       }
@@ -128,7 +111,7 @@ window.CerneApp.EvidenceTable = {
       }
 
       const index = Math.abs(hash) % palette.length;
-      return `background-color: ${palette[index]}; color: #ffffff; font-weight: 600;`;
+      return `background-color: ${palette[index]} !important; color: #ffffff !important; font-weight: 600;`;
     }
 
     function formatResponsavelName(nomeCompleto, lista = []) {

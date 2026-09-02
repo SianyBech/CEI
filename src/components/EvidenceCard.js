@@ -32,24 +32,13 @@ window.CerneApp.EvidenceCard = {
         .replace(/&lt;\/strong&gt;/g, '</strong>');
     }
 
-    function getAvatarStyle(responsavelName, customColor) {
-      let localProfile = {};
-      try {
-        localProfile = JSON.parse(localStorage.getItem('cerne:userProfile') || '{}');
-      } catch(e) {}
-
-      const currentUserName = localProfile.nome || '';
-      const currentUserColor = localProfile.cor;
-
-      if (currentUserColor && responsavelName && currentUserName && 
-          responsavelName.trim().toLowerCase() === currentUserName.trim().toLowerCase()) {
-        return `background-color: ${currentUserColor} !important; color: #ffffff !important; font-weight: 600;`;
-      }
-
+function getAvatarStyle(responsavelName, customColor) {
+      // Se a evidência veio do banco trazendo a cor do responsável
       if (customColor) {
         return `background-color: ${customColor} !important; color: #ffffff !important; font-weight: 600;`;
       }
 
+      // Paleta fallback apenas para evidências antigas sem cor vinculada
       const palette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#0284c7'];
       if (!responsavelName) {
         return `background-color: var(--primary); color: #ffffff; font-weight: 600;`;

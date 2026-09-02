@@ -66,14 +66,15 @@
       if (typeof onCloseCallback === 'function') onCloseCallback();
     }
 
-    // Helper para extrair/gerar a cor do avatar do membro
-    function getUserAvatarStyle(user) {
-      const customColor = user?.cor || user?.color;
+function getUserAvatarStyle(user) {
+      // Lê a cor diretamente da coluna do banco enviada pela API
+      const dbColor = user?.cor || user?.color;
       
-      if (customColor) {
-        return `background-color: ${customColor} !important; color: #ffffff !important; font-weight: 600;`;
+      if (dbColor) {
+        return `background-color: ${dbColor} !important; color: #ffffff !important; font-weight: 600;`;
       }
 
+      // Paleta fallback apenas se o registro no banco estiver nulo
       const palette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#0284c7'];
       const userName = user?.nome || '';
       
@@ -284,20 +285,11 @@
   // ==========================================
   // MODAL DE EDIÇÃO (COM SELETOR DE COR)
   // ==========================================
-  function openEditUserSubmodal(user, onSuccess) {
-    const subBackdrop = document.createElement('div');
-    subBackdrop.className = 'modal-backdrop';
-    subBackdrop.style.cssText = `
-      position: fixed !important; top: 0 !important; left: 0 !important;
-      width: 100vw !important; height: 100vh !important;
-      background-color: rgba(0, 0, 0, 0.6) !important;
-      display: flex !important; align-items: center !important; justify-content: center !important;
-      z-index: 100000 !important;
-    `;
+ // 2. Leitura consistente da cor atual na submodal do Admin
+function openEditUserSubmodal(user, onSuccess) {
+  let selectedColor = user.cor || user.color || '#0066cc';
 
-    // Paleta de cores para edição do admin
-    const userColorPalette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-    let selectedColor = user.cor || user.color || '#0066cc';
+  const userColorPalette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
     const colorDotsHTML = userColorPalette.map(c => `
       <button 

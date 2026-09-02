@@ -62,30 +62,22 @@
     backdrop.querySelector('#set-close-bottom-btn').addEventListener('click', closeModal);
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
 
-// 1. Busca dados do perfil com fallback inteligente do localStorage
+// Busca dados do perfil no banco via API
     let userProfile = null;
-    let localData = {};
-    
-    try {
-      localData = JSON.parse(localStorage.getItem('cerne:userProfile') || '{}');
-    } catch (e) {
-      localData = {};
-    }
-
     try {
       userProfile = await window.CerneApp.Api.fetchUserProfile();
     } catch (err) {
-      console.warn('Falha ao carregar perfil via API, usando fallback local:', err);
-      userProfile = localData;
+      console.warn('Falha ao carregar perfil via API, tentando cache local:', err);
+      userProfile = JSON.parse(localStorage.getItem('cerne:userProfile') || '{}');
     }
 
-    // Garante que se o perfil da API vier sem cor, usamos a do localStorage ou a padrão
-    const userName = userProfile?.nome || localData.nome || 'Gestor CEI';
-    const userEmail = userProfile?.email || localData.email || '';
-    const userRole = userProfile?.cargo || localData.cargo || 'Analista CEI';
-    const userSelectedColor = userProfile?.cor || localData.cor || '#0066cc'; // <--- Lê a cor do localData se a API não trouxer
+    // Lê os dados retornados pela API/Banco de Dados
+    const userName = userProfile?.nome || 'Nome do Usuário';
+    const userEmail = userProfile?.email || '';
+    const userRole = userProfile?.cargo || 'Analista CEI';
+    const userSelectedColor = userProfile?.cor || '#0066cc'; // Direto da coluna 'cor' do Banco
     
-    const userConfigs = userProfile?.configuracoes || localData.configuracoes || {};
+    const userConfigs = userProfile?.configuracoes || {};
     const defaultView = userConfigs.defaultView || 'table';
     const itemsPerPage = userConfigs.itemsPerPage || 10;
 
@@ -209,30 +201,21 @@
         }
       };
 
-      try {
+   try {
         saveBtn.disabled = true;
         saveBtn.textContent = 'Salvando...';
 
-        let updatedUser = null;
-        try {
-          updatedUser = await window.CerneApp.Api.updateUserProfile(payload);
-        } catch (apiErr) {
-          console.warn('API não respondeu, salvando localmente:', apiErr);
+        // Atualiza diretamente no banco de dados através da API
+        const updatedUser = await window.CerneApp.Api.updateUserProfile(payload);
+        
+        // Mantemos no localStorage apenas como cache
+        localStorage.setItem('cerne:userProfile', JSON.stringify(updatedUser));
+        if (updatedUser.configuracoes) {
+          localStorage.setItem('cerne:settings', JSON.stringify(updatedUser.configuracoes));
         }
 
-        // Se a API não retornar a cor salva, garantimos que o objeto final tenha a cor escolhida
-        const finalUserProfile = {
-          ...localData,
-          ...(updatedUser || {}),
-          ...payload // Garante que 'cor', 'nome' e 'configuracoes' persistam no localStorage
-        };
-        
-        // Persiste o perfil completo com a cor atualizada
-        localStorage.setItem('cerne:userProfile', JSON.stringify(finalUserProfile));
-        localStorage.setItem('cerne:settings', JSON.stringify(finalUserProfile.configuracoes));
-
         if (typeof onSaveCallback === 'function') {
-          onSaveCallback(finalUserProfile);
+          onSaveCallback(updatedUser);
         }
 
         closeModal();

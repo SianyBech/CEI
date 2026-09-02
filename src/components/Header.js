@@ -2,16 +2,8 @@ window.CerneApp.Header = {
   render(onNewEvidenceClick, onSettingsClick, onLogout, user = null) {
     const currentUser = user || window.CerneApp.Auth?.getCurrentUser?.() || null;
     
-    // Tenta ler do localStorage como fallback
-    let localProfile = {};
-    try {
-      localProfile = JSON.parse(localStorage.getItem('cerne:userProfile') || '{}');
-    } catch(e) {}
-
-    // Dá prioridade para o 'user' recebido via parâmetro (dados recém-salvos)
-    const userColor = currentUser?.cor || localProfile.cor || currentUser?.user_metadata?.cor || '#0066cc';
-    
-    // Força o estilo inline com !important para sobrescrever qualquer CSS global
+    // Lê a cor direto da coluna do Banco de Dados (vinda no perfil do usuário da sessão)
+    const userColor = currentUser?.cor || currentUser?.user_metadata?.cor || '#0066cc';
     const avatarStyle = `background-color: ${userColor} !important; color: #ffffff !important; font-weight: 600;`;
 
     const role = String(currentUser?.app_metadata?.role || currentUser?.role || currentUser?.user_metadata?.role || 'user').toLowerCase();
