@@ -1,6 +1,45 @@
 // ==========================================================================
 // COMPONENTE: GESTÃO DE CATEGORIAS CERNE (CEI/UFRGS)
 // ==========================================================================
+function showSuccessToast(message) {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    background-color: #10b981 !important;
+    color: #ffffff !important;
+    padding: 0.75rem 1.25rem !important;
+    border-radius: 8px !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+    z-index: 999999 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transform: translateY(-10px);
+  `;
+  
+  toast.innerHTML = `<i data-lucide="check-circle" style="width: 18px; height: 18px;"></i> ${message}`;
+  document.body.appendChild(toast);
+  if (window.lucide) lucide.createIcons({ node: toast });
+
+  // Animação de entrada
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  });
+
+  // Remove após 3 segundos com animação de saída
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-10px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
 
 (function () {
   function render(onCloseCallback) {
@@ -189,12 +228,12 @@ function renderList() {
 
 async function saveToDatabase() {
   const saveBtn = backdrop.querySelector('#cat-save-btn');
-  const cancelBtn = backdrop.querySelector('#cat-cancel-btn');
+  const cancelBtn = backdrop.querySelector('#cat-cancel-btn'); 
   
   const filtered = categories.map(c => c.trim()).filter(Boolean);
   
   try {
-    // 1. Bloqueia os botões e altera o texto para "Salvando..."
+    // 1. Bloqueia os botões e mostra "Salvando..."
     saveBtn.disabled = true;
     cancelBtn.disabled = true;
     saveBtn.textContent = 'Salvando...';
@@ -207,19 +246,15 @@ async function saveToDatabase() {
       }
     }
 
-    // 2. Feedback visual de sucesso antes de fechar
-    saveBtn.textContent = 'Categorias atualizadas com sucesso!';
-    saveBtn.style.backgroundColor = '#10b981'; // Cor verde de sucesso opcional
-    
-    setTimeout(() => {
-      closeModal();
-    }, 700); // Pequeno delay de 0.7s para o usuário ler a mensagem
+    // 2. Fecha o modal e dispara o aviso flutuante no canto superior direito
+    closeModal();
+    showSuccessToast('Categorias atualizadas com sucesso!');
 
   } catch (err) {
-    console.error('Erro ao salvar categorias:', err);
+    console.error('Erro ao salvar:', err);
     alert('Erro ao salvar alterações no banco de dados.');
     
-    // Restaura o estado original do botão em caso de erro
+    // Restaura o botão se der erro
     saveBtn.disabled = false;
     cancelBtn.disabled = false;
     saveBtn.textContent = 'Salvar Alterações';
