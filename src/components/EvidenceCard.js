@@ -1,8 +1,12 @@
 window.CerneApp = window.CerneApp || {};
 
 window.CerneApp.EvidenceCard = {
-  render(evidences, onViewDetailsClick) {
+  render(evidences, onViewDetailsClick, listaResponsaveis = []) {
     const container = document.createElement('div');
+
+    const listaFinalResponsaveis = Array.isArray(listaResponsaveis) && listaResponsaveis.length > 0
+      ? listaResponsaveis
+      : [...new Set((evidences || []).map(e => e.responsavel).filter(Boolean))];
 
     function escapeHtml(value) {
       return String(value || '')
@@ -13,7 +17,88 @@ window.CerneApp.EvidenceCard = {
         .replace(/'/g, '&#39;');
     }
 
-    // Helper para mapear tipo -> ícone do Lucide, classe CSS e label
+    // Helper para sanitizar o HTML permitindo tags simples de negrito no resumo
+    function renderSafeSummary(summaryText) {
+      if (!summaryText || summaryText.trim() === '') {
+        return 'Sem resumo disponível.';
+      }
+
+      let safe = escapeHtml(summaryText);
+
+      return safe
+        .replace(/&lt;b&gt;/g, '<b>')
+        .replace(/&lt;\/b&gt;/g, '</b>')
+        .replace(/&lt;strong&gt;/g, '<strong>')
+        .replace(/&lt;\/strong&gt;/g, '</strong>');
+    }
+
+    function getAvatarStyle(responsavelName, customColor) {
+      let localProfile = {};
+      try {
+        localProfile = JSON.parse(localStorage.getItem('cerne:userProfile') || '{}');
+      } catch(e) {}
+
+      const currentUserName = localProfile.nome || '';
+      const currentUserColor = localProfile.cor;
+
+      if (currentUserColor && responsavelName && currentUserName && 
+          responsavelName.trim().toLowerCase() === currentUserName.trim().toLowerCase()) {
+        return `background-color: ${currentUserColor} !important; color: #ffffff !important; font-weight: 600;`;
+      }
+
+      if (customColor) {
+        return `background-color: ${customColor} !important; color: #ffffff !important; font-weight: 600;`;
+      }
+
+      const palette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#0284c7'];
+      if (!responsavelName) {
+        return `background-color: var(--primary); color: #ffffff; font-weight: 600;`;
+      }
+
+      let hash = 0;
+      for (let i = 0; i < responsavelName.length; i++) {
+        hash = responsavelName.charCodeAt(i) + ((hash << 5) - hash);
+      }
+
+      const index = Math.abs(hash) % palette.length;
+      return `background-color: ${palette[index]} !important; color: #ffffff !important; font-weight: 600;`;
+    }
+
+    function formatResponsavelName(nomeCompleto, lista = []) {
+      if (!nomeCompleto) return 'Equipe CEI';
+
+      const partes = nomeCompleto.trim().split(/\s+/);
+      const primeiroNome = partes[0];
+
+      if (partes.length === 1) return primeiroNome;
+
+      const nomeLower = nomeCompleto.trim().toLowerCase();
+
+      const temDuplicado = lista.some(outroNome => {
+        if (!outroNome) return false;
+        const outroTrim = outroNome.trim();
+        const outroLower = outroTrim.toLowerCase();
+
+        if (
+          outroLower === nomeLower ||
+          outroLower.startsWith(nomeLower) ||
+          nomeLower.startsWith(outroLower)
+        ) {
+          return false;
+        }
+
+        const outroPrimeiro = outroTrim.split(/\s+/)[0];
+        return outroPrimeiro.toLowerCase() === primeiroNome.toLowerCase();
+      });
+
+      if (temDuplicado) {
+        const ultimoSobrenome = partes[partes.length - 1];
+        return `${primeiroNome} ${ultimoSobrenome}`;
+      }
+
+      return primeiroNome;
+    }
+
     const getTypeConfig = (tipo) => {
       switch (tipo) {
         case 'pdf':
@@ -31,14 +116,12 @@ window.CerneApp.EvidenceCard = {
       }
     };
 
-    // Helper para truncar evento (max 5 palavras), com fallback de traço se vazio
     const truncateWords = (str, max) => {
       if (!str || str.trim() === '' || str.trim().toLowerCase() === 'sem evento') return '';
       const words = str.trim().split(/\s+/);
       return words.length > max ? words.slice(0, max).join(' ') + '...' : str;
     };
 
-    // Empty State (nenhuma evidência encontrada)
     if (!Array.isArray(evidences) || evidences.length === 0) {
       container.className = 'table-container';
       container.innerHTML = `
@@ -73,7 +156,6 @@ window.CerneApp.EvidenceCard = {
       let iconHtml = '';
       let displayType = evidence.tipo || 'Documento';
 
-      // Tratamento para exibição híbrida (Arquivo + Link) e ícone correto
       if (hasFile && hasLink) {
         const config = getTypeConfig(evidence.tipo);
         displayType = `${config.label} + Link`;
@@ -96,7 +178,6 @@ window.CerneApp.EvidenceCard = {
         iconHtml = `<i data-lucide="${config.icon}" class="file-icon ${config.klass}" style="margin-top: 2px;"></i>`;
       }
 
-      // Trata lista de categorias (sem "Geral" automático)
       const categoriesList = Array.isArray(evidence.categorias) && evidence.categorias.length > 0
         ? evidence.categorias
         : (evidence.categoria ? [evidence.categoria] : []);
@@ -108,20 +189,20 @@ window.CerneApp.EvidenceCard = {
           }).join(' ')
         : '<span style="color: var(--text-tertiary); font-style: italic; font-size: 0.8rem;">—</span>';
 
-      // Trata lista de tags
       const tagsHTML = (evidence.tags || [])
         .map(tag => `<span class="tag">${escapeHtml(tag)}</span>`)
         .join('');
 
-      // Formatação do Evento (se não tiver, mostra traço)
       const eventoFormatted = truncateWords(evidence.evento, 5);
       const eventoHTML = eventoFormatted 
         ? escapeHtml(eventoFormatted)
         : '<span style="color: var(--text-tertiary); font-style: italic;">—</span>';
 
       const tituloText = evidence.titulo || evidence.nome || 'Sem título';
-      const responsavelText = evidence.responsavel || 'Não especificado';
-      const initialLetter = responsavelText.charAt(0).toUpperCase();
+      
+      const nomeFormatado = formatResponsavelName(evidence.responsavel, listaFinalResponsaveis);
+      const avatarStyle = getAvatarStyle(evidence.responsavel, evidence.responsavelColor);
+      const initialLetter = evidence.responsavel ? evidence.responsavel.charAt(0).toUpperCase() : 'U';
 
       cardsHTML += `
         <div class="evidence-card" data-id="${escapeHtml(evidence.id)}">
@@ -142,7 +223,7 @@ window.CerneApp.EvidenceCard = {
               Evento: ${eventoHTML}
             </strong>
             <div style="color: var(--text-secondary); font-size: 0.85rem;">
-              ${escapeHtml(evidence.resumo || 'Sem resumo disponível.')}
+              ${renderSafeSummary(evidence.resumo)}
             </div>
           </div>
 
@@ -150,8 +231,8 @@ window.CerneApp.EvidenceCard = {
 
           <div class="card-footer">
             <div class="card-author">
-              <div class="avatar-initial">${escapeHtml(initialLetter)}</div>
-              <span>${escapeHtml(responsavelText)}</span>
+              <div class="avatar-initial" style="${avatarStyle}">${escapeHtml(initialLetter)}</div>
+              <span>${escapeHtml(nomeFormatado)}</span>
             </div>
             <span style="font-size: 0.75rem; color: var(--text-tertiary);">${escapeHtml(evidence.data || '')}</span>
           </div>
@@ -161,7 +242,6 @@ window.CerneApp.EvidenceCard = {
 
     container.innerHTML = cardsHTML;
 
-    // Attach click listeners
     container.querySelectorAll('.evidence-card').forEach(card => {
       card.addEventListener('click', () => {
         const id = card.getAttribute('data-id');
