@@ -668,6 +668,13 @@ async function loadEvidences() {
           });
         }
 
+        // No callback de sucesso do openSettings (dentro do app.js):
+        const updatedUser = await window.CerneApp.Api.updateUserProfile(payload);
+        
+        // ---> ADICIONE ESTA LINHA PARA ATUALIZAR O CACHE GLOBAL <---
+        window.CerneApp.Auth = window.CerneApp.Auth || {};
+        window.CerneApp.Auth.currentUserProfile = updatedUser;
+
           const headerContainer = document.querySelector('#header-container');
           if (headerContainer && window.CerneApp.Header) {
             headerContainer.innerHTML = '';
