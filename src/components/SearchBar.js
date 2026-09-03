@@ -2,6 +2,10 @@ window.CerneApp = window.CerneApp || {};
 
 window.CerneApp.SearchBar = {
   render(currentQuery, currentViewMode, categories, tags, onSearchChange, onFilterChange, onViewModeChange, onDateFilterChange, onClearFilters) {
+
+    const currentCategories = window.CerneApp?.state?.appSettings?.categories || categories;
+    const currentTags = window.CerneApp?.state?.appSettings?.tags || tags;
+
     const escapeHtml = (str) => String(str || '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -16,19 +20,19 @@ window.CerneApp.SearchBar = {
     container.style.width = '100%';
 
     // Filtra itens nulos/vazios, ordena de A a Z respeitando acentuação em PT-BR
-const sortedCategories = Array.isArray(categories)
-  ? [...categories]
-      .filter(cat => cat && cat.trim() !== '')
-      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  : [];
+const sortedCategories = Array.isArray(currentCategories)
+      ? [...currentCategories]
+          .filter(cat => cat && cat.trim() !== '')
+          .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      : [];
 
 const categoriesOptions = sortedCategories
   .map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
   .join('');
 
     // Ordenação Alfabética e Sanitização de Tags
-    const sortedTags = Array.isArray(tags)
-      ? [...tags].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+   const sortedTags = Array.isArray(currentTags)
+      ? [...currentTags].sort((a, b) => a.localeCompare(b, 'pt-BR'))
       : [];
 
     const tagsOptions = sortedTags

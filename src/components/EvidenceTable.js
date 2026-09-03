@@ -241,7 +241,7 @@ function getAvatarStyle(responsavelName, customColor) {
         ? escapeHtml(eventoFormatado) 
         : '<span style="color: var(--text-tertiary); font-style: italic; font-size: 0.8rem;">—</span>';
 
-      const tagsHTML = (evidence.tags || []).map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
+      const tagsHTML = (evidence.tags || []).map(tag => `<span class="tag" style="${window.CerneConfig.tagsStyle}">${escapeHtml(tag)}</span>`).join('');
       const nomeFormatado = formatResponsavelName(evidence.responsavel, listaFinalResponsaveis);
 
       const categoriesList = Array.isArray(evidence.categorias) && evidence.categorias.length > 0 
@@ -310,7 +310,15 @@ function getAvatarStyle(responsavelName, customColor) {
             ${renderSortableHeader('Tipo', 'tipo')}
             ${renderSortableHeader('Data', 'data')}
             ${renderSortableHeader('Evento', 'evento')}
-            <th>Categoria CERNE</th>
+            <th>
+              <select id="table-cerne-filter" style="background: transparent; border: none; font-weight: 600; color: var(--text-primary); cursor: pointer; outline: none; font-size: inherit; font-family: inherit;">
+                <option value="todos">Categoria Cerne ▾</option>
+                <option value="Cerne 1">Cerne 1</option>
+                <option value="Cerne 2">Cerne 2</option>
+                <option value="Cerne 3">Cerne 3</option>
+                <option value="Cerne 4">Cerne 4</option>
+              </select>
+            </th>
             ${renderSortableHeader('Responsável', 'responsavel')}
             <th>Tags</th>
           </tr>
@@ -320,6 +328,21 @@ function getAvatarStyle(responsavelName, customColor) {
         </tbody>
       </table>
     `;
+
+    // Handler do Select CERNE na tabela
+    const cerneFilter = container.querySelector('#table-cerne-filter');
+    if (cerneFilter) {
+      // Sincroniza o valor atual (guardado no estado, veja próximo passo)
+      cerneFilter.value = window.CerneApp.currentTableCerneFilter || 'todos';
+      
+      cerneFilter.addEventListener('change', (e) => {
+        window.CerneApp.currentTableCerneFilter = e.target.value;
+        // Re-renderiza chamando a lógica do app.js
+        if (typeof window.CerneApp.triggerFilterRefresh === 'function') {
+          window.CerneApp.triggerFilterRefresh();
+        }
+      });
+    }
 
     // Handler de clique nos cabeçalhos ordenáveis
     const self = this;

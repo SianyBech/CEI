@@ -233,20 +233,27 @@ async function saveToDatabase() {
   const filtered = categories.map(c => c.trim()).filter(Boolean);
   
   try {
-    // 1. Bloqueia os botões e mostra "Salvando..."
+    // 1. Bloqueia os botões e mostra estado de loading
     saveBtn.disabled = true;
     cancelBtn.disabled = true;
     saveBtn.textContent = 'Salvando...';
 
     if (window.CerneApp?.Api?.updateSettings) {
+      // 2. Faz a chamada única para a API
       const updatedSettings = await window.CerneApp.Api.updateSettings({ ...settingsData, categories: filtered });
       
+      // 3. Atualiza o estado global
       if (window.CerneApp?.state) {
         window.CerneApp.state.appSettings = updatedSettings || { ...settingsData, categories: filtered };
       }
+
+      // 4. Atualiza os selects da interface principal imediatamente
+      if (typeof window.CerneApp.populateFilterOptions === 'function') {
+        window.CerneApp.populateFilterOptions();
+      }
     }
 
-    // 2. Fecha o modal e dispara o aviso flutuante no canto superior direito
+    // 5. Fecha o modal e dispara o aviso de sucesso
     closeModal();
     showSuccessToast('Categorias atualizadas com sucesso!');
 
@@ -254,27 +261,11 @@ async function saveToDatabase() {
     console.error('Erro ao salvar:', err);
     alert('Erro ao salvar alterações no banco de dados.');
     
-    // Restaura o botão se der erro
+    // 6. Restaura os botões se a requisição falhar
     saveBtn.disabled = false;
     cancelBtn.disabled = false;
     saveBtn.textContent = 'Salvar Alterações';
   }
-
-  // Dentro de saveToDatabase() em CategoriesPage.js e TagsPage.js:
-if (window.CerneApp?.Api?.updateSettings) {
-  const updatedSettings = await window.CerneApp.Api.updateSettings({ ...settingsData, categories: filtered }); // ou tags: filtered
-  
-  // Atualiza o estado global se houver referência
-  if (window.CerneApp?.state) {
-    window.CerneApp.state.appSettings = updatedSettings;
-  }
-
-  // Se a função global de popular filtros existir no escopo da aplicação, atualiza na hora
-  if (typeof populateFilterOptions === 'function') {
-    populateFilterOptions();
-  }
-}
-
 }
 
     function closeModal() {

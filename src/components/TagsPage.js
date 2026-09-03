@@ -123,18 +123,15 @@ function showSuccessToast(message) {
 
       tags.forEach((tag, index) => {
   const badge = document.createElement('span');
-  // 💡 ESTILO ATUALIZADO: Fundo roxo suave com borda e texto roxo/violeta
   badge.style.cssText = `
     display: inline-flex; 
     align-items: center; 
     gap: 0.4rem; 
     padding: 0.35rem 0.75rem; 
-    background-color: #f3e8ff; 
-    color: #6b21a8; 
     font-size: 0.825rem; 
     border-radius: 20px; 
     font-weight: 500;
-    border: 1px solid #e9d5ff;
+    ${window.CerneConfig.tagsStyle}
   `;
 
   badge.innerHTML = `
@@ -149,7 +146,7 @@ function showSuccessToast(message) {
         cursor: pointer; 
         display: flex; 
         align-items: center; 
-        color: #6b21a8; 
+        color: inherit; 
         opacity: 0.7;
       " 
       title="Remover tag"
@@ -202,54 +199,46 @@ function showSuccessToast(message) {
     });
 
 async function saveToDatabase() {
-  const saveBtn = backdrop.querySelector('#tag-save-btn');
-  const cancelBtn = backdrop.querySelector('#tag-cancel-btn');
-  
-  const filtered = tags.map(t => t.trim()).filter(Boolean);
-  
-  try {
-    // 1. Bloqueia os botões e mostra "Salvando..."
-    saveBtn.disabled = true;
-    cancelBtn.disabled = true;
-    saveBtn.textContent = 'Salvando...';
-
-    if (window.CerneApp?.Api?.updateSettings) {
-      const updatedSettings = await window.CerneApp.Api.updateSettings({ ...settingsData, tags: filtered });
-      
-      if (window.CerneApp?.state) {
-        window.CerneApp.state.appSettings = updatedSettings || { ...settingsData, tags: filtered };
-      }
-    }
-
-    // 2. Fecha o modal e dispara o aviso flutuante no canto superior direito
-    closeModal();
-    showSuccessToast('Tags atualizadas com sucesso!');
-
-  } catch (err) {
-    console.error('Erro ao salvar:', err);
-    alert('Erro ao salvar alterações no banco de dados.');
+    const saveBtn = backdrop.querySelector('#tag-save-btn');
+    const cancelBtn = backdrop.querySelector('#tag-cancel-btn');
     
-    // Restaura o botão se der erro
-    saveBtn.disabled = false;
-    cancelBtn.disabled = false;
-    saveBtn.textContent = 'Salvar Alterações';
-  }
+    const filtered = tags.map(t => t.trim()).filter(Boolean);
+    
+    try {
+      saveBtn.disabled = true;
+      cancelBtn.disabled = true;
+      saveBtn.textContent = 'Salvando...';
 
-if (window.CerneApp?.Api?.updateSettings) {
-  const updatedSettings = await window.CerneApp.Api.updateSettings({ ...settingsData, tags: filtered });
-  
-  // Atualiza o estado global se houver referência
-  if (window.CerneApp?.state) {
-    window.CerneApp.state.appSettings = updatedSettings;
-  }
+      if (window.CerneApp?.Api?.updateSettings) {
+        // Garante que enviamos o objeto settings atualizado preservando categorias e ajustando tags
+        const payload = {
+          ...settingsData,
+          tags: filtered
+        };
 
-  // Se a função global de popular filtros existir no escopo da aplicação, atualiza na hora
-  if (typeof populateFilterOptions === 'function') {
-    populateFilterOptions();
-  }
-}
+        const updatedSettings = await window.CerneApp.Api.updateSettings(payload);
+        
+        if (window.CerneApp?.state) {
+          window.CerneApp.state.appSettings = updatedSettings || payload;
+        }
+      }
 
-}
+      closeModal();
+      showSuccessToast('Tags atualizadas com sucesso!');
+
+      if (typeof window.CerneApp.populateFilterOptions === 'function') {
+        window.CerneApp.populateFilterOptions();
+      }
+
+    } catch (err) {
+      console.error('Erro ao salvar tags:', err);
+      alert('Erro ao salvar alterações no banco de dados.');
+      
+      saveBtn.disabled = false;
+      cancelBtn.disabled = false;
+      saveBtn.textContent = 'Salvar Alterações';
+    }
+  }
 
     function closeModal() {
       backdrop.remove();

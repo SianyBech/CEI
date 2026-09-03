@@ -296,7 +296,7 @@ window.CerneApp.EvidenceDetails = {
       selectElement.appendChild(defaultOpt);
 
       // Usa a lista fresca obtida do estado global
-      const categoriesArray = Array.isArray(currentCategories) ? currentCategories : [];
+      const categoriesArray = window.CerneApp?.state?.appSettings?.categories || [];
       const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
 
       availableCategories.forEach(cat => {
@@ -354,7 +354,7 @@ window.CerneApp.EvidenceDetails = {
       defaultOpt.selected = true;
       selectElement.appendChild(defaultOpt);
 
-      const tagsListArray = Array.isArray(tagsList) ? tagsList : [];
+      const tagsListArray = window.CerneApp?.state?.appSettings?.tags || [];
       const availableTags = tagsListArray.filter(tag => !selectedTags.includes(tag));
       
       availableTags.forEach(tag => {
@@ -485,9 +485,9 @@ window.CerneApp.EvidenceDetails = {
               }
             });
           }
-          if (typeof populateFilterOptions === 'function') {
-            populateFilterOptions();
-          }
+          if (typeof window.CerneApp.populateFilterOptions === 'function') {
+    window.CerneApp.populateFilterOptions();
+  }
         }
 
         showToast('Alterações salvas com sucesso.', 'success');

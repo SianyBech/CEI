@@ -178,9 +178,7 @@ function getAvatarStyle(responsavelName, customColor) {
           }).join(' ')
         : '<span style="color: var(--text-tertiary); font-style: italic; font-size: 0.8rem;">—</span>';
 
-      const tagsHTML = (evidence.tags || [])
-        .map(tag => `<span class="tag">${escapeHtml(tag)}</span>`)
-        .join('');
+      const tagsHTML = (evidence.tags || []).map(tag => `<span class="tag" style="${window.CerneConfig.tagsStyle}">${escapeHtml(tag)}</span>`).join('');
 
       const eventoFormatted = truncateWords(evidence.evento, 5);
       const eventoHTML = eventoFormatted 

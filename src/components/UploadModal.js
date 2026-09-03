@@ -485,7 +485,7 @@ window.CerneApp.UploadModal = {
         defaultOpt.selected = true;
         selectElement.appendChild(defaultOpt);
 
-        const categoriesArray = Array.isArray(categories) ? categories : [];
+        const categoriesArray = window.CerneApp?.state?.appSettings?.categories || [];
         const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
 
         availableCategories.forEach(cat => {
@@ -524,6 +524,7 @@ window.CerneApp.UploadModal = {
           selectedTags.forEach(tag => {
             const badge = document.createElement('span');
             badge.className = 'tag-badge';
+            badge.setAttribute('style', window.CerneConfig.tagsStyle);
             badge.innerHTML = `
               <span>${escapeHtml(tag)}</span>
               <button type="button" class="tag-badge-remove" title="Remover tag">&times;</button>
@@ -544,7 +545,7 @@ window.CerneApp.UploadModal = {
         defaultOpt.selected = true;
         selectElement.appendChild(defaultOpt);
 
-        const tagsListArray = Array.isArray(tagsList) ? tagsList : [];
+        const tagsListArray = window.CerneApp?.state?.appSettings?.tags || [];
         const availableTags = tagsListArray.filter(tag => !selectedTags.includes(tag));
         
         availableTags.forEach(tag => {
@@ -618,7 +619,7 @@ window.CerneApp.UploadModal = {
           titulo: modalBody.querySelector('#edit-titulo').value.trim() || evidence.nome,
           evento: modalBody.querySelector('#edit-evento').value.trim() || 'Sem Evento',
           categorias: selectedCategories,
-          categoria: selectedCategories.length > 0 ? selectedCategories[0] : 'Geral',
+          categoria: selectedCategories.length > 0 ? selectedCategories[0] : '',
           responsavel: modalBody.querySelector('#edit-responsavel').value.trim() || 'Não especificado',
           data: dataFormatted,
           resumo: modalBody.querySelector('#edit-resumo').value.trim() || 'Sem resumo disponível.',
@@ -651,9 +652,9 @@ window.CerneApp.UploadModal = {
               });
             }
             // Atualiza os selects de filtro da tela principal instantaneamente
-            if (typeof populateFilterOptions === 'function') {
-              populateFilterOptions();
-            }
+            if (typeof window.CerneApp.populateFilterOptions === 'function') {
+    window.CerneApp.populateFilterOptions();
+  }
           }
 
           if (typeof onAddEvidence === 'function') {

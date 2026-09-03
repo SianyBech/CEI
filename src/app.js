@@ -3,6 +3,78 @@
 // ==========================================================================
 
 (function () {
+
+  // --- CONFIGURAÇÃO CENTRALIZADA CERNE & TAGS ---
+  window.CerneConfig = {
+    // Nova cor neutra para tags (Cinza) aplicável em todo o sistema
+    tagsStyle: 'background-color: #f1f5f9 !important; color: #475569 !important; border: 1px solid #cbd5e1 !important;',
+    
+    cernes: {
+      "Cerne 1": {
+        color: "background-color: #e0f2fe !important; color: #0369a1 !important; border: 1px solid #bae6fd !important;", // Azul Pastel
+        categories: [
+          "Sensibilização", "Prospecção", "Qualificação de Potenciais Empreendedores",
+          "Recepção de Propostas", "Avaliação", "Contratação",
+          "Planejamento", "Agregação de Valor", "Monitoramento",
+          "Graduação", "Relacionamento com Graduadas",
+          "Estrutura Organizacional", "Gestão do Mecanismo de Inovação", "Comunicação e Marketing"
+        ]
+      },
+      "Cerne 2": {
+        color: "background-color: #dcfce7 !important; color: #15803d !important; border: 1px solid #bbf7d0 !important;", // Verde Pastel
+        categories: [
+          "Planejamento Estratégico", "Administração Estratégica",
+          "Estímulo a Ideação", "Serviços a Organizações",
+          "Avaliação da Qualidade", "Avaliação dos Impactos"
+        ]
+      },
+      "Cerne 3": {
+        color: "background-color: #fef08a !important; color: #a16207 !important; border: 1px solid #fde047 !important;", // Amarelo Pastel
+        categories: [
+          "Interação com o Entorno", "Participação na Proposição de Políticas Públicas",
+          "Rede de Apoio aos Empreendimentos", "Gestão de Ofertas e Demandas", "Expansão da Atuação Territorial",
+          "Gestão Ambiental", "Responsabilidade Social"
+        ]
+      },
+      "Cerne 4": {
+        color: "background-color: #f3e8ff !important; color: #6b21a8 !important; border: 1px solid #e9d5ff !important;", // Roxo Pastel
+        categories: [
+          "Internacionalização do Mecanismo de Inovação", "Internacionalização dos Empreendimentos"
+        ]
+      }
+    },
+    
+    // Identifica a qual Cerne uma categoria pertence
+    getCerneName(categoryName) {
+      for (const [cerneName, data] of Object.entries(this.cernes)) {
+        if (data.categories.includes(categoryName)) return cerneName;
+      }
+      return "Outros";
+    },
+
+    // Retorna o estilo exato para injetar no HTML
+    getCategoryStyle(categoryName) {
+      const cerneName = this.getCerneName(categoryName);
+      if (this.cernes[cerneName]) return this.cernes[cerneName].color;
+      return 'background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb;'; // Cinza Default
+    }
+  };
+
+  async function loadUserProfile() {
+    try {
+      const profile = await window.CerneApp.Api.fetchUserProfile();
+      if (profile) {
+        window.CerneApp.Auth = window.CerneApp.Auth || {};
+        window.CerneApp.Auth.currentUserProfile = profile; 
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar perfil:', e);
+    }
+  }
+  
+  // Sobrescrevemos a função global antiga para usar nossa nova central
+  window.getCategoryStyle = (cat) => window.CerneConfig.getCategoryStyle(cat);
+
   const state = {
     evidences: [],
     searchQuery: '',
@@ -51,16 +123,7 @@
       return;
     }
 
-    // Carrega as preferências personalizadas do usuário
-  try {
-  const profile = await window.CerneApp.Api.fetchUserProfile();
-  if (profile) {
-    // Mescla a cor e os dados do banco no objeto de sessão global se necessário
-    window.CerneApp.Auth.currentUserProfile = profile; 
-  }
-} catch (e) {
-  console.warn('Erro ao carregar perfil:', e);
-}
+    await loadUserProfile();
   
     isAuthenticatedUser = true;
     await loadSettings();
@@ -305,6 +368,7 @@
     if (result?.user) {
       isAuthenticatedUser = true;
       await loadSettings();
+      await loadUserProfile(); // <-- AQUI É A CORREÇÃO PRINCIPAL DO HEADER
       renderAppShell();
       await loadEvidences();
       lucide.createIcons();
@@ -367,6 +431,14 @@ async function loadEvidences() {
       };
     }
   }
+
+  window.CerneApp.populateFilterOptions = function() {
+    populateFilterOptions();
+  };
+
+  window.CerneApp.triggerFilterRefresh = function() {
+    renderList();
+  };
 
   function populateFilterOptions() {
     const responsibles = [...new Set(state.evidences.map(e => e.responsavel))]
@@ -433,6 +505,7 @@ async function loadEvidences() {
 
   function renderList() {
     const query = normalizeString(state.searchQuery);
+    const activeCerneFilter = window.CerneApp.currentTableCerneFilter || 'todos';
     
     const filteredEvidences = state.evidences.filter(item => {
       if (query) {
@@ -458,6 +531,12 @@ async function loadEvidences() {
         );
         
         if (!matchesQuery) return false;
+      }
+
+      if (activeCerneFilter !== 'todos') {
+         const cat = item.categoria || (item.categorias && item.categorias[0]);
+         const belongsToCerne = window.CerneConfig.getCerneName(cat) === activeCerneFilter;
+         if (!belongsToCerne) return false;
       }
 
       if (state.filters.tipo !== 'todos' && item.tipo !== state.filters.tipo) {
@@ -887,6 +966,18 @@ async function loadEvidences() {
         if (state.evidences.length === 1 && state.evidences[0].id.startsWith('mock-')) {
           state.evidences = [];
         }
+        
+        // CORREÇÃO DA COR: Injeta a cor imediatamente cruzando com o usuário logado ou existentes
+        if (!newEvidence.responsavelColor) {
+          const profile = window.CerneApp.Auth?.currentUserProfile;
+          if (profile && newEvidence.responsavel === profile.nome) {
+            newEvidence.responsavelColor = profile.cor;
+          } else {
+            const existing = state.evidences.find(e => e.responsavel === newEvidence.responsavel && e.responsavelColor);
+            if (existing) newEvidence.responsavelColor = existing.responsavelColor;
+          }
+        }
+
         state.evidences.unshift(newEvidence);
         populateFilterOptions();
         renderList();
