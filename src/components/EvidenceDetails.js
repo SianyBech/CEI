@@ -254,6 +254,9 @@ window.CerneApp.EvidenceDetails = {
       const selectElement = overlay.querySelector('#detail-add-category-select');
       if (!displayContainer || !selectElement) return;
 
+      // 💡 Pega as categorias atualizadas direto do estado global da aplicação se disponível, ou usa o fallback
+      const currentCategories = window.CerneApp?.state?.appSettings?.categories || categories;
+
       displayContainer.innerHTML = '';
       if (selectedCategories.length === 0) {
         displayContainer.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-tertiary); font-style: italic;">Nenhuma categoria selecionada</span>';
@@ -292,7 +295,8 @@ window.CerneApp.EvidenceDetails = {
       defaultOpt.selected = true;
       selectElement.appendChild(defaultOpt);
 
-      const categoriesArray = Array.isArray(categories) ? categories : [];
+      // Usa a lista fresca obtida do estado global
+      const categoriesArray = Array.isArray(currentCategories) ? currentCategories : [];
       const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
 
       availableCategories.forEach(cat => {
@@ -485,7 +489,7 @@ window.CerneApp.EvidenceDetails = {
             populateFilterOptions();
           }
         }
-        
+
         showToast('Alterações salvas com sucesso.', 'success');
         if (typeof onSave === 'function') onSave(savedEvidence);
         doClose();

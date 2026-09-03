@@ -205,7 +205,7 @@ async function saveToDatabase() {
   const saveBtn = backdrop.querySelector('#tag-save-btn');
   const cancelBtn = backdrop.querySelector('#tag-cancel-btn');
   
-  const filtered = tags.map(c => c.trim()).filter(Boolean);
+  const filtered = tags.map(t => t.trim()).filter(Boolean);
   
   try {
     // 1. Bloqueia os botões e mostra "Salvando..."
@@ -235,9 +235,8 @@ async function saveToDatabase() {
     saveBtn.textContent = 'Salvar Alterações';
   }
 
-  // Dentro de saveToDatabase() em CategoriesPage.js e TagsPage.js:
 if (window.CerneApp?.Api?.updateSettings) {
-  const updatedSettings = await window.CerneApp.Api.updateSettings({ ...settingsData, categories: filtered }); // ou tags: filtered
+  const updatedSettings = await window.CerneApp.Api.updateSettings({ ...settingsData, tags: filtered });
   
   // Atualiza o estado global se houver referência
   if (window.CerneApp?.state) {
