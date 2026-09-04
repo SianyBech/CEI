@@ -75,10 +75,11 @@
   // Sobrescrevemos a função global antiga para usar nossa nova central
   window.getCategoryStyle = (cat) => window.CerneConfig.getCategoryStyle(cat);
 
-  const state = {
+  // Expõe o estado globalmente, mas mantém a constante local para o código existente continuar funcionando
+  window.CerneApp.state = {
     evidences: [],
     searchQuery: '',
-    viewMode: 'table', // default view mode: 'table' or 'grid'
+    viewMode: 'table', 
     filters: {
       tipo: 'todos',
       categoria: 'todos',
@@ -86,12 +87,7 @@
       tag: 'todos'
     },
     dateFilters: {
-      dayFrom: '',
-      monthFrom: '',
-      yearFrom: '',
-      dayTo: '',
-      monthTo: '',
-      yearTo: ''
+      dayFrom: '', monthFrom: '', yearFrom: '', dayTo: '', monthTo: '', yearTo: ''
     },
     appSettings: {
       categories: [],
@@ -99,6 +95,8 @@
     },
     showSidebarCard: localStorage.getItem('cerne:sidebar-card-closed') !== 'true'
   };
+  
+  const state = window.CerneApp.state;
 
   // Cache DOM references
   let appContainer = null;
@@ -672,6 +670,8 @@ async function loadEvidences() {
     state.dateFilters = { dayFrom: '', monthFrom: '', yearFrom: '', dayTo: '', monthTo: '', yearTo: '' };
     renderList();
   }
+
+  window.CerneApp.currentTableCerneFilter = 'todos';
 
   let isSidebarEventsSetup = false;
 

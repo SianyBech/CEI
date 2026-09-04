@@ -131,10 +131,11 @@ function renderList() {
           display: flex; 
           align-items: center; 
           gap: 0.75rem; 
-          padding: 0.45rem 0.5rem 0.45rem 0.85rem; 
+          padding: 0.5rem 0.85rem; 
+          margin-bottom: 0.5rem;
           border-radius: 8px;
-          transition: all 0.15s ease;
-          ${dynamicStyle} /* Aplica a cor de fundo e do texto da categoria */
+          transition: all 0.2s ease;
+          ${dynamicStyle} 
         `;
 
         itemRow.innerHTML = `
@@ -145,12 +146,12 @@ function renderList() {
             data-index="${index}" 
             style="
               flex: 1; 
-              background: transparent; 
+              background: transparent !important; 
               border: none; 
               outline: none; 
               font-size: 0.875rem; 
               font-weight: 600; 
-              color: inherit; /* Herda a cor do texto definida pelo getCategoryStyle */
+              color: inherit; 
               padding: 0.2rem 0;
             " 
           />
@@ -158,21 +159,23 @@ function renderList() {
             class="cat-delete-btn" 
             data-index="${index}" 
             style="
-              background-color: rgba(255, 255, 255, 0.8); 
-              border: 1px solid rgba(0, 0, 0, 0.08); 
-              border-radius: 6px; 
+              background-color: transparent; 
+              border: none; 
               width: 30px; 
               height: 30px; 
               display: flex; 
               align-items: center; 
               justify-content: center; 
-              color: #ef4444; 
+              color: inherit; 
+              opacity: 0.7;
               cursor: pointer; 
-              transition: all 0.15s ease;
+              transition: opacity 0.2s ease;
             " 
             title="Excluir categoria"
+            onmouseover="this.style.opacity='1'"
+            onmouseout="this.style.opacity='0.7'"
           >
-            <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+            <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
           </button>
         `;
 

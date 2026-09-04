@@ -485,7 +485,7 @@ window.CerneApp.UploadModal = {
         defaultOpt.selected = true;
         selectElement.appendChild(defaultOpt);
 
-        const categoriesArray = window.CerneApp?.state?.appSettings?.categories || [];
+        const categoriesArray = window.CerneApp?.state?.appSettings?.categories || categories || [];
         const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
 
         availableCategories.forEach(cat => {
@@ -545,7 +545,7 @@ window.CerneApp.UploadModal = {
         defaultOpt.selected = true;
         selectElement.appendChild(defaultOpt);
 
-        const tagsListArray = window.CerneApp?.state?.appSettings?.tags || [];
+        const tagsListArray = window.CerneApp?.state?.appSettings?.tags || tagsList || [];
         const availableTags = tagsListArray.filter(tag => !selectedTags.includes(tag));
         
         availableTags.forEach(tag => {

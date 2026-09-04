@@ -296,7 +296,7 @@ window.CerneApp.EvidenceDetails = {
       selectElement.appendChild(defaultOpt);
 
       // Usa a lista fresca obtida do estado global
-      const categoriesArray = window.CerneApp?.state?.appSettings?.categories || [];
+      const categoriesArray = window.CerneApp?.state?.appSettings?.categories || categories || [];
       const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
 
       availableCategories.forEach(cat => {
@@ -354,7 +354,7 @@ window.CerneApp.EvidenceDetails = {
       defaultOpt.selected = true;
       selectElement.appendChild(defaultOpt);
 
-      const tagsListArray = window.CerneApp?.state?.appSettings?.tags || [];
+      const tagsListArray = window.CerneApp?.state?.appSettings?.tags || tagsList || [];
       const availableTags = tagsListArray.filter(tag => !selectedTags.includes(tag));
       
       availableTags.forEach(tag => {

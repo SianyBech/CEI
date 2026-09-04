@@ -61,20 +61,79 @@
     const totalResponsaveis = new Set(evidences.map(e => e.responsavel).filter(Boolean)).size;
     const chartColors = ['#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#64748b'];
 
-// Helper para extrair a cor do texto e aplicar 75% de opacidade (ficando vívida, porém suave)
-function getCategoryBarColor(categoryName) {
-  if (window.getCategoryStyle) {
-    const styleString = window.getCategoryStyle(categoryName);
-    const match = styleString.match(/(?:^|;)\s*color:\s*([^;]+)/i);
-    
-    if (match && match[1]) {
-      const baseColor = match[1].trim();
-      // Aplica mistura nativa do CSS mantendo 70% da cor e 30% de transparência
-      return `color-mix(in srgb, ${baseColor} 70%, transparent)`;
+    // Estrutura Oficial CERNE para ordenação e cores consistentes
+    const cerneStructure = [
+      {
+        name: "Cerne 1",
+        badgeColor: "#0284c7",
+        bgLight: "#e0f2fe",
+        categories: [
+          "Sensibilização", "Prospecção", "Qualificação de Potenciais Empreendedores",
+          "Recepção de Propostas", "Avaliação", "Contratação",
+          "Planejamento", "Agregação de Valor", "Monitoramento",
+          "Graduação", "Relacionamento com Graduadas",
+          "Estrutura Organizacional", "Gestão do Mecanismo de Inovação", "Comunicação e Marketing"
+        ]
+      },
+      {
+        name: "Cerne 2",
+        badgeColor: "#16a34a",
+        bgLight: "#dcfce7",
+        categories: [
+          "Planejamento Estratégico", "Administração Estratégica",
+          "Estímulo a Ideação", "Serviços a Organizações",
+          "Avaliação da Qualidade", "Avaliação dos Impactos"
+        ]
+      },
+      {
+        name: "Cerne 3",
+        badgeColor: "#ca8a04",
+        bgLight: "#fef08a",
+        categories: [
+          "Interação com o Entorno", "Participação na Proposição de Políticas Públicas",
+          "Rede de Apoio aos Empreendimentos", "Gestão de Ofertas e Demandas", "Expansão da Atuação Territorial",
+          "Gestão Ambiental", "Responsabilidade Social"
+        ]
+      },
+      {
+        name: "Cerne 4",
+        badgeColor: "#9333ea",
+        bgLight: "#f3e8ff",
+        categories: [
+          "Internacionalização do Mecanismo de Inovação", "Internacionalização dos Empreendimentos"
+        ]
+      }
+    ];
+
+    // Função para obter cor da barra baseada estritamente na config do Cerne
+    function getCerneBarColor(categoryName) {
+      for (const cerne of cerneStructure) {
+        if (cerne.categories.includes(categoryName)) {
+          return cerne.badgeColor;
+        }
+      }
+      return '#64748b'; // Cinza slate padrão caso seja uma categoria customizada fora do padrão
     }
-  }
-  return 'rgba(22, 163, 74, 0.8)'; // Fallback verde equilibrado
-}
+
+    // Organiza as categorias cadastradas agrupadas do Cerne 1 ao 4, em ordem alfabética por grupo
+    const sortedCategoriesList = [];
+    cerneStructure.forEach(cerne => {
+      const catsInThisCerne = Object.keys(categoriasCount)
+        .filter(cat => cerne.categories.includes(cat))
+        .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      
+      catsInThisCerne.forEach(cat => {
+        sortedCategoriesList.push({ name: cat, count: categoriasCount[cat], cerne: cerne.name });
+      });
+    });
+
+    // Adiciona eventuais categorias extras que não estejam na lista oficial no final
+    const handledCategories = sortedCategoriesList.map(item => item.name);
+    Object.keys(categoriasCount).forEach(cat => {
+      if (!handledCategories.includes(cat)) {
+        sortedCategoriesList.push({ name: cat, count: categoriasCount[cat], cerne: 'Outros' });
+      }
+    });
 
     // Generator de SVG para os Gráficos de Rosca
     function generateInteractiveDonutSvg(dataEntries, totalSum, chartId) {
@@ -178,25 +237,46 @@ function getCategoryBarColor(categoryName) {
             </div>
           </div>
 
-          <!-- 1. Gráfico em Barras usando as mesmas cores da EvidenceTable -->
+          <!-- 1. Gráfico em Barras com Legenda de Cores por Cerne -->
           <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; background-color: var(--bg-primary);">
-            <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
-              <i data-lucide="layers" style="width: 18px; height: 18px; color: var(--success);"></i>
-              Distribuição por Categoria CERNE
-            </h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+              <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="layers" style="width: 18px; height: 18px; color: var(--success);"></i>
+                Distribuição por Categoria CERNE
+              </h3>
+
+              <!-- Legenda de Cores por Cerne -->
+              <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; font-size: 0.72rem; font-weight: 600;">
+                <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.5rem; background: #e0f2fe; color: #0369a1; border-radius: 6px;">
+                  <span style="width: 7px; height: 7px; border-radius: 50%; background: #0284c7;"></span> Cerne 1
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.5rem; background: #dcfce7; color: #15803d; border-radius: 6px;">
+                  <span style="width: 7px; height: 7px; border-radius: 50%; background: #16a34a;"></span> Cerne 2
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.5rem; background: #fef08a; color: #a16207; border-radius: 6px;">
+                  <span style="width: 7px; height: 7px; border-radius: 50%; background: #ca8a04;"></span> Cerne 3
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.5rem; background: #f3e8ff; color: #6b21a8; border-radius: 6px;">
+                  <span style="width: 7px; height: 7px; border-radius: 50%; background: #9333ea;"></span> Cerne 4
+                </span>
+              </div>
+            </div>
 
             <div style="display: flex; flex-direction: column; gap: 0.85rem;">
-              ${Object.keys(categoriasCount).length === 0 ? '<p style="font-size: 0.85rem; color: var(--text-tertiary); font-style: italic;">Nenhuma categoria registrada.</p>' : ''}
+              ${sortedCategoriesList.length === 0 ? '<p style="font-size: 0.85rem; color: var(--text-tertiary); font-style: italic;">Nenhuma categoria registrada.</p>' : ''}
               
-              ${Object.entries(categoriasCount).map(([cat, qtd]) => {
-                const percentual = totalEvidencias > 0 ? Math.round((qtd / totalEvidencias) * 100) : 0;
-                const barColor = getCategoryBarColor(cat);
+              ${sortedCategoriesList.map(item => {
+                const percentual = totalEvidencias > 0 ? Math.round((item.count / totalEvidencias) * 100) : 0;
+                const barColor = getCerneBarColor(item.name);
                 
                 return `
                   <div>
                     <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.35rem;">
-                      <span style="font-weight: 600; color: var(--text-primary);">${cat}</span>
-                      <span style="color: var(--text-secondary); font-weight: 500;">${qtd} <small style="color: var(--text-tertiary);">(${percentual}%)</small></span>
+                      <span style="font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
+                        ${item.name} 
+                        <span style="font-size: 0.65rem; padding: 0.1rem 0.35rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-secondary); font-weight: 500;">${item.cerne}</span>
+                      </span>
+                      <span style="color: var(--text-secondary); font-weight: 500;">${item.count} <small style="color: var(--text-tertiary);">(${percentual}%)</small></span>
                     </div>
                     <div style="width: 100%; background-color: var(--bg-tertiary); height: 9px; border-radius: 5px; overflow: hidden;">
                       <div style="width: ${percentual}%; background-color: ${barColor}; height: 100%; border-radius: 5px; transition: width 0.4s ease;"></div>

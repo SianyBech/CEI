@@ -85,223 +85,126 @@ window.CerneApp.EvidenceTable = {
       : [...new Set((evidences || []).map(e => e.responsavel).filter(Boolean))];
 
     function escapeHtml(value) {
-      return String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+      return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
-function getAvatarStyle(responsavelName, customColor) {
-      // Se a evidência veio do banco trazendo a cor do responsável
-      if (customColor) {
-        return `background-color: ${customColor} !important; color: #ffffff !important; font-weight: 600;`;
-      }
-
-      // Paleta fallback apenas para evidências antigas sem cor vinculada
+    function getAvatarStyle(responsavelName, customColor) {
+      if (customColor) return `background-color: ${customColor} !important; color: #ffffff !important; font-weight: 600;`;
       const palette = ['#0066cc', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#0284c7'];
-      if (!responsavelName) {
-        return `background-color: var(--primary); color: #ffffff; font-weight: 600;`;
-      }
-
+      if (!responsavelName) return `background-color: var(--primary); color: #ffffff; font-weight: 600;`;
       let hash = 0;
-      for (let i = 0; i < responsavelName.length; i++) {
-        hash = responsavelName.charCodeAt(i) + ((hash << 5) - hash);
-      }
-
-      const index = Math.abs(hash) % palette.length;
-      return `background-color: ${palette[index]} !important; color: #ffffff !important; font-weight: 600;`;
+      for (let i = 0; i < responsavelName.length; i++) hash = responsavelName.charCodeAt(i) + ((hash << 5) - hash);
+      return `background-color: ${palette[Math.abs(hash) % palette.length]} !important; color: #ffffff !important; font-weight: 600;`;
     }
 
     function formatResponsavelName(nomeCompleto, lista = []) {
       if (!nomeCompleto) return 'Equipe CEI';
-
       const partes = nomeCompleto.trim().split(/\s+/);
       const primeiroNome = partes[0];
-
       if (partes.length === 1) return primeiroNome;
-
       const nomeLower = nomeCompleto.trim().toLowerCase();
-
       const temDuplicado = lista.some(outroNome => {
         if (!outroNome) return false;
-        const outroTrim = outroNome.trim();
-        const outroLower = outroTrim.toLowerCase();
-
-        if (
-          outroLower === nomeLower ||
-          outroLower.startsWith(nomeLower) ||
-          nomeLower.startsWith(outroLower)
-        ) {
-          return false;
-        }
-
-        const outroPrimeiro = outroTrim.split(/\s+/)[0];
-        return outroPrimeiro.toLowerCase() === primeiroNome.toLowerCase();
+        const outroLower = outroNome.trim().toLowerCase();
+        if (outroLower === nomeLower || outroLower.startsWith(nomeLower) || nomeLower.startsWith(outroLower)) return false;
+        return outroNome.trim().split(/\s+/)[0].toLowerCase() === primeiroNome.toLowerCase();
       });
-
-      if (temDuplicado) {
-        const ultimoSobrenome = partes[partes.length - 1];
-        return `${primeiroNome} ${ultimoSobrenome}`;
-      }
-
-      return primeiroNome;
+      return temDuplicado ? `${primeiroNome} ${partes[partes.length - 1]}` : primeiroNome;
     }
 
-    // Tratamento de Estado Vazio
-    if (!evidences || evidences.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-illustration">
-            <div class="empty-state-illustration-glow"></div>
-            <div class="empty-state-illustration-frame">
-              <i data-lucide="file-text" class="empty-state-illustration-icon doc-icon"></i>
-              <i data-lucide="search" class="empty-state-illustration-icon search-icon"></i>
-            </div>
-          </div>
-          <h3>Nenhuma evidência encontrada</h3>
-          <p>Tente ajustar os termos de pesquisa ou cadastrar uma nova evidência.</p>
-          <button type="button" class="empty-state-action-btn">
-            <i data-lucide="plus" class="empty-state-action-icon"></i>
-            Cadastrar nova evidência
-          </button>
-          <span class="empty-state-tip">Pressione C para cadastrar nova evidência.</span>
-        </div>
-      `;
-      return container;
-    }
-
-    // 1. Aplica a ordenação na lista inteira recebida
-    const sortedEvidences = this.sortEvidences(evidences);
-
-    // 2. Lógica de Paginação na lista ordenada
+    // Ordenação e Paginação (processa normalmente mesmo se a lista for vazia)
+    const sortedEvidences = this.sortEvidences(evidences || []);
     const totalItems = sortedEvidences.length;
     const totalPages = Math.ceil(totalItems / this.itemsPerPage) || 1;
 
-    if (this.currentPage > totalPages) {
-      this.currentPage = totalPages;
-    }
-
+    if (this.currentPage > totalPages) this.currentPage = totalPages;
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
     const paginatedEvidences = sortedEvidences.slice(startIndex, startIndex + this.itemsPerPage);
 
-    // --- MONTAGEM DAS LINHAS DA TABELA ---
     let rowsHTML = '';
-    paginatedEvidences.forEach(evidence => {
-      const hasLink = !!evidence.link;
-      const hasFile = evidence.tipo !== 'link' && evidence.nome;
-      let displayType = evidence.tipo || 'Desconhecido';
+    let emptyStateHTML = '';
 
-      const getTypeConfig = (tipo) => {
-        switch (tipo) {
-          case 'pdf':
-            return { icon: 'file-text', klass: 'file-icon-pdf', label: 'PDF' };
-          case 'imagem':
-            return { icon: 'image', klass: 'file-icon-imagem', label: 'Imagem' };
-          case 'planilha':
-            return { icon: 'file-spreadsheet', klass: 'file-icon-planilha', label: 'Planilha' };
-          case 'video':
-            return { icon: 'video', klass: 'file-icon-video', label: 'Vídeo' };
-          case 'link':
-            return { icon: 'link', klass: 'file-icon-link', label: 'Link' };
-          default:
-            return { icon: 'file', klass: 'file-icon-documento', label: 'Documento' };
-        }
-      };
-
-      let iconHtml = '';
-
-      if (hasFile && hasLink) {
-        const config = getTypeConfig(evidence.tipo);
-        displayType = `${config.label} + Link`;
-        iconHtml = `
-          <div style="display: flex; align-items: center; gap: 4px;">
-            <i data-lucide="${config.icon}" class="file-icon ${config.klass}"></i>
-            <i data-lucide="link" class="file-icon file-icon-link" style="width: 14px; height: 14px;" title="Contém link vinculado"></i>
-          </div>
-        `;
-      } else if (hasFile) {
-        const config = getTypeConfig(evidence.tipo);
-        displayType = config.label;
-        iconHtml = `<i data-lucide="${config.icon}" class="file-icon ${config.klass}"></i>`;
-      } else if (hasLink) {
-        displayType = 'Link';
-        iconHtml = `<i data-lucide="link" class="file-icon file-icon-link"></i>`;
-      }
-
-      const truncateWords = (str, max) => {
-        if (!str || str.trim() === '' || str.trim().toLowerCase() === 'sem evento') return '';
-        const words = str.trim().split(/\s+/);
-        return words.length > max ? words.slice(0, max).join(' ') + '...' : str;
-      };
-
-      const eventoFormatado = truncateWords(evidence.evento, 5);
-      const eventoHTML = eventoFormatado 
-        ? escapeHtml(eventoFormatado) 
-        : '<span style="color: var(--text-tertiary); font-style: italic; font-size: 0.8rem;">—</span>';
-
-      const tagsHTML = (evidence.tags || []).map(tag => `<span class="tag" style="${window.CerneConfig.tagsStyle}">${escapeHtml(tag)}</span>`).join('');
-      const nomeFormatado = formatResponsavelName(evidence.responsavel, listaFinalResponsaveis);
-
-      const categoriesList = Array.isArray(evidence.categorias) && evidence.categorias.length > 0 
-        ? evidence.categorias 
-        : (evidence.categoria ? [evidence.categoria] : []);
-
-      const categoriesHTML = categoriesList.length > 0 
-        ? categoriesList.map(cat => {
-            const customStyle = window.getCategoryStyle ? window.getCategoryStyle(cat) : '';
-            return `<span class="badge" style="${customStyle}">${escapeHtml(cat)}</span>`;
-          }).join(' ')
-        : '<span style="color: var(--text-tertiary); font-style: italic; font-size: 0.8rem;">—</span>';
-
-        const avatarStyle = getAvatarStyle(evidence.responsavel, evidence.responsavelColor);
-
-      rowsHTML += `
-        <tr data-id="${evidence.id}">
-          <td>
-            <div class="file-name-cell">
-              ${iconHtml}
-              <span>${escapeHtml(evidence.titulo || evidence.nome)}</span>
+    if (paginatedEvidences.length === 0) {
+      // Renderiza o estado vazio DENTRO do corpo da tabela
+      emptyStateHTML = `
+        <tr>
+          <td colspan="7">
+            <div class="empty-state" style="box-shadow: none; border: none; background: transparent; margin: 2rem 0;">
+              <div class="empty-state-illustration">
+                <div class="empty-state-illustration-glow"></div>
+                <div class="empty-state-illustration-frame">
+                  <i data-lucide="file-text" class="empty-state-illustration-icon doc-icon"></i>
+                  <i data-lucide="search" class="empty-state-illustration-icon search-icon"></i>
+                </div>
+              </div>
+              <h3>Nenhuma evidência encontrada</h3>
+              <p>Tente ajustar os termos de pesquisa ou limpar os filtros.</p>
             </div>
           </td>
-          <td><span class="file-type-badge">${escapeHtml(displayType)}</span></td>
-          <td>${escapeHtml(evidence.data)}</td>
-          <td title="${escapeHtml(evidence.evento || '')}">${eventoHTML}</td>
-          <td><div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">${categoriesHTML}</div></td>
-          <td>
-    <div style="display: flex; align-items: center; gap: 0.5rem;">
-      <div class="avatar-initial" style="${avatarStyle}">
-        ${escapeHtml(evidence.responsavel ? evidence.responsavel.charAt(0) : 'U')}
-      </div>
-      <span>${escapeHtml(nomeFormatado)}</span>
-    </div>
-  </td>
-          <td><div class="tags-list">${tagsHTML}</div></td>
         </tr>
       `;
-    });
+    } else {
+      paginatedEvidences.forEach(evidence => {
+        const hasLink = !!evidence.link;
+        const hasFile = evidence.tipo !== 'link' && evidence.nome;
+        let displayType = evidence.tipo || 'Desconhecido';
+        let iconHtml = '';
 
-    // Helper para gerar o cabeçalho com seta interativa
+        const getTypeConfig = (tipo) => {
+          switch (tipo) {
+            case 'pdf': return { icon: 'file-text', klass: 'file-icon-pdf', label: 'PDF' };
+            case 'imagem': return { icon: 'image', klass: 'file-icon-imagem', label: 'Imagem' };
+            case 'planilha': return { icon: 'file-spreadsheet', klass: 'file-icon-planilha', label: 'Planilha' };
+            case 'video': return { icon: 'video', klass: 'file-icon-video', label: 'Vídeo' };
+            case 'link': return { icon: 'link', klass: 'file-icon-link', label: 'Link' };
+            default: return { icon: 'file', klass: 'file-icon-documento', label: 'Documento' };
+          }
+        };
+
+        if (hasFile && hasLink) {
+          const config = getTypeConfig(evidence.tipo);
+          displayType = `${config.label} + Link`;
+          iconHtml = `<div style="display: flex; align-items: center; gap: 4px;"><i data-lucide="${config.icon}" class="file-icon ${config.klass}"></i><i data-lucide="link" class="file-icon file-icon-link" style="width: 14px; height: 14px;" title="Contém link vinculado"></i></div>`;
+        } else if (hasFile) {
+          const config = getTypeConfig(evidence.tipo);
+          displayType = config.label;
+          iconHtml = `<i data-lucide="${config.icon}" class="file-icon ${config.klass}"></i>`;
+        } else if (hasLink) {
+          displayType = 'Link';
+          iconHtml = `<i data-lucide="link" class="file-icon file-icon-link"></i>`;
+        }
+
+        const eventoHTML = evidence.evento && evidence.evento.trim() !== 'Sem Evento'
+          ? escapeHtml(evidence.evento.split(/\s+/).length > 5 ? evidence.evento.split(/\s+/).slice(0, 5).join(' ') + '...' : evidence.evento) 
+          : '<span style="color: var(--text-tertiary); font-style: italic; font-size: 0.8rem;">—</span>';
+
+        const tagsHTML = (evidence.tags || []).map(tag => `<span class="tag" style="${window.CerneConfig.tagsStyle}">${escapeHtml(tag)}</span>`).join('');
+        const nomeFormatado = formatResponsavelName(evidence.responsavel, listaFinalResponsaveis);
+        
+        const categoriesList = Array.isArray(evidence.categorias) && evidence.categorias.length > 0 ? evidence.categorias : (evidence.categoria ? [evidence.categoria] : []);
+        const categoriesHTML = categoriesList.length > 0 
+          ? categoriesList.map(cat => `<span class="badge" style="${window.getCategoryStyle ? window.getCategoryStyle(cat) : ''}">${escapeHtml(cat)}</span>`).join(' ')
+          : '<span style="color: var(--text-tertiary); font-style: italic; font-size: 0.8rem;">—</span>';
+
+        rowsHTML += `
+          <tr data-id="${evidence.id}">
+            <td><div class="file-name-cell">${iconHtml}<span>${escapeHtml(evidence.titulo || evidence.nome)}</span></div></td>
+            <td><span class="file-type-badge">${escapeHtml(displayType)}</span></td>
+            <td>${escapeHtml(evidence.data)}</td>
+            <td title="${escapeHtml(evidence.evento || '')}">${eventoHTML}</td>
+            <td><div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">${categoriesHTML}</div></td>
+            <td><div style="display: flex; align-items: center; gap: 0.5rem;"><div class="avatar-initial" style="${getAvatarStyle(evidence.responsavel, evidence.responsavelColor)}">${escapeHtml(evidence.responsavel ? evidence.responsavel.charAt(0) : 'U')}</div><span>${escapeHtml(nomeFormatado)}</span></div></td>
+            <td><div class="tags-list">${tagsHTML}</div></td>
+          </tr>
+        `;
+      });
+    }
+
     const renderSortableHeader = (label, fieldKey) => {
       const isActive = this.sortField === fieldKey;
-      let iconName = 'arrow-up-down';
-
-      if (isActive) {
-        iconName = this.sortDirection === 'asc' ? 'arrow-up' : 'arrow-down';
-      }
-
-      return `
-        <th class="sortable ${isActive ? 'active' : ''}" data-sort="${fieldKey}">
-          <div class="th-sort-wrapper">
-            <span>${label}</span>
-            <i data-lucide="${iconName}" class="sort-icon"></i>
-          </div>
-        </th>
-      `;
+      return `<th class="sortable ${isActive ? 'active' : ''}" data-sort="${fieldKey}"><div class="th-sort-wrapper"><span>${label}</span><i data-lucide="${isActive ? (this.sortDirection === 'asc' ? 'arrow-up' : 'arrow-down') : 'arrow-up-down'}" class="sort-icon"></i></div></th>`;
     };
 
-    // Estrutura Base da Tabela
     container.innerHTML = `
       <table class="evidence-table">
         <thead>
@@ -311,105 +214,73 @@ function getAvatarStyle(responsavelName, customColor) {
             ${renderSortableHeader('Data', 'data')}
             ${renderSortableHeader('Evento', 'evento')}
             <th>
-              <select id="table-cerne-filter" style="background: transparent; border: none; font-weight: 600; color: var(--text-primary); cursor: pointer; outline: none; font-size: inherit; font-family: inherit;">
-                <option value="todos">Categoria Cerne ▾</option>
-                <option value="Cerne 1">Cerne 1</option>
-                <option value="Cerne 2">Cerne 2</option>
-                <option value="Cerne 3">Cerne 3</option>
-                <option value="Cerne 4">Cerne 4</option>
-              </select>
+              <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <span>Categoria</span>
+                <div style="position: relative; display: inline-flex; align-items: center;">
+                  <select id="table-cerne-filter" style="appearance: none; background: transparent; border: 1px solid var(--border-color); border-radius: 6px; padding: 0.15rem 1.4rem 0.15rem 0.5rem; font-weight: 600; color: var(--text-primary); cursor: pointer; outline: none; font-size: inherit; font-family: inherit;">
+                    <option value="todos">Cerne</option>
+                    <option value="Cerne 1">Cerne 1</option>
+                    <option value="Cerne 2">Cerne 2</option>
+                    <option value="Cerne 3">Cerne 3</option>
+                    <option value="Cerne 4">Cerne 4</option>
+                  </select>
+                  <i data-lucide="chevron-down" style="position: absolute; right: 4px; width: 14px; height: 14px; pointer-events: none; color: var(--text-secondary);"></i>
+                </div>
+              </div>
             </th>
             ${renderSortableHeader('Responsável', 'responsavel')}
             <th>Tags</th>
           </tr>
         </thead>
         <tbody>
-          ${rowsHTML}
+          ${rowsHTML || emptyStateHTML}
         </tbody>
       </table>
     `;
 
-    // Handler do Select CERNE na tabela
     const cerneFilter = container.querySelector('#table-cerne-filter');
     if (cerneFilter) {
-      // Sincroniza o valor atual (guardado no estado, veja próximo passo)
       cerneFilter.value = window.CerneApp.currentTableCerneFilter || 'todos';
-      
       cerneFilter.addEventListener('change', (e) => {
         window.CerneApp.currentTableCerneFilter = e.target.value;
-        // Re-renderiza chamando a lógica do app.js
-        if (typeof window.CerneApp.triggerFilterRefresh === 'function') {
-          window.CerneApp.triggerFilterRefresh();
-        }
+        if (typeof window.CerneApp.triggerFilterRefresh === 'function') window.CerneApp.triggerFilterRefresh();
       });
     }
 
-    // Handler de clique nos cabeçalhos ordenáveis
     const self = this;
     container.querySelectorAll('th.sortable').forEach(th => {
       th.addEventListener('click', () => {
         const field = th.getAttribute('data-sort');
-
-        if (self.sortField === field) {
-          // Inverte a direção se já for o campo ativo
-          self.sortDirection = self.sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-          // Troca o campo e define ordem padrão
-          self.sortField = field;
-          self.sortDirection = field === 'data' ? 'desc' : 'asc'; // Data padrão recente; texto padrão A-Z
-        }
-
-        // Reseta para primeira página para mostrar os resultados ordenados do topo
+        if (self.sortField === field) self.sortDirection = self.sortDirection === 'asc' ? 'desc' : 'asc';
+        else { self.sortField = field; self.sortDirection = field === 'data' ? 'desc' : 'asc'; }
         self.currentPage = 1;
-
-        // Re-renderiza a tabela
         const parent = container.parentElement;
         if (parent) {
-          const newTable = self.render(evidences, onViewDetailsClick, self.itemsPerPage, listaFinalResponsaveis);
-          parent.replaceChild(newTable, container);
+          parent.replaceChild(self.render(evidences, onViewDetailsClick, self.itemsPerPage, listaFinalResponsaveis), container);
           if (window.lucide) window.lucide.createIcons();
         }
       });
     });
 
-    // Adiciona evento de clique nas linhas
-    container.querySelectorAll('tbody tr').forEach(row => {
-      row.addEventListener('click', () => {
-        const id = row.getAttribute('data-id');
-        onViewDetailsClick(id);
-      });
+    container.querySelectorAll('tbody tr[data-id]').forEach(row => {
+      row.addEventListener('click', () => onViewDetailsClick(row.getAttribute('data-id')));
       row.style.cursor = 'pointer';
     });
 
-    // --- INJEÇÃO DA PAGINAÇÃO ---
-    if (window.CerneApp.Pagination) {
-      const paginationElement = window.CerneApp.Pagination.render({
-        currentPage: self.currentPage,
-        totalPages: totalPages,
-        totalItems: totalItems,
-        itemsPerPage: self.itemsPerPage,
+    if (window.CerneApp.Pagination && totalItems > 0) {
+      container.appendChild(window.CerneApp.Pagination.render({
+        currentPage: self.currentPage, totalPages, totalItems, itemsPerPage: self.itemsPerPage,
         onPageChange(newPage) {
           self.currentPage = newPage;
-          const parent = container.parentElement;
-          if (parent) {
-            const newTable = self.render(evidences, onViewDetailsClick, self.itemsPerPage, listaFinalResponsaveis);
-            parent.replaceChild(newTable, container);
-            if (window.lucide) window.lucide.createIcons();
-          }
+          container.parentElement?.replaceChild(self.render(evidences, onViewDetailsClick, self.itemsPerPage, listaFinalResponsaveis), container);
+          if (window.lucide) window.lucide.createIcons();
         },
         onItemsPerPageChange(newItemsPerPage) {
-          self.itemsPerPage = newItemsPerPage;
-          self.currentPage = 1;
-          const parent = container.parentElement;
-          if (parent) {
-            const newTable = self.render(evidences, onViewDetailsClick, self.itemsPerPage, listaFinalResponsaveis);
-            parent.replaceChild(newTable, container);
-            if (window.lucide) window.lucide.createIcons();
-          }
+          self.itemsPerPage = newItemsPerPage; self.currentPage = 1;
+          container.parentElement?.replaceChild(self.render(evidences, onViewDetailsClick, self.itemsPerPage, listaFinalResponsaveis), container);
+          if (window.lucide) window.lucide.createIcons();
         }
-      });
-
-      container.appendChild(paginationElement);
+      }));
     }
 
     return container;
