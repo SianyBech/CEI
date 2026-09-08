@@ -501,6 +501,15 @@ async function loadEvidences() {
       .replace(/[\u0300-\u036f]/g, '');
   }
 
+      function parseDate(dateStr) {
+      if (!dateStr) return new Date(0);
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        return new Date(parts[2], parts[1] - 1, parts[0]);
+      }
+      return new Date(0);
+    }
+
   function renderList() {
     const query = normalizeString(state.searchQuery);
     const activeCerneFilter = window.CerneApp.currentTableCerneFilter || 'todos';
@@ -548,14 +557,16 @@ const filteredEvidences = state.evidences.filter(item => {
       if (state.filters.responsavel !== 'todos' && item.responsavel !== state.filters.responsavel) return false;
       if (state.filters.tag !== 'todos' && !(item.tags || []).includes(state.filters.tag)) return false;
 
+      // CONVERTE A DATA DA EVIDÊNCIA AQUI ANTES DOS FILTROS DE PERÍODO
+      const itemDate = parseDate(item.data);
+
       if (state.dateFilters.yearFrom || state.dateFilters.monthFrom || state.dateFilters.dayFrom) {
         const yearFrom = state.dateFilters.yearFrom || '1900';
         const monthFrom = state.dateFilters.monthFrom || '1';
         const dayFrom = state.dateFilters.dayFrom || '1';
         
-        // Zera a hora para pegar o dia inteiro desde o início
         const fromDate = new Date(parseInt(yearFrom), parseInt(monthFrom) - 1, parseInt(dayFrom), 0, 0, 0);
-        if (itemDate < fromDate) isInRange = false;
+        if (itemDate < fromDate) return false;
       }
 
       if (state.dateFilters.yearTo || state.dateFilters.monthTo || state.dateFilters.yearTo) {
@@ -567,23 +578,14 @@ const filteredEvidences = state.evidences.filter(item => {
           dayTo = monthTo ? String(new Date(parseInt(yearTo), parseInt(monthTo), 0).getDate()) : '31';
         }
         
-        // Vai até o último segundo do dia final
         const toDate = new Date(parseInt(yearTo), parseInt(monthTo) - 1, parseInt(dayTo), 23, 59, 59);
-        if (itemDate > toDate) isInRange = false;
+        if (itemDate > toDate) return false;
       }
 
-      // Se passou por todas as barreiras (if), a evidência é exibida
       return true;
     });
 
-    function parseDate(dateStr) {
-      if (!dateStr) return new Date(0);
-      const parts = dateStr.split('/');
-      if (parts.length === 3) {
-        return new Date(parts[2], parts[1] - 1, parts[0]);
-      }
-      return new Date(0);
-    }
+
 
     listContainer.innerHTML = '';
 
