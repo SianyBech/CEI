@@ -548,35 +548,28 @@ const filteredEvidences = state.evidences.filter(item => {
       if (state.filters.responsavel !== 'todos' && item.responsavel !== state.filters.responsavel) return false;
       if (state.filters.tag !== 'todos' && !(item.tags || []).includes(state.filters.tag)) return false;
 
-      // 5. Filtro de Período (Datas)
-      if (state.dateFilters.dayFrom || state.dateFilters.monthFrom || state.dateFilters.yearFrom ||
-          state.dateFilters.dayTo || state.dateFilters.monthTo || state.dateFilters.yearTo) {
+      if (state.dateFilters.yearFrom || state.dateFilters.monthFrom || state.dateFilters.dayFrom) {
+        const yearFrom = state.dateFilters.yearFrom || '1900';
+        const monthFrom = state.dateFilters.monthFrom || '1';
+        const dayFrom = state.dateFilters.dayFrom || '1';
         
-        const itemDate = parseDate(item.data);
-        if (isNaN(itemDate)) return false; // Ignora se a data for inválida no banco
+        // Zera a hora para pegar o dia inteiro desde o início
+        const fromDate = new Date(parseInt(yearFrom), parseInt(monthFrom) - 1, parseInt(dayFrom), 0, 0, 0);
+        if (itemDate < fromDate) isInRange = false;
+      }
 
-        if (state.dateFilters.yearFrom || state.dateFilters.monthFrom || state.dateFilters.dayFrom) {
-          const yearFrom = state.dateFilters.yearFrom || '1900';
-          const monthFrom = state.dateFilters.monthFrom || '1';
-          const dayFrom = state.dateFilters.dayFrom || '1';
-          
-          const fromDate = new Date(parseInt(yearFrom), parseInt(monthFrom) - 1, parseInt(dayFrom));
-          if (itemDate < fromDate) return false;
+      if (state.dateFilters.yearTo || state.dateFilters.monthTo || state.dateFilters.yearTo) {
+        const yearTo = state.dateFilters.yearTo || '9999';
+        const monthTo = state.dateFilters.monthTo || '12';
+        let dayTo = state.dateFilters.dayTo;
+        
+        if (!dayTo) {
+          dayTo = monthTo ? String(new Date(parseInt(yearTo), parseInt(monthTo), 0).getDate()) : '31';
         }
-
-        if (state.dateFilters.yearTo || state.dateFilters.monthTo || state.dateFilters.yearTo) {
-          const yearTo = state.dateFilters.yearTo || '9999';
-          const monthTo = state.dateFilters.monthTo || '12';
-          let dayTo = state.dateFilters.dayTo;
-          
-          if (!dayTo) {
-            dayTo = monthTo ? String(new Date(parseInt(yearTo), parseInt(monthTo), 0).getDate()) : '31';
-          }
-          
-          // Adicionado 23:59:59 para garantir que o limite final do dia seja englobado
-          const toDate = new Date(parseInt(yearTo), parseInt(monthTo) - 1, parseInt(dayTo), 23, 59, 59);
-          if (itemDate > toDate) return false;
-        }
+        
+        // Vai até o último segundo do dia final
+        const toDate = new Date(parseInt(yearTo), parseInt(monthTo) - 1, parseInt(dayTo), 23, 59, 59);
+        if (itemDate > toDate) isInRange = false;
       }
 
       // Se passou por todas as barreiras (if), a evidência é exibida

@@ -234,7 +234,7 @@ function getUserAvatarStyle(user) {
           </div>
           <div>
             <label style="font-size: 0.8rem; font-weight: 600;">Cargo / Função</label>
-            <input type="text" id="new-user-cargo" class="form-input" style="width: 100%; padding: 0.4rem;" placeholder="Ex: Bolsista CERNE" />
+            <input type="text" id="new-user-cargo" class="form-input" style="width: 100%; padding: 0.4rem;" placeholder="Ex: Bolsista" />
           </div>
           <div>
             <label style="font-size: 0.8rem; font-weight: 600;">Senha Temporária</label>
