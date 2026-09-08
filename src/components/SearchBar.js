@@ -421,7 +421,9 @@ const categoriesOptions = sortedCategories
 
     const resetCalendarDates = () => {
       selectedFromDate = null;
+      selectedToData = null; // se houver typo, garanta que seja selectedToDate = null
       selectedToDate = null;
+      updateTriggerTexts(); // <-- ADICIONADO PARA ATUALIZAR O VISUAL "De / Até" NA HORA
       notifyDateFilterChange();
       renderCalendar();
     };
