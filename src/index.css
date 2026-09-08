@@ -301,6 +301,14 @@ textarea:focus-visible,
   background: rgba(22, 163, 74, 0.12);
 }
 
+#header-container {
+  position: sticky;
+  top: 0;
+  z-index: 99; /* Mantém o header acima da lista, mas abaixo das modais que usam 99999 */
+  background-color: var(--bg-primary, #ffffff); /* Garante que o fundo seja sólido e não transparente ao rolar */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* (Opcional) Dá um charme com uma sombrinha leve */
+}
+
 .header-brand {
   display: flex;
   align-items: center;
