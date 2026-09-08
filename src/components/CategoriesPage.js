@@ -122,82 +122,69 @@ function renderList() {
         return;
       }
 
+      // 1. Cria a estrutura de grupos
+      const grouped = {
+        "Cerne 1": [],
+        "Cerne 2": [],
+        "Cerne 3": [],
+        "Cerne 4": [],
+        "Outros": []
+      };
+
+      // 2. Distribui as categorias preservando o índice original (necessário para edição/exclusão)
       categories.forEach((cat, index) => {
-        // Busca a cor e estilo dinâmicos da categoria cadastrados no sistema
-        const dynamicStyle = window.getCategoryStyle ? window.getCategoryStyle(cat) : '';
+        const cerneName = window.CerneConfig?.getCerneName ? window.CerneConfig.getCerneName(cat) : "Outros";
+        if (grouped[cerneName]) {
+          grouped[cerneName].push({ cat, index });
+        } else {
+          grouped["Outros"].push({ cat, index });
+        }
+      });
 
-        const itemRow = document.createElement('div');
-        itemRow.style.cssText = `
-          display: flex; 
-          align-items: center; 
-          gap: 0.75rem; 
-          padding: 0.5rem 0.85rem; 
-          margin-bottom: 0.5rem;
-          border-radius: 8px;
-          transition: all 0.2s ease;
-          ${dynamicStyle} 
-        `;
+      // 3. Renderiza os blocos e seus itens
+      Object.keys(grouped).forEach(cerne => {
+        const items = grouped[cerne];
+        if (items.length === 0) return; // Não renderiza o título se não houver categorias
 
-        itemRow.innerHTML = `
-          <input 
-            type="text" 
-            class="cat-item-input" 
-            value="${cat}" 
-            data-index="${index}" 
-            style="
-              flex: 1; 
-              background: transparent !important; 
-              border: none; 
-              outline: none; 
-              font-size: 0.875rem; 
-              font-weight: 600; 
-              color: inherit; 
-              padding: 0.2rem 0;
-            " 
-          />
-          <button 
-            class="cat-delete-btn" 
-            data-index="${index}" 
-            style="
-              background-color: transparent; 
-              border: none; 
-              width: 30px; 
-              height: 30px; 
-              display: flex; 
-              align-items: center; 
-              justify-content: center; 
-              color: inherit; 
-              opacity: 0.7;
-              cursor: pointer; 
-              transition: opacity 0.2s ease;
-            " 
-            title="Excluir categoria"
-            onmouseover="this.style.opacity='1'"
-            onmouseout="this.style.opacity='0.7'"
-          >
-            <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
-          </button>
-        `;
+        // Título do Grupo
+        const header = document.createElement('h3');
+        header.style.cssText = `font-size: 0.75rem; color: var(--text-tertiary); margin: 1.25rem 0 0.5rem 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3rem;`;
+        header.textContent = cerne;
+        listContainer.appendChild(header);
 
-        itemRow.querySelector('.cat-item-input').addEventListener('input', (e) => {
-          categories[index] = e.target.value;
-          
-          // Opcional: Re-aplica a cor dinamicamente se a pessoa mudar o nome digitando
-          if (window.getCategoryStyle) {
-            itemRow.style.cssText = `
-              display: flex; align-items: center; gap: 0.75rem; 
-              padding: 0.45rem 0.5rem 0.45rem 0.85rem; border-radius: 8px;
-              ${window.getCategoryStyle(e.target.value)}
-            `;
-          }
+        // Renderiza cada item do grupo
+        items.forEach(({ cat, index }) => {
+          const dynamicStyle = window.getCategoryStyle ? window.getCategoryStyle(cat) : '';
+
+          const itemRow = document.createElement('div');
+          itemRow.style.cssText = `
+            display: flex; align-items: center; gap: 0.75rem; 
+            padding: 0.5rem 0.85rem; margin-bottom: 0.4rem;
+            border-radius: 8px; transition: all 0.2s ease;
+            ${dynamicStyle} 
+          `;
+
+          itemRow.innerHTML = `
+            <input type="text" class="cat-item-input" value="${cat}" data-index="${index}" style="flex: 1; background: transparent !important; border: none; outline: none; font-size: 0.875rem; font-weight: 600; color: inherit; padding: 0.2rem 0;" />
+            <button class="cat-delete-btn" data-index="${index}" style="background-color: transparent; border: none; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; color: inherit; opacity: 0.7; cursor: pointer; transition: opacity 0.2s ease;" title="Excluir categoria" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
+              <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+            </button>
+          `;
+
+          itemRow.querySelector('.cat-item-input').addEventListener('input', (e) => {
+            categories[index] = e.target.value;
+            if (window.getCategoryStyle) {
+              itemRow.style.cssText = `display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.85rem; margin-bottom: 0.4rem; border-radius: 8px; transition: all 0.2s ease; ${window.getCategoryStyle(e.target.value)}`;
+            }
+          });
+
+          itemRow.querySelector('.cat-delete-btn').addEventListener('click', () => {
+            categories.splice(index, 1);
+            renderList();
+          });
+
+          listContainer.appendChild(itemRow);
         });
-
-        itemRow.querySelector('.cat-delete-btn').addEventListener('click', () => {
-          categories.splice(index, 1);
-          renderList();
-        });
-
-        listContainer.appendChild(itemRow);
       });
 
       if (window.lucide) lucide.createIcons();

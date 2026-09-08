@@ -505,18 +505,21 @@ async function loadEvidences() {
     const query = normalizeString(state.searchQuery);
     const activeCerneFilter = window.CerneApp.currentTableCerneFilter || 'todos';
     
-    const filteredEvidences = state.evidences.filter(item => {
+const filteredEvidences = state.evidences.filter(item => {
+      // 1. Consolida as categorias (trata o fallback entre 'categorias' e 'categoria' do banco)
+      const itemCats = Array.isArray(item.categorias) && item.categorias.length > 0 
+        ? item.categorias 
+        : (item.categoria ? [item.categoria] : []);
+
+      // 2. Filtro de Busca Textual (Barra de Pesquisa)
       if (query) {
-        const nome = normalizeString(item.nome);
+        // Fallback de título/nome garante que arquivos e links sejam encontrados
+        const nome = normalizeString(item.titulo || item.nome); 
         const evento = normalizeString(item.evento);
         const responsavel = normalizeString(item.responsavel);
         const resumo = normalizeString(item.resumo);
         
-        const itemCats = Array.isArray(item.categorias) && item.categorias.length > 0
-          ? item.categorias
-          : (item.categoria ? [item.categoria] : []);
         const categoriasStr = itemCats.map(c => normalizeString(c));
-
         const tags = (item.tags || []).map(t => normalizeString(t));
 
         const matchesQuery = (
@@ -531,36 +534,26 @@ async function loadEvidences() {
         if (!matchesQuery) return false;
       }
 
+      // 3. Filtro de CERNE (Agora verifica TODAS as categorias da evidência)
       if (activeCerneFilter !== 'todos') {
-         const cat = item.categoria || (item.categorias && item.categorias[0]);
-         const belongsToCerne = window.CerneConfig.getCerneName(cat) === activeCerneFilter;
-         if (!belongsToCerne) return false;
+        const belongsToCerne = itemCats.some(cat => {
+          return window.CerneConfig.getCerneName(cat.trim()) === activeCerneFilter;
+        });
+        if (!belongsToCerne) return false;
       }
 
-      if (state.filters.tipo !== 'todos' && item.tipo !== state.filters.tipo) {
-        return false;
-      }
-      if (state.filters.categoria !== 'todos') {
-        const itemCats = Array.isArray(item.categorias) && item.categorias.length > 0 
-          ? item.categorias 
-          : [item.categoria];
-          
-        if (!itemCats.includes(state.filters.categoria)) {
-          return false;
-        }
-      }
-      if (state.filters.responsavel !== 'todos' && item.responsavel !== state.filters.responsavel) {
-        return false;
-      }
-      if (state.filters.tag !== 'todos' && !(item.tags || []).includes(state.filters.tag)) {
-        return false;
-      }
+      // 4. Filtros Diretos (Dropdowns da Interface)
+      if (state.filters.tipo !== 'todos' && item.tipo !== state.filters.tipo) return false;
+      if (state.filters.categoria !== 'todos' && !itemCats.includes(state.filters.categoria)) return false;
+      if (state.filters.responsavel !== 'todos' && item.responsavel !== state.filters.responsavel) return false;
+      if (state.filters.tag !== 'todos' && !(item.tags || []).includes(state.filters.tag)) return false;
 
+      // 5. Filtro de Período (Datas)
       if (state.dateFilters.dayFrom || state.dateFilters.monthFrom || state.dateFilters.yearFrom ||
           state.dateFilters.dayTo || state.dateFilters.monthTo || state.dateFilters.yearTo) {
         
         const itemDate = parseDate(item.data);
-        let isInRange = true;
+        if (isNaN(itemDate)) return false; // Ignora se a data for inválida no banco
 
         if (state.dateFilters.yearFrom || state.dateFilters.monthFrom || state.dateFilters.dayFrom) {
           const yearFrom = state.dateFilters.yearFrom || '1900';
@@ -568,28 +561,25 @@ async function loadEvidences() {
           const dayFrom = state.dateFilters.dayFrom || '1';
           
           const fromDate = new Date(parseInt(yearFrom), parseInt(monthFrom) - 1, parseInt(dayFrom));
-          if (itemDate < fromDate) isInRange = false;
+          if (itemDate < fromDate) return false;
         }
 
         if (state.dateFilters.yearTo || state.dateFilters.monthTo || state.dateFilters.yearTo) {
           const yearTo = state.dateFilters.yearTo || '9999';
           const monthTo = state.dateFilters.monthTo || '12';
-          
           let dayTo = state.dateFilters.dayTo;
-          if (!dayTo && monthTo) {
-            const lastDay = new Date(parseInt(yearTo), parseInt(monthTo), 0).getDate();
-            dayTo = String(lastDay);
-          } else if (!dayTo) {
-            dayTo = '31';
+          
+          if (!dayTo) {
+            dayTo = monthTo ? String(new Date(parseInt(yearTo), parseInt(monthTo), 0).getDate()) : '31';
           }
           
-          const toDate = new Date(parseInt(yearTo), parseInt(monthTo) - 1, parseInt(dayTo));
-          if (itemDate > toDate) isInRange = false;
+          // Adicionado 23:59:59 para garantir que o limite final do dia seja englobado
+          const toDate = new Date(parseInt(yearTo), parseInt(monthTo) - 1, parseInt(dayTo), 23, 59, 59);
+          if (itemDate > toDate) return false;
         }
-
-        if (!isInRange) return false;
       }
 
+      // Se passou por todas as barreiras (if), a evidência é exibida
       return true;
     });
 
