@@ -501,13 +501,23 @@ async function loadEvidences() {
       .replace(/[\u0300-\u036f]/g, '');
   }
 
-      function parseDate(dateStr) {
+function parseDate(dateStr) {
       if (!dateStr) return new Date(0);
-      const parts = dateStr.split('/');
-      if (parts.length === 3) {
-        return new Date(parts[2], parts[1] - 1, parts[0]);
+      
+      // Converte para string com segurança (caso o banco retorne objeto ou timestamp)
+      const str = String(dateStr).trim();
+
+      // Trata o formato brasileiro (DD/MM/YYYY)
+      if (str.includes('/')) {
+        const parts = str.split('/');
+        if (parts.length === 3) {
+          return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+        }
       }
-      return new Date(0);
+      
+      // Fallback: Trata o formato padrão de banco de dados (YYYY-MM-DD ou ISO)
+      const fallbackDate = new Date(str);
+      return isNaN(fallbackDate.getTime()) ? new Date(0) : fallbackDate;
     }
 
   function renderList() {
@@ -557,8 +567,10 @@ const filteredEvidences = state.evidences.filter(item => {
       if (state.filters.responsavel !== 'todos' && item.responsavel !== state.filters.responsavel) return false;
       if (state.filters.tag !== 'todos' && !(item.tags || []).includes(state.filters.tag)) return false;
 
-      // CONVERTE A DATA DA EVIDÊNCIA AQUI ANTES DOS FILTROS DE PERÍODO
       const itemDate = parseDate(item.data);
+      
+      // Aborta a validação se a data extraída for inválida (previne erros no calendário)
+      if (isNaN(itemDate.getTime())) return false; 
 
       if (state.dateFilters.yearFrom || state.dateFilters.monthFrom || state.dateFilters.dayFrom) {
         const yearFrom = state.dateFilters.yearFrom || '1900';
@@ -569,7 +581,8 @@ const filteredEvidences = state.evidences.filter(item => {
         if (itemDate < fromDate) return false;
       }
 
-      if (state.dateFilters.yearTo || state.dateFilters.monthTo || state.dateFilters.yearTo) {
+      // CORREÇÃO: O último parâmetro agora é dayTo (e não yearTo repetido)
+      if (state.dateFilters.yearTo || state.dateFilters.monthTo || state.dateFilters.dayTo) {
         const yearTo = state.dateFilters.yearTo || '9999';
         const monthTo = state.dateFilters.monthTo || '12';
         let dayTo = state.dateFilters.dayTo;
@@ -584,8 +597,6 @@ const filteredEvidences = state.evidences.filter(item => {
 
       return true;
     });
-
-
 
     listContainer.innerHTML = '';
 
