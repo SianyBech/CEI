@@ -419,13 +419,24 @@ const categoriesOptions = sortedCategories
       renderCalendar();
     });
 
-    const resetCalendarDates = () => {
+   const resetCalendarDates = () => {
+      // 1. Zera as datas rigorosamente
       selectedFromDate = null;
-      selectedToData = null; // se houver typo, garanta que seja selectedToDate = null
       selectedToDate = null;
-      updateTriggerTexts(); // <-- ADICIONADO PARA ATUALIZAR O VISUAL "De / Até" NA HORA
-      notifyDateFilterChange();
+      activeInputTarget = 'from';
+
+      // 2. Remove o destaque visual (bordas ativas) dos botões
+      dateFromTrigger.classList.remove('active');
+      dateToTrigger.classList.remove('active');
+
+      // 3. Devolve os textos placeholders "De" e "Até"
+      updateTriggerTexts();
+      
+      // 4. Limpa as marcações azuis dentro do calendário
       renderCalendar();
+      
+      // 5. Avisa o app.js para atualizar a tabela
+      notifyDateFilterChange();
     };
 
     searchRow.querySelector('#cal-clear-btn').addEventListener('click', (e) => {
@@ -438,20 +449,30 @@ const categoriesOptions = sortedCategories
       closePopover();
     });
 
-    // 5. Limpar Filtros
+    // 5. Botão Global: Limpar Filtros
     const clearFiltersBtn = filtersRow.querySelector('.filters-panel-clear-btn');
     if (clearFiltersBtn) {
       clearFiltersBtn.addEventListener('click', () => {
+        // Limpa a busca textual
         const searchInput = searchRow.querySelector('#search-input');
         if (searchInput) searchInput.value = '';
 
+        // Retorna todos os selects para "Todos"
         filtersRow.querySelectorAll('.filter-select').forEach(select => {
           select.value = 'todos';
         });
 
-        resetCalendarDates();
+        // Limpa a interface do calendário silenciosamente (sem acionar o notify para evitar piscar a tela 2x)
+        selectedFromDate = null;
+        selectedToDate = null;
+        activeInputTarget = 'from';
+        dateFromTrigger.classList.remove('active');
+        dateToTrigger.classList.remove('active');
+        updateTriggerTexts();
+        renderCalendar();
         closePopover();
 
+        // Delega a ação de limpar os dados exclusivamente para o app.js
         if (typeof onClearFilters === 'function') {
           onClearFilters();
         }
