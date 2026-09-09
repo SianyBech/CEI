@@ -113,7 +113,7 @@ function showSuccessToast(message) {
     const cloudContainer = backdrop.querySelector('#tag-cloud-container');
     const input = backdrop.querySelector('#tag-add-input');
 
-    function renderTags() {
+function renderTags() {
       cloudContainer.innerHTML = '';
 
       if (tags.length === 0) {
@@ -121,48 +121,51 @@ function showSuccessToast(message) {
         return;
       }
 
-      tags.forEach((tag, index) => {
-  const badge = document.createElement('span');
-  badge.style.cssText = `
-    display: inline-flex; 
-    align-items: center; 
-    gap: 0.4rem; 
-    padding: 0.35rem 0.75rem; 
-    font-size: 0.825rem; 
-    border-radius: 20px; 
-    font-weight: 500;
-    ${window.CerneConfig.tagsStyle}
-  `;
+      // 💡 Ordena o array alfabeticamente respeitando o português antes de renderizar
+      const sortedTags = [...tags].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
-  badge.innerHTML = `
-    <span># ${tag}</span>
-    <button 
-      class="tag-del-btn" 
-      data-index="${index}" 
-      style="
-        background: none; 
-        border: none; 
-        padding: 0; 
-        cursor: pointer; 
-        display: flex; 
-        align-items: center; 
-        color: inherit; 
-        opacity: 0.7;
-      " 
-      title="Remover tag"
-    >
-      <i data-lucide="x" style="width: 14px; height: 14px;"></i>
-    </button>
-  `;
+      sortedTags.forEach((tag) => {
+        const badge = document.createElement('span');
+        badge.style.cssText = `
+          display: inline-flex; 
+          align-items: center; 
+          gap: 0.4rem; 
+          padding: 0.35rem 0.75rem; 
+          font-size: 0.825rem; 
+          border-radius: 20px; 
+          font-weight: 500;
+          ${window.CerneConfig.tagsStyle}
+        `;
 
-  badge.querySelector('.tag-del-btn').addEventListener('click', (e) => {
-    e.stopPropagation();
-    tags.splice(index, 1);
-    renderTags();
-  });
+        badge.innerHTML = `
+          <span># ${tag}</span>
+          <button 
+            class="tag-del-btn" 
+            style="
+              background: none; 
+              border: none; 
+              padding: 0; 
+              cursor: pointer; 
+              display: flex; 
+              align-items: center; 
+              color: inherit; 
+              opacity: 0.7;
+            " 
+            title="Remover tag"
+          >
+            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+          </button>
+        `;
 
-  cloudContainer.appendChild(badge);
-});
+        // Remove a tag encontrando pelo nome real dela no array principal
+        badge.querySelector('.tag-del-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          tags = tags.filter(t => t !== tag);
+          renderTags();
+        });
+
+        cloudContainer.appendChild(badge);
+      });
 
       if (window.lucide) lucide.createIcons();
     }
@@ -181,10 +184,11 @@ function showSuccessToast(message) {
       }
     })();
 
-    function addTag() {
+ function addTag() {
       const val = input.value.trim();
       if (val && !tags.includes(val)) {
         tags.push(val);
+        tags.sort((a, b) => a.localeCompare(b, 'pt-BR')); // Mantém ordenado ao adicionar
         input.value = '';
         renderTags();
       }
