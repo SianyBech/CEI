@@ -1580,7 +1580,7 @@ async function processarEmailsPendentes() {
               'Encaminhado por E-mail', 
               'Planejamento', 
               responsavelTabela, 
-              ['Email', tipoEvidencia.toUpperCase()], 
+              JSON.stringify(['Email', tipoEvidencia.toUpperCase()]),
               `Remetente: ${remetenteOriginal} | Evidência extraída automaticamente do anexo: ${filename}`
             ]
           );
@@ -1602,7 +1602,7 @@ async function processarEmailsPendentes() {
             'Encaminhado por E-mail', 
             'Planejamento', 
             responsavelTabela, 
-            ['Email', 'Texto'], 
+            JSON.stringify(['Email', 'Texto']),
             `Remetente: ${remetenteOriginal} | ${corpoTexto}`
           ]
         );
