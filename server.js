@@ -761,6 +761,55 @@ try {
   }
 }
 
+app.get('/api/evidences/:id/other-file', requirePermission('view'), async (req, res, next) => {
+  try {
+    const evidenceId = req.params.id;
+    const targetPath = req.query.path;
+
+    if (!targetPath) {
+      return res.status(400).send('Caminho do arquivo secundário não informado.');
+    }
+
+    // Busca a evidência no banco pelo ID
+    const row = await dbClient.one(
+      `SELECT "outros_anexos" FROM public.evidences WHERE "id" = $1`,
+      [evidenceId]
+    );
+
+    if (!row) {
+      return res.status(404).send('Evidência não encontrada.');
+    }
+
+    // Normaliza a coluna jsonb para array com segurança
+    let outrosAnexos = [];
+    try {
+      outrosAnexos = typeof row.outros_anexos === 'string' 
+        ? JSON.parse(row.outros_anexos) 
+        : (row.outros_anexos || []);
+    } catch (e) {
+      outrosAnexos = [];
+    }
+
+    // Valida se o arquivo solicitado realmente faz parte dos "outros_anexos" desta evidência
+    const anexoEncontrado = outrosAnexos.find(item => item.storage_path === targetPath);
+
+    if (!anexoEncontrado) {
+      return res.status(403).send('Acesso negado ou arquivo inexistente para esta evidência.');
+    }
+
+    // Gera o link assinado seguro do Supabase Storage
+    const signedUrl = await createSignedUrl(anexoEncontrado.storage_path);
+    if (!signedUrl) {
+      return res.status(500).send('Erro ao gerar link temporário do arquivo.');
+    }
+
+    return res.redirect(signedUrl);
+  } catch (error) {
+    console.error('[STORAGE FILE] Erro ao buscar anexo secundário:', error);
+    res.status(500).send('Erro interno ao buscar arquivo.');
+  }
+});
+
 // ==========================================================================
 // ROTAS DE GERENCIAMENTO DE MEMBROS DA EQUIPE CEI
 // ==========================================================================

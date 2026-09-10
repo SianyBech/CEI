@@ -83,6 +83,52 @@ window.CerneApp.EvidenceDetails = {
       `;
     }
 
+    // Renderização moderna e minimalista de Outros Anexos (se houver)
+    let outrosAnexos = [];
+    try {
+      outrosAnexos = typeof evidence.outros_anexos === 'string' 
+        ? JSON.parse(evidence.outros_anexos) 
+        : (evidence.outros_anexos || []);
+    } catch (e) {
+      outrosAnexos = [];
+    }
+
+    if (Array.isArray(outrosAnexos) && outrosAnexos.length > 0) {
+      actionsHtml += `
+        <div style="margin-top: 0.5rem; border-top: 1px dashed var(--border-color); padding-top: 0.75rem;">
+          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); font-weight: 600; display: block; margin-bottom: 0.5rem;">
+            Outros Anexos (${outrosAnexos.length})
+          </span>
+          <div style="display: flex; flex-direction: column; gap: 0.4rem; max-height: 140px; overflow-y: auto; padding-right: 2px;">
+      `;
+
+      outrosAnexos.forEach((anexo, index) => {
+        const fileUrl = `/api/storage-file?path=${encodeURIComponent(anexo.storage_path)}`;
+        const safeName = escapeHtml(anexo.nome || `Anexo ${index + 1}`);
+
+        actionsHtml += `
+          <div style="display: flex; align-items: center; justify-content: space-between; background-color: var(--bg-tertiary); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); gap: 0.5rem;">
+            <span style="font-size: 0.82rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;" title="${safeName}">
+              ${safeName}
+            </span>
+            <div style="display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0;">
+              <a href="${fileUrl}" target="_blank" title="Visualizar anexo" style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; background: #ffffff; border: 1px solid var(--border-color); color: var(--text-secondary); text-decoration: none; transition: background 0.2s;">
+                <i data-lucide="eye" style="width: 13px; height: 13px;"></i>
+              </a>
+              <a href="${fileUrl}" download title="Baixar anexo" style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; background: #ffffff; border: 1px solid var(--border-color); color: var(--text-secondary); text-decoration: none; transition: background 0.2s;">
+                <i data-lucide="download" style="width: 13px; height: 13px;"></i>
+              </a>
+            </div>
+          </div>
+        `;
+      });
+
+      actionsHtml += `
+          </div>
+        </div>
+      `;
+    }
+
     // Construção correta dos campos de Origem (Arquivo e/ou Link separados)
     let originalSourceHtml = '';
     const hasFile = evidence.tipo !== 'link' && evidence.nome && evidence.nome !== evidence.link;
