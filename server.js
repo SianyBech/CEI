@@ -1523,8 +1523,8 @@ export {
 
 // IMPLEMENTAÇÃO DE VARREDURA AUTOMÁTICA DE E-MAILS PARA EVIDÊNCIAS
 
-const { ImapFlow } = require('imapflow');
-const { simpleParser } = require('mailparser');
+import { ImapFlow } from 'imapflow';
+import { simpleParser } from 'mailparser';
 
 // Mapeia o arquivo recebido para os tipos suportados pela interface (SearchBar / EvidenceTable)
 function getMediaType(filename, contentType) {
@@ -1535,7 +1535,6 @@ function getMediaType(filename, contentType) {
   if (['xls', 'xlsx', 'csv', 'ods'].includes(ext) || (contentType || '').includes('spreadsheet') || (contentType || '').includes('excel')) return 'planilha';
   if (['mp4', 'mov', 'avi', 'mkv'].includes(ext) || (contentType || '').startsWith('video/')) return 'video';
   
-  // Formatos genéricos (docx, pptx, txt, etc.) salvos como documento padrão
   return 'documento';
 }
 
@@ -1546,7 +1545,7 @@ async function processarEmailsPendentes() {
     secure: true,
     auth: {
       user: 'incubadoracei@gmail.com',
-      pass: process.env.GMAIL_APP_PASS // Variável segura configurada na Hostinger
+      pass: process.env.GMAIL_APP_PASS
     }
   });
 
@@ -1558,10 +1557,8 @@ async function processarEmailsPendentes() {
       const parsed = await simpleParser(message.source);
       
       const assunto = parsed.subject || 'Evidência via E-mail';
-      const remetente = parsed.from ? parsed.from.text : 'Desconhecido';
+      const remetenteOriginal = parsed.from ? parsed.from.text : 'Desconhecido';
       const dataHoje = new Date().toLocaleDateString('pt-BR');
-      
-      // Responsável padronizado para a tabela
       const responsavelTabela = 'E-mail';
 
       let processedAnyAttachment = false;
@@ -1581,9 +1578,9 @@ async function processarEmailsPendentes() {
               dataHoje, 
               'Encaminhado por E-mail', 
               'Planejamento', 
-              responsavelTabela, // Fica escrito "E-mail" na tabela
+              responsavelTabela, 
               ['Email', tipoEvidencia.toUpperCase()], 
-              `Remetente: ${remetente} | Evidência extraída automaticamente do anexo: ${filename}`
+              `Remetente: ${remetenteOriginal} | Evidência extraída automaticamente do anexo: ${filename}`
             ]
           );
           processedAnyAttachment = true;
@@ -1603,14 +1600,14 @@ async function processarEmailsPendentes() {
             dataHoje, 
             'Encaminhado por E-mail', 
             'Planejamento', 
-            responsavelTabela, // Fica escrito "E-mail" na tabela
+            responsavelTabela, 
             ['Email', 'Texto'], 
-            `Remetente: ${remetente} | ${corpoTexto}`
+            `Remetente: ${remetenteOriginal} | ${corpoTexto}`
           ]
         );
       }
 
-      // 3. Marca a mensagem como lida para evitar duplicação nas próximas varreduras
+      // 3. Marca a mensagem como lida na pasta do Gmail
       await client.messageFlagsAdd(message.uid, ['\\Seen'], { uid: true });
     }
   } catch (err) {
@@ -1620,7 +1617,5 @@ async function processarEmailsPendentes() {
   }
 }
 
-// Executa a verificação a cada 10 minutos em segundo plano
-setInterval(processarEmailsPendentes, 10 * 60 * 1000);
-
-
+// Executa a verificação a cada 1 minuto em segundo plano
+setInterval(processarEmailsPendentes, 1 * 60 * 1000);
