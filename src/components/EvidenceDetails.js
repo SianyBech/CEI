@@ -507,6 +507,18 @@ window.CerneApp.EvidenceDetails = {
       });
     }
 
+// Tratamento inteligente dos botões de arquivo original (Oculta se for e-mail de texto sem anexo)
+    const downloadBtnOriginal = overlay.querySelector('#btn-download-original');
+    const previewBtnOriginal = overlay.querySelector('#btn-preview-original');
+
+    if (evidence.storagePath) {
+      if (downloadBtnOriginal) downloadBtnOriginal.style.display = 'inline-flex';
+      if (previewBtnOriginal) previewBtnOriginal.style.display = 'inline-flex';
+    } else {
+      if (downloadBtnOriginal) downloadBtnOriginal.style.display = 'none';
+      if (previewBtnOriginal) previewBtnOriginal.style.display = 'none';
+    }
+
     const previewBtn = overlay.querySelector('#btn-preview-original');
     if (previewBtn) {
       previewBtn.addEventListener('click', () => {

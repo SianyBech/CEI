@@ -1554,81 +1554,177 @@ async function processarEmailsPendentes() {
     await client.connect();
     await client.mailboxOpen('SistemaEvidencias');
 
-    // Busca TODOS os e-mails da pasta (sem filtrar por lido/não lido)
+    // Busca as categorias e tags válidas cadastradas no banco para a IA escolher
+    let dbCategories = [];
+    let dbTags = [];
+    try {
+      dbCategories = await getAppSetting('categories', ['Capacitação', 'Planejamento', 'Gestão', 'Assessoria', 'Sustentabilidade', 'Qualificação']);
+      dbTags = await getAppSetting('tags', ['CERNE', 'Gestão', 'Capacitação', 'Assessoria', 'Sustentabilidade', 'Qualificação']);
+    } catch (e) {
+      dbCategories = ['Planejamento', 'Gestão'];
+      dbTags = ['CERNE', 'Email'];
+    }
+
     for await (let message of client.fetch({}, { source: true, envelope: true })) {
       const parsed = await simpleParser(message.source);
-      
-      // O Message-ID único do e-mail (nosso "CPF" da mensagem)
       const messageId = parsed.messageId || String(message.uid);
       
-      // Verifica se este e-mail já foi processado anteriormente no banco
+      // Verifica se o e-mail já foi processado pelo ID único
       const jaExiste = await pool.query(
         `SELECT 1 FROM public.evidences WHERE "email_message_id" = $1 LIMIT 1`,
         [messageId]
       );
-
-      if (jaExiste.rowCount > 0) {
-        // E-mail já cadastrado, pula para o próximo sem duplicar nada!
-        continue;
-      }
+      if (jaExiste.rowCount > 0) continue;
 
       const assunto = parsed.subject || 'Evidência via E-mail';
       const remetenteOriginal = parsed.from ? parsed.from.text : 'Desconhecido';
       const dataHoje = new Date().toLocaleDateString('pt-BR');
       const responsavelTabela = 'E-mail';
+      const corpoEmailCru = parsed.text || 'Sem conteúdo textual.';
 
-      let processedAnyAttachment = false;
+      let storagePath = null;
+      let storageFilename = null;
+      let originalName = null;
+      let tipoEvidencia = 'documento';
+      let mimeType = 'text/plain';
+      let fileSize = 0;
+      let outrosAnexosList = [];
+      let textoExtraidoFinal = `Remetente: ${remetenteOriginal}\nAssunto: ${assunto}\n\nCorpo do E-mail:\n${corpoEmailCru}`;
 
-      // 1. Processa todos os anexos encontrados
-      if (parsed.attachments && parsed.attachments.length > 0) {
-        for (let attachment of parsed.attachments) {
-          const filename = attachment.filename || 'anexo_sem_nome';
-          const tipoEvidencia = getMediaType(filename, attachment.contentType);
+      const anexos = parsed.attachments || [];
+
+      // CENÁRIO A: E-mail estritamente de texto (sem anexos)
+      if (anexos.length === 0) {
+        originalName = `${assunto}.txt`;
+        tipoEvidencia = 'documento';
+      } 
+      // CENÁRIO B: Apenas UM anexo (Avalia anexo + texto)
+      else if (anexos.length === 1) {
+        const att = anexos[0];
+        originalName = att.filename || 'anexo_sem_nome';
+        tipoEvidencia = getMediaType(originalName, att.contentType);
+        mimeType = (att.contentType || getMimeType(originalName)).toLowerCase();
+        fileSize = att.size || att.content.length;
+
+        // Salva fisicamente o anexo no Supabase Storage para funcionarem os botões de Download/Visualizar
+        storagePath = buildStoragePath(originalName);
+        const tempAnexoPath = path.join(tempDir, `email-att-${Date.now()}-${originalName}`);
+        await fs.promises.writeFile(tempAnexoPath, att.content);
+        
+        try {
+          await uploadFileToSupabase(tempAnexoPath, storagePath, originalName, mimeType);
+        } catch (upErr) {
+          console.error('[IMAP STORAGE] Erro ao enviar anexo único:', upErr.message);
+        }
+        await removeTemporaryFile(tempAnexoPath);
+
+        // Extrai texto cru do anexo se for PDF/Imagem/etc para somar ao texto extraído
+        const textoAnexo = await extractText(tempAnexoPath, getFileExtension(originalName)).catch(() => '');
+        if (textoAnexo) {
+          textoExtraidoFinal += `\n\n--- Conteúdo Extraído do Anexo (${originalName}) ---\n${textoAnexo}`;
+        }
+      } 
+      // CENÁRIO C: Múltiplos anexos (Avalia o texto + o 1º anexo, joga o resto em 'outros_anexos')
+      else {
+        const primeiroAtt = anexos[0];
+        originalName = primeiroAtt.filename || 'anexo_principal';
+        tipoEvidencia = getMediaType(originalName, primeiroAtt.contentType);
+        mimeType = (primeiroAtt.contentType || getMimeType(originalName)).toLowerCase();
+        fileSize = primeiroAtt.size || primeiroAtt.content.length;
+
+        storagePath = buildStoragePath(originalName);
+        const tempAnexoPath = path.join(tempDir, `email-att1-${Date.now()}-${originalName}`);
+        await fs.promises.writeFile(tempAnexoPath, primeiroAtt.content);
+        try {
+          await uploadFileToSupabase(tempAnexoPath, storagePath, originalName, mimeType);
+        } catch (upErr) {
+          console.error('[IMAP STORAGE] Erro ao enviar primeiro anexo:', upErr.message);
+        }
+        await removeTemporaryFile(tempAnexoPath);
+
+        // Guarda os demais anexos na coluna JSON de "outros_anexos" sem passar pela IA
+        for (let i = 1; i < anexos.length; i++) {
+          const extraAtt = anexos[i];
+          const extraName = extraAtt.filename || `outro_anexo_${i}`;
+          const extraPath = buildStoragePath(extraName);
+          const tempExtraPath = path.join(tempDir, `email-extra-${Date.now()}-${extraName}`);
           
-          await pool.query(
-            `INSERT INTO evidences (titulo, nome, tipo, data, evento, categoria, responsavel, tags, resumo, email_message_id) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-            [
-              `${assunto} (${filename})`, 
-              filename, 
-              tipoEvidencia, 
-              dataHoje, 
-              'Encaminhado por E-mail', 
-              'Planejamento', 
-              responsavelTabela, 
-              JSON.stringify(['Email', tipoEvidencia.toUpperCase()]), 
-              `Remetente: ${remetenteOriginal} | Evidência extraída automaticamente do anexo: ${filename}`,
-              messageId
-            ]
-          );
-          processedAnyAttachment = true;
+          await fs.promises.writeFile(tempExtraPath, extraAtt.content);
+          try {
+            await uploadFileToSupabase(tempExtraPath, extraPath, extraName, extraAtt.contentType || 'application/octet-stream');
+            outrosAnexosList.push({
+              nome: extraName,
+              storage_path: extraPath,
+              size: extraAtt.size || extraAtt.content.length
+            });
+          } catch (exErr) {
+            console.error('[IMAP STORAGE] Erro ao salvar anexo adicional:', exErr.message);
+          }
+          await removeTemporaryFile(tempExtraPath);
         }
       }
 
-      // 2. Se não houver anexos, salva o corpo de texto
-      if (!processedAnyAttachment) {
-        const corpoTexto = parsed.text ? parsed.text.substring(0, 300) + '...' : 'Sem conteúdo textual.';
-        
-        await pool.query(
-          `INSERT INTO evidences (titulo, nome, tipo, data, evento, categoria, responsavel, tags, resumo, email_message_id) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-          [
-            assunto, 
-            assunto, 
-            'documento', 
-            dataHoje, 
-            'Encaminhado por E-mail', 
-            'Planejamento', 
-            responsavelTabela, 
-            JSON.stringify(['Email', 'Texto']), 
-            `Remetente: ${remetenteOriginal} | ${corpoTexto}`,
-            messageId
-          ]
-        );
+      // Processamento inteligente via IA para gerar Resumo, Categorias e Tags reais
+      let metadata = {
+        titulo: `${assunto}${anexos.length > 0 ? ` (${originalName})` : ''}`,
+        evento: 'Encaminhado por E-mail',
+        resumo: `Remetente: ${remetenteOriginal} | ${corpoEmailCru.substring(0, 350)}...`,
+        categoriasSugeridas: ['Planejamento'],
+        tagsSugeridas: ['Email', tipoEvidencia.toUpperCase()]
+      };
+
+      try {
+        const tempTxtPath = path.join(tempDir, `email-ai-${Date.now()}.txt`);
+        await fs.promises.writeFile(tempTxtPath, textoExtraidoFinal, 'utf8');
+        metadata = await resumirQualquerDocumento(tempTxtPath, 'txt', dbCategories, dbTags);
+        await removeTemporaryFile(tempTxtPath);
+      } catch (aiErr) {
+        console.warn('[IMAP IA] Falha ao gerar resumo inteligente, usando fallback:', aiErr.message);
       }
+
+      const rawCategories = metadata.categoriasSugeridas || metadata.categorias || ['Planejamento'];
+      const categoriesList = Array.isArray(rawCategories) ? rawCategories : [rawCategories];
+      const primaryCategory = categoriesList[0] || 'Planejamento';
+      const rawTags = metadata.tagsSugeridas || metadata.tags || ['Email'];
+      const tagsList = Array.isArray(rawTags) ? rawTags : ['Email'];
+
+      // Inserção unificada e limpa na tabela 'evidences'
+      await pool.query(
+        `INSERT INTO public.evidences (
+          "titulo", "nome", "tipo", "data", "evento", "categoria", "categorias", 
+          "responsavel", "tags", "resumo", "textoExtraido", "storage_path", 
+          "storage_filename", "original_filename", "mime_type", "file_size", 
+          "email_message_id", "outros_anexos", "criadoEm", "created_at"
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9::jsonb, $10, 
+          $11, $12, $13, $14, $15, $16, $17, $18::jsonb, $19, NOW()
+        )`,
+        [
+          metadata.titulo || assunto,
+          originalName || assunto,
+          tipoEvidencia,
+          dataHoje,
+          metadata.evento || 'Encaminhado por E-mail',
+          primaryCategory,
+          JSON.stringify(categoriesList),
+          responsavelTabela,
+          JSON.stringify(tagsList),
+          metadata.resumo || corpoEmailCru.substring(0, 300),
+          textoExtraidoFinal,
+          storagePath, // Fica NULL se for e-mail puramente de texto
+          storagePath ? path.basename(storagePath) : null,
+          originalName,
+          mimeType,
+          fileSize,
+          messageId,
+          JSON.stringify(outrosAnexosList),
+          new Date().toISOString(),
+          new Date().toISOString()
+        ]
+      );
     }
   } catch (err) {
-    console.error('Erro na varredura IMAP do Gmail:', err);
+    console.error('Erro na varredura inteligente IMAP do Gmail:', err);
   } finally {
     await client.logout();
   }
