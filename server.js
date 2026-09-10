@@ -1688,38 +1688,37 @@ async function processarEmailsPendentes() {
       const rawTags = metadata.tagsSugeridas || metadata.tags || ['Email'];
       const tagsList = Array.isArray(rawTags) ? rawTags : ['Email'];
 
-      // Inserção unificada e limpa na tabela 'evidences'
+// Inserção unificada e limpa na tabela 'evidences'
       await pool.query(
         `INSERT INTO public.evidences (
           "titulo", "nome", "tipo", "data", "evento", "categoria", "categorias", 
           "responsavel", "tags", "resumo", "textoExtraido", "storage_path", 
           "storage_filename", "original_filename", "mime_type", "file_size", 
-          "email_message_id", "outros_anexos", "criadoEm", "created_at"
+          "email_message_id", "outros_anexos", "criadoEm"
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9::jsonb, $10, 
-          $11, $12, $13, $14, $15, $16, $17, $18::jsonb, $19, NOW()
+          $11, $12, $13, $14, $15, $16, $17, $18::jsonb, $19
         )`,
         [
-          metadata.titulo || assunto,
-          originalName || assunto,
-          tipoEvidencia,
-          dataHoje,
-          metadata.evento || 'Encaminhado por E-mail',
-          primaryCategory,
-          JSON.stringify(categoriesList),
-          responsavelTabela,
-          JSON.stringify(tagsList),
-          metadata.resumo || corpoEmailCru.substring(0, 300),
-          textoExtraidoFinal,
-          storagePath, // Fica NULL se for e-mail puramente de texto
-          storagePath ? path.basename(storagePath) : null,
-          originalName,
-          mimeType,
-          fileSize,
-          messageId,
-          JSON.stringify(outrosAnexosList),
-          new Date().toISOString(),
-          new Date().toISOString()
+          metadata.titulo || assunto,                          // $1
+          originalName || assunto,                             // $2
+          tipoEvidencia,                                       // $3
+          dataHoje,                                            // $4
+          metadata.evento || 'Encaminhado por E-mail',         // $5
+          primaryCategory,                                     // $6
+          JSON.stringify(categoriesList),                      // $7
+          responsavelTabela,                                   // $8
+          JSON.stringify(tagsList),                            // $9
+          metadata.resumo || corpoEmailCru.substring(0, 300),  // $10
+          textoExtraidoFinal,                                  // $11
+          storagePath,                                         // $12
+          storagePath ? path.basename(storagePath) : null,     // $13
+          originalName,                                        // $14
+          mimeType,                                            // $15
+          fileSize,                                            // $16
+          messageId,                                           // $17
+          JSON.stringify(outrosAnexosList),                    // $18
+          new Date().toISOString()                             // $19
         ]
       );
     }
