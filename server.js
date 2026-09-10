@@ -1571,10 +1571,11 @@ async function processarEmailsPendentes() {
           const tipoEvidencia = getMediaType(filename, attachment.contentType);
           
           await pool.query(
-            `INSERT INTO evidences (titulo, tipo, data, evento, categoria, responsavel, tags, resumo) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            `INSERT INTO evidences (titulo, nome, tipo, data, evento, categoria, responsavel, tags, resumo) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
             [
               `${assunto} (${filename})`, 
+              filename,
               tipoEvidencia, 
               dataHoje, 
               'Encaminhado por E-mail', 
@@ -1593,9 +1594,10 @@ async function processarEmailsPendentes() {
         const corpoTexto = parsed.text ? parsed.text.substring(0, 300) + '...' : 'Sem conteúdo textual.';
         
         await pool.query(
-          `INSERT INTO evidences (titulo, tipo, data, evento, categoria, responsavel, tags, resumo) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          `INSERT INTO evidences (titulo, nome, tipo, data, evento, categoria, responsavel, tags, resumo) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
           [
+            assunto,
             assunto, 
             'documento', 
             dataHoje, 
