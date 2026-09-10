@@ -103,7 +103,7 @@ window.CerneApp.EvidenceDetails = {
       `;
 
       outrosAnexos.forEach((anexo, index) => {
-        const fileUrl = `/api/storage-file?path=${encodeURIComponent(anexo.storage_path)}`;
+        const fileUrl = `/api/evidences/${encodeURIComponent(evidence.id)}/other-file?path=${encodeURIComponent(anexo.storage_path)}`;
         const safeName = escapeHtml(anexo.nome || `Anexo ${index + 1}`);
 
         actionsHtml += `
