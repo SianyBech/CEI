@@ -15,6 +15,10 @@ import { getUserRole, hasPermission } from './auth.js';
 import { fileURLToPath } from 'url';
 import { resumirQualquerDocumento, resumirTextoSimples } from './aiService.js';
 
+//Para emails
+import { ImapFlow } from 'imapflow';
+import { simpleParser } from 'mailparser';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -1522,9 +1526,6 @@ export {
 };
 
 // IMPLEMENTAÇÃO DE VARREDURA AUTOMÁTICA DE E-MAILS PARA EVIDÊNCIAS
-
-const { ImapFlow } = require('imapflow');
-const { simpleParser } = require('mailparser');
 
 // Mapeia o arquivo recebido para os tipos suportados pela interface (SearchBar / EvidenceTable)
 function getMediaType(filename, contentType) {
