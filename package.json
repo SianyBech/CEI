@@ -28,7 +28,7 @@
     "@supabase/supabase-js": "^2.0.0",
     "tesseract.js": "^4.1.4",
     "xlsx": "^0.18.5",
-    "imapflow": "^3.8.0",
-    "mailparser": "^3.7.1"
+   "imapflow": "latest",
+    "mailparser": "latest"
   }
 }
