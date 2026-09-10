@@ -1554,9 +1554,24 @@ async function processarEmailsPendentes() {
     await client.connect();
     await client.mailboxOpen('SistemaEvidencias');
 
-    for await (let message of client.fetch({ seen: false }, { source: true, envelope: true })) {
+    // Busca TODOS os e-mails da pasta (sem filtrar por lido/não lido)
+    for await (let message of client.fetch({}, { source: true, envelope: true })) {
       const parsed = await simpleParser(message.source);
       
+      // O Message-ID único do e-mail (nosso "CPF" da mensagem)
+      const messageId = parsed.messageId || String(message.uid);
+      
+      // Verifica se este e-mail já foi processado anteriormente no banco
+      const jaExiste = await pool.query(
+        `SELECT 1 FROM public.evidences WHERE "email_message_id" = $1 LIMIT 1`,
+        [messageId]
+      );
+
+      if (jaExiste.rowCount > 0) {
+        // E-mail já cadastrado, pula para o próximo sem duplicar nada!
+        continue;
+      }
+
       const assunto = parsed.subject || 'Evidência via E-mail';
       const remetenteOriginal = parsed.from ? parsed.from.text : 'Desconhecido';
       const dataHoje = new Date().toLocaleDateString('pt-BR');
@@ -1564,54 +1579,53 @@ async function processarEmailsPendentes() {
 
       let processedAnyAttachment = false;
 
-      // 1. Processa todos os anexos encontrados no e-mail
+      // 1. Processa todos os anexos encontrados
       if (parsed.attachments && parsed.attachments.length > 0) {
         for (let attachment of parsed.attachments) {
           const filename = attachment.filename || 'anexo_sem_nome';
           const tipoEvidencia = getMediaType(filename, attachment.contentType);
           
           await pool.query(
-            `INSERT INTO evidences (titulo, nome, tipo, data, evento, categoria, responsavel, tags, resumo) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            `INSERT INTO evidences (titulo, nome, tipo, data, evento, categoria, responsavel, tags, resumo, email_message_id) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
             [
               `${assunto} (${filename})`, 
-              filename,
+              filename, 
               tipoEvidencia, 
               dataHoje, 
               'Encaminhado por E-mail', 
               'Planejamento', 
               responsavelTabela, 
-              JSON.stringify(['Email', tipoEvidencia.toUpperCase()]),
-              `Remetente: ${remetenteOriginal} | Evidência extraída automaticamente do anexo: ${filename}`
+              JSON.stringify(['Email', tipoEvidencia.toUpperCase()]), 
+              `Remetente: ${remetenteOriginal} | Evidência extraída automaticamente do anexo: ${filename}`,
+              messageId
             ]
           );
           processedAnyAttachment = true;
         }
       }
 
-      // 2. Se não houver anexos válidos, salva o corpo de texto do e-mail
+      // 2. Se não houver anexos, salva o corpo de texto
       if (!processedAnyAttachment) {
         const corpoTexto = parsed.text ? parsed.text.substring(0, 300) + '...' : 'Sem conteúdo textual.';
         
         await pool.query(
-          `INSERT INTO evidences (titulo, nome, tipo, data, evento, categoria, responsavel, tags, resumo) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          `INSERT INTO evidences (titulo, nome, tipo, data, evento, categoria, responsavel, tags, resumo, email_message_id) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
           [
-            assunto,
+            assunto, 
             assunto, 
             'documento', 
             dataHoje, 
             'Encaminhado por E-mail', 
             'Planejamento', 
             responsavelTabela, 
-            JSON.stringify(['Email', 'Texto']),
-            `Remetente: ${remetenteOriginal} | ${corpoTexto}`
+            JSON.stringify(['Email', 'Texto']), 
+            `Remetente: ${remetenteOriginal} | ${corpoTexto}`,
+            messageId
           ]
         );
       }
-
-      // 3. Marca a mensagem como lida na pasta do Gmail
-      await client.messageFlagsAdd(message.uid, ['\\Seen'], { uid: true });
     }
   } catch (err) {
     console.error('Erro na varredura IMAP do Gmail:', err);
