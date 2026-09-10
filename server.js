@@ -1520,3 +1520,107 @@ export {
   isForbiddenFile,
   serializeRow
 };
+
+// IMPLEMENTAÇÃO DE VARREDURA AUTOMÁTICA DE E-MAILS PARA EVIDÊNCIAS
+
+const { ImapFlow } = require('imapflow');
+const { simpleParser } = require('mailparser');
+
+// Mapeia o arquivo recebido para os tipos suportados pela interface (SearchBar / EvidenceTable)
+function getMediaType(filename, contentType) {
+  const ext = (filename || '').split('.').pop().toLowerCase();
+  
+  if (ext === 'pdf' || (contentType || '').includes('pdf')) return 'pdf';
+  if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext) || (contentType || '').startsWith('image/')) return 'imagem';
+  if (['xls', 'xlsx', 'csv', 'ods'].includes(ext) || (contentType || '').includes('spreadsheet') || (contentType || '').includes('excel')) return 'planilha';
+  if (['mp4', 'mov', 'avi', 'mkv'].includes(ext) || (contentType || '').startsWith('video/')) return 'video';
+  
+  // Formatos genéricos (docx, pptx, txt, etc.) salvos como documento padrão
+  return 'documento';
+}
+
+async function processarEmailsPendentes() {
+  const client = new ImapFlow({
+    host: 'imap.gmail.com',
+    port: 993,
+    secure: true,
+    auth: {
+      user: 'incubadoracei@gmail.com',
+      pass: process.env.GMAIL_APP_PASS // Variável segura configurada na Hostinger
+    }
+  });
+
+  try {
+    await client.connect();
+    await client.mailboxOpen('SistemaEvidencias');
+
+    for await (let message of client.fetch({ seen: false }, { source: true, envelope: true })) {
+      const parsed = await simpleParser(message.source);
+      
+      const assunto = parsed.subject || 'Evidência via E-mail';
+      const remetente = parsed.from ? parsed.from.text : 'Desconhecido';
+      const dataHoje = new Date().toLocaleDateString('pt-BR');
+      
+      // Responsável padronizado para a tabela
+      const responsavelTabela = 'E-mail';
+
+      let processedAnyAttachment = false;
+
+      // 1. Processa todos os anexos encontrados no e-mail
+      if (parsed.attachments && parsed.attachments.length > 0) {
+        for (let attachment of parsed.attachments) {
+          const filename = attachment.filename || 'anexo_sem_nome';
+          const tipoEvidencia = getMediaType(filename, attachment.contentType);
+          
+          await pool.query(
+            `INSERT INTO evidences (titulo, tipo, data, evento, categoria, responsavel, tags, resumo) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              `${assunto} (${filename})`, 
+              tipoEvidencia, 
+              dataHoje, 
+              'Encaminhado por E-mail', 
+              'Planejamento', 
+              responsavelTabela, // Fica escrito "E-mail" na tabela
+              ['Email', tipoEvidencia.toUpperCase()], 
+              `Remetente: ${remetente} | Evidência extraída automaticamente do anexo: ${filename}`
+            ]
+          );
+          processedAnyAttachment = true;
+        }
+      }
+
+      // 2. Se não houver anexos válidos, salva o corpo de texto do e-mail
+      if (!processedAnyAttachment) {
+        const corpoTexto = parsed.text ? parsed.text.substring(0, 300) + '...' : 'Sem conteúdo textual.';
+        
+        await pool.query(
+          `INSERT INTO evidences (titulo, tipo, data, evento, categoria, responsavel, tags, resumo) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            assunto, 
+            'documento', 
+            dataHoje, 
+            'Encaminhado por E-mail', 
+            'Planejamento', 
+            responsavelTabela, // Fica escrito "E-mail" na tabela
+            ['Email', 'Texto'], 
+            `Remetente: ${remetente} | ${corpoTexto}`
+          ]
+        );
+      }
+
+      // 3. Marca a mensagem como lida para evitar duplicação nas próximas varreduras
+      await client.messageFlagsAdd(message.uid, ['\\Seen'], { uid: true });
+    }
+  } catch (err) {
+    console.error('Erro na varredura IMAP do Gmail:', err);
+  } finally {
+    await client.logout();
+  }
+}
+
+// Executa a verificação a cada 10 minutos em segundo plano
+setInterval(processarEmailsPendentes, 10 * 60 * 1000);
+
+
