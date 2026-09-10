@@ -1523,8 +1523,8 @@ export {
 
 // IMPLEMENTAÇÃO DE VARREDURA AUTOMÁTICA DE E-MAILS PARA EVIDÊNCIAS
 
-import { ImapFlow } from 'imapflow';
-import { simpleParser } from 'mailparser';
+const { ImapFlow } = require('imapflow');
+const { simpleParser } = require('mailparser');
 
 // Mapeia o arquivo recebido para os tipos suportados pela interface (SearchBar / EvidenceTable)
 function getMediaType(filename, contentType) {
