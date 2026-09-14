@@ -14,15 +14,15 @@ window.CerneApp.UploadModal = {
         </div>
 
         <div class="modal-body" id="modal-body-container">
-          <!-- Step 1: File Selection or Link -->
+         <!-- Step 1: File Selection or Link -->
           <div id="upload-step-select" style="display: flex; flex-direction: column; gap: 1rem;">
             <div class="dropzone" id="dropzone-box">
               <i data-lucide="upload-cloud" class="dropzone-icon"></i>
               <div class="dropzone-text">
-                <strong>Arraste seu arquivo aqui</strong> ou clique para navegar
+                <strong>Arraste seu arquivo principal aqui</strong> ou clique para navegar
               </div>
               <div class="dropzone-subtext">
-                Suporta PDF, Imagens (JPG/PNG) ou Documentos (DOCX) até 30MB
+                Suporta PDF, Imagens (JPG/PNG) ou Documentos (DOCX) até 30MB (Analisado pela IA)
               </div>
               <input type="file" id="file-input-element" style="display: none;" accept=".pdf, .png, .jpg, .jpeg, .docx, .pptx">
             </div>
@@ -35,6 +35,15 @@ window.CerneApp.UploadModal = {
               <button class="btn btn-secondary btn-icon-only" id="remove-file-btn" style="border:none; background:transparent;" title="Remover Arquivo">
                 <i data-lucide="trash-2" style="width: 16px; height: 16px; color: var(--danger);"></i>
               </button>
+            </div>
+
+            <!-- SEÇÃO DE OUTROS ANEXOS EXTRAS (Não lidos pela IA) -->
+            <div style="background-color: var(--bg-secondary); border: 1px dashed var(--border-color); border-radius: 8px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
+              <label class="form-label" style="font-size: 0.8rem; margin: 0; display: flex; align-items: center; gap: 0.35rem; color: var(--text-secondary);">
+                <i data-lucide="paperclip" style="width: 14px; height: 14px;"></i> Outros Anexos Opcionais (Armazenamento Direto)
+              </label>
+              <input type="file" id="extra-files-input" multiple style="font-size: 0.8rem; color: var(--text-secondary);" />
+              <div id="extra-files-list" style="font-size: 0.75rem; color: var(--text-tertiary);">Nenhum arquivo extra selecionado.</div>
             </div>
 
             <!-- ÚNICO CAMPO DE LINK E LEGENDA -->
@@ -70,6 +79,19 @@ window.CerneApp.UploadModal = {
     const linkInput = overlay.querySelector('#link-input-element');
 
     let selectedFile = null;
+    let extraFiles = [];
+
+    const extraFilesInput = overlay.querySelector('#extra-files-input');
+    const extraFilesList = overlay.querySelector('#extra-files-list');
+
+    extraFilesInput.addEventListener('change', (e) => {
+      extraFiles = Array.from(e.target.files);
+      if (extraFiles.length > 0) {
+        extraFilesList.textContent = `${extraFiles.length} arquivo(s) extra(s) selecionado(s): ` + extraFiles.map(f => f.name).join(', ');
+      } else {
+        extraFilesList.textContent = 'Nenhum arquivo extra selecionado.';
+      }
+    });
 
     function checkFormValidity() {
       if (selectedFile || (linkInput && linkInput.value.trim().length > 0)) {

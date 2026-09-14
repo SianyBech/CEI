@@ -372,6 +372,7 @@ function serializeRow(row, req) {
     mimeType: row.mime_type || null,
     fileSize: row.file_size || null,
     link: row.link || null,
+    outrosAnexos: row.outros_anexos || [],
     criadoEm: row.criadoEm,
     downloadUrl: buildDownloadUrl(req, row.id)
   };
@@ -1034,7 +1035,7 @@ app.use(attachAuthContext);
 app.get('/api/evidences', requirePermission('view'), async (req, res, next) => {
   try {
     console.log('[EVIDENCES] Buscando evidências...');
-    const rows = await dbClient.many(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "categorias", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "link", "criadoEm" FROM public.evidences ORDER BY "criadoEm" DESC`);
+    const rows = await dbClient.many(`SELECT "id", "titulo", "nome", "tipo", "data", "evento", "categoria", "categorias", "responsavel", "tags", "resumo", "textoExtraido", "caminhoArquivo", "storage_path", "storage_filename", "original_filename", "mime_type", "file_size", "link", "outros_anexos", "criadoEm" FROM public.evidences ORDER BY "criadoEm" DESC`);
     res.json((rows || []).map((row) => serializeRow(row, req)));
   } catch (error) {
     console.error('[EVIDENCES] Erro ao buscar evidências:', error);
