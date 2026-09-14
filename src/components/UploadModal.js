@@ -14,8 +14,10 @@ window.CerneApp.UploadModal = {
         </div>
 
         <div class="modal-body" id="modal-body-container">
-         <!-- Step 1: File Selection or Link -->
+          <!-- Step 1: File Selection or Link -->
           <div id="upload-step-select" style="display: flex; flex-direction: column; gap: 1rem;">
+            
+            <!-- DROPZONE PRINCIPAL (Some se houver arquivo principal selecionado) -->
             <div class="dropzone" id="dropzone-box">
               <i data-lucide="upload-cloud" class="dropzone-icon"></i>
               <div class="dropzone-text">
@@ -27,27 +29,33 @@ window.CerneApp.UploadModal = {
               <input type="file" id="file-input-element" style="display: none;" accept=".pdf, .png, .jpg, .jpeg, .docx, .pptx">
             </div>
 
-            <div class="file-selected-box" id="file-selected-info-box" style="display: none;">
-              <div class="file-selected-info">
+            <!-- CAIXA DO ARQUIVO PRINCIPAL SELECIONADO -->
+            <div class="file-selected-box" id="file-selected-info-box" style="display: none; align-items: center; justify-content: space-between; background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: var(--radius-md);">
+              <div class="file-selected-info" style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden;">
                 <i data-lucide="file-check" class="file-icon-documento" id="selected-file-icon"></i>
-                <span id="selected-file-name" style="word-break: break-all;">Nome_do_Arquivo.pdf</span>
+                <span id="selected-file-name" style="word-break: break-all; font-size: 0.9rem; font-weight: 500;">Nome_do_Arquivo.pdf</span>
               </div>
-              <button class="btn btn-secondary btn-icon-only" id="remove-file-btn" style="border:none; background:transparent;" title="Remover Arquivo">
+              <button class="btn btn-secondary btn-icon-only" id="remove-file-btn" style="border:none; background:transparent; cursor:pointer;" title="Remover Arquivo">
                 <i data-lucide="trash-2" style="width: 16px; height: 16px; color: var(--danger);"></i>
               </button>
             </div>
 
-            <!-- SEÇÃO DE OUTROS ANEXOS EXTRAS (Não lidos pela IA) -->
-            <div style="background-color: var(--bg-secondary); border: 1px dashed var(--border-color); border-radius: 8px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
-              <label class="form-label" style="font-size: 0.8rem; margin: 0; display: flex; align-items: center; gap: 0.35rem; color: var(--text-secondary);">
-                <i data-lucide="paperclip" style="width: 14px; height: 14px;"></i> Outros Anexos Opcionais (Armazenamento Direto)
-              </label>
-              <input type="file" id="extra-files-input" multiple style="font-size: 0.8rem; color: var(--text-secondary);" />
-              <div id="extra-files-list" style="font-size: 0.75rem; color: var(--text-tertiary);">Nenhum arquivo extra selecionado.</div>
+            <!-- MINI-DROPZONE DISCRETA PARA OUTROS ANEXOS -->
+            <div id="extra-dropzone-box" style="border: 1px dashed var(--border-color); border-radius: var(--radius-md); background-color: #fafafa; padding: 0.75rem; text-align: center; cursor: pointer; transition: all 0.2s;">
+              <div style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; color: var(--text-secondary); font-size: 0.8rem; font-weight: 500;">
+                <i data-lucide="paperclip" style="width: 14px; height: 14px;"></i>
+                <span>Carregar mais anexos — Arraste ou clique aqui</span>
+              </div>
+              <input type="file" id="extra-files-input" multiple style="display: none;" accept=".pdf, .png, .jpg, .jpeg, .docx, .pptx, .xlsx, .xls">
+            </div>
+
+            <!-- LISTA DE ANEXOS EXTRAS SELECIONADOS -->
+            <div id="extra-files-list-container" style="display: none; flex-direction: column; gap: 0.35rem; max-height: 100px; overflow-y: auto;">
+              <!-- Itens injetados via JS -->
             </div>
 
             <!-- ÚNICO CAMPO DE LINK E LEGENDA -->
-            <div style="display: flex; align-items: center; text-align: center; gap: 0.75rem; color: var(--text-secondary); font-size: 0.8rem;">
+            <div style="display: flex; align-items: center; text-align: center; gap: 0.75rem; color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">
               <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
               <span>OU ENVIE UM LINK DA WEB</span>
               <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
@@ -73,6 +81,11 @@ window.CerneApp.UploadModal = {
     const selectedFileName = overlay.querySelector('#selected-file-name');
     const selectedFileIcon = overlay.querySelector('#selected-file-icon');
     const removeFileBtn = overlay.querySelector('#remove-file-btn');
+    
+    const extraDropzone = overlay.querySelector('#extra-dropzone-box');
+    const extraFileInput = overlay.querySelector('#extra-files-input');
+    const extraFilesListContainer = overlay.querySelector('#extra-files-list-container');
+
     const submitBtn = overlay.querySelector('#modal-upload-submit-btn');
     const cancelBtn = overlay.querySelector('#modal-cancel-btn');
     const closeBtn = overlay.querySelector('#modal-close-btn');
@@ -81,53 +94,86 @@ window.CerneApp.UploadModal = {
     let selectedFile = null;
     let extraFiles = [];
 
-    const extraFilesInput = overlay.querySelector('#extra-files-input');
-    const extraFilesList = overlay.querySelector('#extra-files-list');
-
-    extraFilesInput.addEventListener('change', (e) => {
-      extraFiles = Array.from(e.target.files);
-      if (extraFiles.length > 0) {
-        extraFilesList.textContent = `${extraFiles.length} arquivo(s) extra(s) selecionado(s): ` + extraFiles.map(f => f.name).join(', ');
-      } else {
-        extraFilesList.textContent = 'Nenhum arquivo extra selecionado.';
-      }
-    });
-
     function checkFormValidity() {
-      if (selectedFile || (linkInput && linkInput.value.trim().length > 0)) {
+      if (selectedFile || extraFiles.length > 0 || (linkInput && linkInput.value.trim().length > 0)) {
         submitBtn.removeAttribute('disabled');
       } else {
         submitBtn.setAttribute('disabled', 'true');
       }
     }
 
+    // --- LÓGICA DO ARQUIVO PRINCIPAL ---
     dropzone.addEventListener('click', () => fileInput.click());
-
-    dropzone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      dropzone.style.borderColor = 'var(--accent)';
-      dropzone.style.backgroundColor = 'var(--accent-light)';
-    });
-
-    dropzone.addEventListener('dragleave', () => {
-      dropzone.style.borderColor = 'var(--border-color)';
-      dropzone.style.backgroundColor = '#fafafa';
-    });
-
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = 'var(--accent)'; });
+    dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = 'var(--border-color)'; });
     dropzone.addEventListener('drop', (e) => {
       e.preventDefault();
       dropzone.style.borderColor = 'var(--border-color)';
-      dropzone.style.backgroundColor = '#fafafa';
-      if (e.dataTransfer.files.length > 0) {
-        handleFileSelect(e.dataTransfer.files[0]);
-      }
+      if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files[0]);
     });
 
     fileInput.addEventListener('change', (e) => {
-      if (e.target.files.length > 0) {
-        handleFileSelect(e.target.files[0]);
-      }
+      if (e.target.files.length > 0) handleFileSelect(e.target.files[0]);
     });
+
+    function handleFileSelect(file) {
+      selectedFile = file;
+      selectedFileName.textContent = file.name;
+      dropzone.style.display = 'none'; // Esconde a dropzone grande principal
+      fileInfoBox.style.display = 'flex';
+      checkFormValidity();
+    }
+
+    removeFileBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectedFile = null;
+      fileInput.value = '';
+      fileInfoBox.style.display = 'none';
+      dropzone.style.display = 'flex'; // Restaura a dropzone grande principal
+      checkFormValidity();
+    });
+
+    // --- LÓGICA DOS ANEXOS EXTRAS ---
+    extraDropzone.addEventListener('click', () => extraFileInput.click());
+    extraFileInput.addEventListener('change', (e) => {
+      const newFiles = Array.from(e.target.files);
+      extraFiles = [...extraFiles, ...newFiles];
+      extraFileInput.value = ''; // Reseta input para permitir re-adicionar o mesmo arquivo se necessário
+      renderExtraFilesList();
+      checkFormValidity();
+    });
+
+    function renderExtraFilesList() {
+      if (extraFiles.length === 0) {
+        extraFilesListContainer.style.display = 'none';
+        extraFilesListContainer.innerHTML = '';
+        return;
+      }
+
+      extraFilesListContainer.style.display = 'flex';
+      extraFilesListContainer.innerHTML = '';
+
+      extraFiles.forEach((file, index) => {
+        const itemEl = document.createElement('div');
+        itemEl.style.cssText = 'display: flex; align-items: center; justify-content: space-between; background: var(--bg-tertiary); padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.8rem;';
+        itemEl.innerHTML = `
+          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); flex: 1;" title="${file.name}">
+            📎 ${file.name}
+          </span>
+          <button type="button" class="remove-extra-btn" data-index="${index}" style="background:none; border:none; cursor:pointer; color: var(--danger); font-size: 1rem; padding: 0 0.25rem;" title="Remover">
+            &times;
+          </button>
+        `;
+
+        itemEl.querySelector('.remove-extra-btn').addEventListener('click', () => {
+          extraFiles.splice(index, 1);
+          renderExtraFilesList();
+          checkFormValidity();
+        });
+
+        extraFilesListContainer.appendChild(itemEl);
+      });
+    }
 
     linkInput.addEventListener('input', checkFormValidity);
 
