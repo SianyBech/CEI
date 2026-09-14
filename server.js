@@ -180,15 +180,12 @@ async function initPostgresPool() {
 const upload = multer({
   dest: tempDir,
   limits: { fileSize: 30 * 1024 * 1024 },
-
   fileFilter: (req, file, cb) => {
     const extension = path.extname(file.originalname || '').toLowerCase();
     const mimeType = (file.mimetype || '').toLowerCase();
-
     if (isForbiddenFile(file.originalname, mimeType)) {
       return cb(new Error('Tipo de arquivo não permitido por segurança.'));
     }
-
     cb(null, true);
   }
 });
@@ -1322,23 +1319,23 @@ app.delete('/api/evidences/:id', requirePermission('delete'), async (req, res, n
 });
 
 app.post('/api/upload', requirePermission('upload'), (req, res, next) => {
-  upload.single('file')(req, res, async (err) => {
-    // 1. Tratamento de erros iniciais (Multer)
+upload.fields([
+    { name: 'file', maxCount: 1 },
+    { name: 'extraFiles', maxCount: 10 }
+  ])(req, res, async (err) => {
     if (err) {
       if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({ error: 'O tamanho máximo permitido é de 30 MB.' });
       }
-      if (err.message === 'Tipo de arquivo não permitido por segurança.') {
-        return res.status(400).json({ error: 'Tipo de arquivo não permitido por segurança.' });
-      }
-      console.error('[UPLOAD] Erro ao processar multipart:', err);
-      return res.status(400).json({ error: 'Erro ao receber os dados enviados.' });
+      return res.status(400).json({ error: 'Erro ao receber os arquivos.' });
     }
 
-    // 2. Validação: Exige obrigatoriamente um arquivo OU um link
+    const reqFile = req.files?.file ? req.files.file[0] : null;
+    const extraFilesArray = req.files?.extraFiles || [];
     const linkEnviado = req.body.link ? req.body.link.trim() : null;
-    if (!req.file && !linkEnviado) {
-      return res.status(400).json({ error: 'Envie um arquivo ou cole um link válido.' });
+
+    if (!reqFile && !linkEnviado && extraFilesArray.length === 0) {
+      return res.status(400).json({ error: 'Envie ao menos um arquivo ou link.' });
     }
 
     try {

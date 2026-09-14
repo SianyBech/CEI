@@ -357,7 +357,7 @@ window.CerneApp.UploadModal = {
         try {
           updateUploadStep(2, 50);
 
-          const uploadedEvidence = await window.CerneApp.Api.uploadEvidence(fileToUpload, linkToSend, customTextToSend, (percentage) => {
+          const uploadedEvidence = await window.CerneApp.Api.uploadEvidence(fileToUpload, linkToSend, customTextToSend, extraFilesToUpload, (percentage) => {
             if (percentage > 50) {
               updateUploadStep(3, 75);
             }

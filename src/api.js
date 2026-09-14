@@ -122,13 +122,20 @@ window.CerneApp.Api = {
     });
   },
 
-  uploadEvidence(file, link, customText, onProgress) {
+  uploadEvidence(file, link, customText, extraFiles = [], onProgress) {
     return new Promise((resolve, reject) => {
       const formData = new FormData();
       
       if (file) formData.append('file', file);
       if (link) formData.append('link', link.trim());
       if (customText) formData.append('customText', customText.trim());
+
+        if (Array.isArray(extraFiles) && extraFiles.length > 0) {
+        extraFiles.forEach((ef) => {
+          formData.append('extraFiles', ef);
+        });
+      }
+
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload', true);
