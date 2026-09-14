@@ -1359,7 +1359,7 @@ upload.fields([
       let metadata = {};
       let tituloFinal = '';
       let eventoFinal = 'Sem Evento';
-      let originalName = req.file ? sanitizeFileName(req.file.originalname) : (linkEnviado || 'link');
+      let originalName = reqFile ? sanitizeFileName(reqFile.originalname) : (linkEnviado || 'link');
       let tipo = '';
       let mimeType = null;
       let fileSize = 0;
@@ -1379,10 +1379,10 @@ upload.fields([
         await removeTemporaryFile(tempTxtPath);
         tituloFinal = metadata.titulo || 'Publicação de Rede Social';
 
-      } else if (req.file) {
-        console.log('[UPLOAD] IA utilizando o arquivo anexado.');
-        const extension = getFileExtension(originalName);
-        metadata = await generateMetadata(req.file.path, originalName, extension, dbCategories, dbTags);
+      } else if (reqFile) {
+  console.log('[UPLOAD] IA utilizando o arquivo anexado.');
+  const extension = getFileExtension(originalName);
+  metadata = await generateMetadata(reqFile.path, originalName, extension, dbCategories, dbTags);
         textoExtraido = metadata.textoExtraido || '';
         tituloFinal = metadata.titulo || originalName;
 
@@ -1401,30 +1401,27 @@ upload.fields([
       // ==========================================
       // B. ARMAZENAMENTO FÍSICO (O que vai para o Supabase)
       // ==========================================
-      if (req.file) {
+      if (reqFile) {
         const extension = getFileExtension(originalName);
         
-        // Classificação inteligente do tipo de arquivo incluindo planilhas
-    if (extension === 'pdf') {
-      tipo = 'pdf';
-    } else if (['png', 'jpg', 'jpeg', 'webp'].includes(extension)) {
-      tipo = 'imagem';
-    } else if (['xlsx', 'xls', 'ods', 'csv'].includes(extension)) {
-      tipo = 'planilha';
-    } else if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(extension)) {
-      tipo = 'video';
-    } else if (!req.file && linkEnviado) {
-      tipo = 'link';
-    } else {
-      tipo = 'documento';
-    }
+        if (extension === 'pdf') {
+          tipo = 'pdf';
+        } else if (['png', 'jpg', 'jpeg', 'webp'].includes(extension)) {
+          tipo = 'imagem';
+        } else if (['xlsx', 'xls', 'ods', 'csv'].includes(extension)) {
+          tipo = 'planilha';
+        } else if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(extension)) {
+          tipo = 'video';
+        } else {
+          tipo = 'documento';
+        }
 
-        mimeType = (req.file.mimetype || getMimeType(originalName)).toLowerCase();
-        fileSize = Number(req.file.size || 0);
-        
+        mimeType = (reqFile.mimetype || getMimeType(originalName)).toLowerCase();
+        fileSize = Number(reqFile.size || 0);
+
         storagePath = buildStoragePath(originalName);
-        await uploadFileToSupabase(req.file.path, storagePath, originalName, mimeType);
-        await removeTemporaryFile(req.file.path);
+        await uploadFileToSupabase(reqFile.path, storagePath, originalName, mimeType);
+        await removeTemporaryFile(reqFile.path);
       } else {
         tipo = 'link';
         mimeType = 'text/html';
@@ -1432,7 +1429,6 @@ upload.fields([
       }
       
       eventoFinal = metadata.evento || 'Sem Evento';
-      console.log(`[UPLOAD] Metadados consolidados:`, tituloFinal);
 
       // 4. Mapeamento final dos arrays de IA
       const rawCategories = metadata.categoriasSugeridas || metadata.categorias || [];
@@ -1441,20 +1437,37 @@ upload.fields([
       const rawTags = metadata.tagsSugeridas || metadata.tags || [];
       const tagsList = Array.isArray(rawTags) ? rawTags : [];
 
+      // 💡 Processamento dos outros_anexos extras enviados manualmente na Web
+      let outrosAnexosList = [];
+      for (const extraFile of extraFilesArray) {
+        const extraName = sanitizeFileName(extraFile.originalname);
+        const extraPath = buildStoragePath(extraName);
+        const extraMime = (extraFile.mimetype || getMimeType(extraName)).toLowerCase();
+
+        await uploadFileToSupabase(extraFile.path, extraPath, extraName, extraMime);
+        await removeTemporaryFile(extraFile.path);
+
+        outrosAnexosList.push({
+          nome: extraName,
+          storage_path: extraPath,
+          size: Number(extraFile.size || 0)
+        });
+      }
+
       // 5. Query de inserção no banco de dados
       const insertQuery = `
         INSERT INTO public.evidences (
           "titulo", "nome", "tipo", "data", "evento", 
           "categoria", "categorias", "responsavel", "tags", "resumo", 
           "textoExtraido", "storage_path", "storage_filename", "original_filename", "mime_type", 
-          "file_size", "link", "criadoEm", "created_by", "created_at", "updated_by", 
+          "file_size", "link", "outros_anexos", "criadoEm", "created_by", "created_at", "updated_by", 
           "updated_at"
         ) VALUES (
           $1, $2, $3, $4, $5, 
           $6, $7::jsonb, $8, $9::jsonb, $10, 
           $11, $12, $13, $14, $15, 
-          $16, $17, $18, $19, $20, 
-          $21, $22
+          $16, $17, $18::jsonb, $19, $20, 
+          $21, $22, $23
         )
         RETURNING "id"
       `;
@@ -1473,23 +1486,23 @@ upload.fields([
           JSON.stringify(tagsList),                 // $9
           metadata.resumo || '',                    // $10
           textoExtraido,                            // $11
-          storagePath,                              // $12 (será null se for link)
+          storagePath,                              // $12
           storagePath ? path.basename(storagePath) : null, // $13
           originalName,                             // $14
           mimeType,                                 // $15
           fileSize,                                 // $16
-          linkEnviado || null,                      // $17: link inserido aqui!
-          createdAt,                                // $18
-          req.user?.email || null,                  // $19
-          createdAt,                                // $20
-          req.user?.email || null,                  // $21
-          createdAt                                 // $22
+          linkEnviado || null,                      // $17
+          JSON.stringify(outrosAnexosList),         // $18
+          createdAt,                                // $19
+          req.user?.email || null,                  // $20
+          createdAt,                                // $21
+          req.user?.email || null,                  // $22
+          createdAt                                 // $23
         ]);
       } catch (dbError) {
         if (storagePath) await deleteFileFromSupabase(storagePath);
         throw dbError;
       }
-
       const id = insertResult.rows[0]?.id;
       console.log(`[UPLOAD] Registro salvo no banco para ${id}`);
 
@@ -1518,9 +1531,9 @@ upload.fields([
 
     } catch (error) {
       console.error('[UPLOAD] Falha no processamento:', error);
-      if (req.file && req.file.path) {
-        await removeTemporaryFile(req.file.path).catch(() => {});
-      }
+      if (reqFile && reqFile.path) {
+  await removeTemporaryFile(reqFile.path).catch(() => {});
+}
       res.status(500).json({ error: error.message || 'Falha no processamento.' });
     }
   });
