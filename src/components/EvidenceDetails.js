@@ -86,9 +86,10 @@ window.CerneApp.EvidenceDetails = {
     // Renderização moderna e minimalista de Outros Anexos (se houver)
     let outrosAnexos = [];
     try {
-      outrosAnexos = typeof evidence.outros_anexos === 'string' 
-        ? JSON.parse(evidence.outros_anexos) 
-        : (evidence.outros_anexos || []);
+      const rawAnexos = evidence.outrosAnexos || evidence.outros_anexos;
+      outrosAnexos = typeof rawAnexos === 'string' 
+        ? JSON.parse(rawAnexos) 
+        : (rawAnexos || []);
     } catch (e) {
       outrosAnexos = [];
     }
