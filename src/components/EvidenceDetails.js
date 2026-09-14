@@ -11,7 +11,7 @@ window.CerneApp.EvidenceDetails = {
     // Determine file icon
     let iconName = 'file';
     let iconClass = 'file-icon-documento';
-   if (evidence.tipo === 'pdf') {
+    if (evidence.tipo === 'pdf') {
       iconName = 'file-text';
       iconClass = 'file-icon-pdf';
     } else if (evidence.tipo === 'imagem') {
@@ -46,24 +46,35 @@ window.CerneApp.EvidenceDetails = {
     }
 
     function formatDateForInput(dateString) {
-        if (!dateString) {
-          const today = new Date();
-          return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-        }
-        if (dateString.includes('/')) {
-          const [dd, mm, yyyy] = dateString.split('/');
-          if (dd && mm && yyyy) return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
-        }
-        return dateString;
+      if (!dateString) {
+        const today = new Date();
+        return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       }
+      if (dateString.includes('/')) {
+        const [dd, mm, yyyy] = dateString.split('/');
+        if (dd && mm && yyyy) return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+      }
+      return dateString;
+    }
 
-    // Construção dinâmica e limpa dos botões de ação (Suporte Híbrido)
+    // Estilos modernos injetados (Hover animado e selects tracejados)
+    const customStyles = `
+      <style>
+        .action-btn { transition: all 0.2s ease; cursor: pointer; }
+        .action-btn:hover:not(:disabled) { transform: translateY(-1.5px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); filter: brightness(0.96); }
+        .select-add { background-color: #f8fafc; border: 1px dashed #cbd5e1; color: #64748b; font-weight: 500; transition: all 0.2s ease; cursor: pointer; }
+        .select-add:hover:not(:disabled) { border-color: #94a3b8; background-color: #f1f5f9; color: #475569; }
+        .original-source-box { font-size: 0.9rem; color: var(--text-secondary); word-break: break-all; background-color: var(--bg-tertiary); padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); }
+      </style>
+    `;
+
+    // Construção dinâmica e limpa dos botões de ação
     let actionsHtml = '';
 
     if (evidence.link) {
       const externalUrl = ensureAbsoluteUrl(evidence.link);
       actionsHtml += `
-        <button type="button" class="btn btn-secondary" id="btn-open-link" data-url="${escapeHtml(externalUrl)}" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
+        <button type="button" class="btn btn-secondary action-btn" id="btn-open-link" data-url="${escapeHtml(externalUrl)}" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
           <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
           Abrir link
         </button>
@@ -72,24 +83,22 @@ window.CerneApp.EvidenceDetails = {
 
     if (evidence.downloadUrl && evidence.tipo !== 'link') {
       actionsHtml += `
-        <a href="${escapeHtml(evidence.downloadUrl)}" target="_blank" class="btn btn-secondary" id="btn-download-original" style="width: 100%; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
+        <button class="btn btn-secondary action-btn" id="btn-download-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
           <i data-lucide="download" style="width: 15px; height: 15px;"></i>
           Baixar Arquivo
-        </a>
-        <button class="btn btn-secondary" id="btn-preview-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+        </button>
+        <button class="btn btn-secondary action-btn" id="btn-preview-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
           <i data-lucide="eye" style="width: 15px; height: 15px;"></i>
           Visualizar Arquivo Original
         </button>
       `;
     }
 
-    // Renderização moderna e minimalista de Outros Anexos (se houver)
+    // Renderização moderna de Outros Anexos
     let outrosAnexos = [];
     try {
       const rawAnexos = evidence.outrosAnexos || evidence.outros_anexos;
-      outrosAnexos = typeof rawAnexos === 'string' 
-        ? JSON.parse(rawAnexos) 
-        : (rawAnexos || []);
+      outrosAnexos = typeof rawAnexos === 'string' ? JSON.parse(rawAnexos) : (rawAnexos || []);
     } catch (e) {
       outrosAnexos = [];
     }
@@ -113,10 +122,10 @@ window.CerneApp.EvidenceDetails = {
               ${safeName}
             </span>
             <div style="display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0;">
-              <a href="${fileUrl}" target="_blank" title="Visualizar anexo" style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; background: #ffffff; border: 1px solid var(--border-color); color: var(--text-secondary); text-decoration: none; transition: background 0.2s;">
+              <a href="${fileUrl}" target="_blank" title="Visualizar anexo" class="action-btn" style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; background: #ffffff; border: 1px solid var(--border-color); color: var(--text-secondary); text-decoration: none;">
                 <i data-lucide="eye" style="width: 13px; height: 13px;"></i>
               </a>
-              <a href="${fileUrl}" download title="Baixar anexo" style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; background: #ffffff; border: 1px solid var(--border-color); color: var(--text-secondary); text-decoration: none; transition: background 0.2s;">
+              <a href="${fileUrl}" download title="Baixar anexo" class="action-btn" style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; background: #ffffff; border: 1px solid var(--border-color); color: var(--text-secondary); text-decoration: none;">
                 <i data-lucide="download" style="width: 13px; height: 13px;"></i>
               </a>
             </div>
@@ -130,7 +139,7 @@ window.CerneApp.EvidenceDetails = {
       `;
     }
 
-    // Construção correta dos campos de Origem (Arquivo e/ou Link separados)
+    // Arquivo Original em formato de Div limpa para leitura completa
     let originalSourceHtml = '';
     const hasFile = evidence.tipo !== 'link' && evidence.nome && evidence.nome !== evidence.link;
 
@@ -138,7 +147,7 @@ window.CerneApp.EvidenceDetails = {
       originalSourceHtml += `
         <div class="detail-item">
           <label class="detail-label">Arquivo Original</label>
-          <input class="form-input" value="${escapeHtml(evidence.nome)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;" />
+          <div class="original-source-box">${escapeHtml(evidence.nome)}</div>
         </div>
       `;
     }
@@ -147,15 +156,18 @@ window.CerneApp.EvidenceDetails = {
       originalSourceHtml += `
         <div class="detail-item">
           <label class="detail-label">Link Vinculado</label>
-          <input class="form-input" value="${escapeHtml(evidence.link)}" disabled style="background-color: var(--bg-tertiary); color: var(--text-secondary); cursor: not-allowed;" />
+          <div class="original-source-box">
+            <a href="${escapeHtml(ensureAbsoluteUrl(evidence.link))}" target="_blank" style="color: var(--accent); text-decoration: none;">${escapeHtml(evidence.link)}</a>
+          </div>
         </div>
       `;
     }
 
     overlay.innerHTML = `
+      ${customStyles}
       <div class="modal-content detail-modal-width" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;">
   
-        <!-- Header da Modal -->
+        <!-- Header -->
         <div class="modal-header" style="flex-shrink: 0;">
           <div style="display: flex; align-items: center; gap: 0.65rem;">
             <i data-lucide="${iconName}" class="file-icon ${iconClass}"></i>
@@ -164,25 +176,24 @@ window.CerneApp.EvidenceDetails = {
             </h2>
           </div>
           <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <button class="modal-close" id="details-close-btn">
+            <button class="modal-close action-btn" id="details-close-btn">
               <i data-lucide="x" style="width: 20px; height: 20px;"></i>
             </button>
           </div>
         </div>
 
-        <!-- Body da Modal -->
+        <!-- Body -->
         <div class="modal-body" style="padding: 1.5rem; flex: 1; min-height: 0; display: flex; overflow: hidden;">
           <div class="details-grid" style="flex: 1; min-height: 0; height: 100%; display: flex; gap: 1.5rem; overflow: hidden; width: 100%;">
             
-            <!-- Left Panel: Metadados Editáveis -->
-            <div class="details-sidebar" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding-right: 0.5rem;">
+            <!-- Left Panel -->
+            <div class="details-sidebar" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding-right: 0.5rem; gap: 1rem;">
               
               <div class="detail-item">
                 <label class="detail-label" for="detail-title-input">Título da Evidência</label>
                 <input id="detail-title-input" class="form-input" value="${escapeHtml(titleText)}" />
               </div>
 
-              <!-- Renderização condicional correta dos campos de origem -->
               ${originalSourceHtml}
 
               <div class="detail-item">
@@ -190,29 +201,31 @@ window.CerneApp.EvidenceDetails = {
                 <input id="detail-evento-input" class="form-input" value="${escapeHtml(evidence.evento)}" />
               </div>
 
-              <div class="detail-item">
-                <label class="detail-label">Categorias CERNE</label>
-                <div class="tags-selector-wrapper">
-                  <div class="selected-tags-display" id="detail-selected-categories-display"></div>
-                  <select class="form-select" id="detail-add-category-select" style="margin-top: 0.35rem;"></select>
-                </div>
-              </div>
-
+              <!-- Reorganizado: Responsável e Data subiram -->
               <div class="detail-item">
                 <label class="detail-label" for="detail-responsavel-input">Responsável pelo Envio</label>
                 <select id="detail-responsavel-input" class="form-select"></select>
               </div>
 
               <div class="detail-item">
-            <label class="detail-label" for="detail-data-input">Data do Registro</label>
-            <input type="date" id="detail-data-input" class="form-input" value="${formatDateForInput(evidence.data)}" />
-          </div>
+                <label class="detail-label" for="detail-data-input">Data do Registro</label>
+                <input type="date" id="detail-data-input" class="form-input" value="${formatDateForInput(evidence.data)}" />
+              </div>
+
+              <!-- Categorias e Tags reagrupadas -->
+              <div class="detail-item">
+                <label class="detail-label">Categorias CERNE</label>
+                <div class="tags-selector-wrapper">
+                  <div class="selected-tags-display" id="detail-selected-categories-display"></div>
+                  <select class="form-select select-add" id="detail-add-category-select" style="margin-top: 0.5rem;"></select>
+                </div>
+              </div>
 
               <div class="detail-item">
                 <label class="detail-label">Tags da Evidência</label>
                 <div class="tags-selector-wrapper">
                   <div class="selected-tags-display" id="detail-selected-tags-display"></div>
-                  <select class="form-select" id="detail-add-tag-select" style="margin-top: 0.35rem;"></select>
+                  <select class="form-select select-add" id="detail-add-tag-select" style="margin-top: 0.5rem;"></select>
                 </div>
               </div>
 
@@ -222,7 +235,7 @@ window.CerneApp.EvidenceDetails = {
 
             </div>
 
-            <!-- Right Panel: Resumo IA e OCR -->
+            <!-- Right Panel -->
             <div style="flex: 1.2; min-height: 0; height: 100%; display: flex; flex-direction: column; gap: 1rem; overflow: hidden;">
               
               <div style="flex: 1; min-height: 0; background-color: #fafafa; border-radius: var(--radius-md); padding: 1rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden;">
@@ -256,14 +269,14 @@ window.CerneApp.EvidenceDetails = {
           </div>
         </div>
 
-        <!-- Footer da Modal -->
+        <!-- Footer -->
         <div class="modal-footer" style="flex-shrink: 0; display: flex; align-items: center; padding: 1rem 1.5rem; border-top: 1px solid var(--border-color);">
-          <button class="modal-close" id="details-delete-btn" style="background-color: #ff4757; color: white; border: none; border-radius: var(--radius-sm); padding: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; transition: background-color 0.2s; margin-right: auto;" title="Excluir evidência">
+          <button class="modal-close action-btn" id="details-delete-btn" style="background-color: #ff4757; color: white; border: none; border-radius: var(--radius-sm); padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin-right: auto;" title="Excluir evidência">
             <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
           </button>
             
-          <button class="btn btn-secondary" id="details-close-bottom-btn" style="padding-left: 1.5rem; padding-right: 1.5rem;">Cancelar</button>
-          <button class="btn btn-primary" id="details-save-btn" style="padding-left: 1.5rem; padding-right: 1.5rem; margin-left: 0.5rem;">Salvar alterações</button>
+          <button class="btn btn-secondary action-btn" id="details-close-bottom-btn" style="padding-left: 1.5rem; padding-right: 1.5rem;">Cancelar</button>
+          <button class="btn btn-primary action-btn" id="details-save-btn" style="padding-left: 1.5rem; padding-right: 1.5rem; margin-left: 0.5rem;">Salvar alterações</button>
         </div>
 
       </div>
@@ -277,7 +290,6 @@ window.CerneApp.EvidenceDetails = {
     const dataInput = overlay.querySelector('#detail-data-input');
     const resumoInput = overlay.querySelector('#detail-resumo-input');
 
-    // Evento seguro para abrir link externo usando o atributo data-url
     const openLinkBtn = overlay.querySelector('#btn-open-link');
     if (openLinkBtn) {
       openLinkBtn.addEventListener('click', (e) => {
@@ -300,9 +312,6 @@ window.CerneApp.EvidenceDetails = {
       const displayContainer = overlay.querySelector('#detail-selected-categories-display');
       const selectElement = overlay.querySelector('#detail-add-category-select');
       if (!displayContainer || !selectElement) return;
-
-      // 💡 Pega as categorias atualizadas direto do estado global da aplicação se disponível, ou usa o fallback
-      const currentCategories = window.CerneApp?.state?.appSettings?.categories || categories;
 
       displayContainer.innerHTML = '';
       if (selectedCategories.length === 0) {
@@ -342,9 +351,8 @@ window.CerneApp.EvidenceDetails = {
       defaultOpt.selected = true;
       selectElement.appendChild(defaultOpt);
 
-      // Usa a lista fresca obtida do estado global
       const categoriesArray = window.CerneApp?.state?.appSettings?.categories || categories || [];
-      const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat));
+      const availableCategories = categoriesArray.filter(cat => !selectedCategories.includes(cat)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
       availableCategories.forEach(cat => {
         const opt = document.createElement('option');
@@ -402,7 +410,7 @@ window.CerneApp.EvidenceDetails = {
       selectElement.appendChild(defaultOpt);
 
       const tagsListArray = window.CerneApp?.state?.appSettings?.tags || tagsList || [];
-      const availableTags = tagsListArray.filter(tag => !selectedTags.includes(tag));
+      const availableTags = tagsListArray.filter(tag => !selectedTags.includes(tag)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
       
       availableTags.forEach(tag => {
         const opt = document.createElement('option');
@@ -533,8 +541,8 @@ window.CerneApp.EvidenceDetails = {
             });
           }
           if (typeof window.CerneApp.populateFilterOptions === 'function') {
-    window.CerneApp.populateFilterOptions();
-  }
+            window.CerneApp.populateFilterOptions();
+          }
         }
 
         showToast('Alterações salvas com sucesso.', 'success');
@@ -546,15 +554,42 @@ window.CerneApp.EvidenceDetails = {
       }
     });
 
+    // Rotina de Download forçado (Evita abrir em nova aba)
     const downloadBtn = overlay.querySelector('#btn-download-original');
     if (downloadBtn) {
-      downloadBtn.addEventListener('click', (e) => {
+      downloadBtn.addEventListener('click', async (e) => {
         e.preventDefault();
-        if (evidence.downloadUrl) window.open(evidence.downloadUrl, '_blank');
+        if (!evidence.downloadUrl) return;
+
+        const originalContent = downloadBtn.innerHTML;
+        downloadBtn.innerHTML = '<i data-lucide="loader" style="width: 15px; height: 15px; animation: spin 1s linear infinite;"></i> Baixando...';
+        downloadBtn.style.pointerEvents = 'none';
+
+        try {
+          const response = await fetch(evidence.downloadUrl);
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = evidence.originalFilename || evidence.nome || 'documento';
+          document.body.appendChild(a);
+          a.click();
+          
+          window.URL.revokeObjectURL(url);
+          a.remove();
+        } catch (err) {
+          console.error('Erro ao baixar arquivo (fallback ativado):', err);
+          window.open(evidence.downloadUrl, '_blank');
+        } finally {
+          downloadBtn.innerHTML = originalContent;
+          downloadBtn.style.pointerEvents = 'auto';
+          if (window.lucide) window.lucide.createIcons();
+        }
       });
     }
 
-// Tratamento inteligente dos botões de arquivo original (Oculta se for e-mail de texto sem anexo)
     const downloadBtnOriginal = overlay.querySelector('#btn-download-original');
     const previewBtnOriginal = overlay.querySelector('#btn-preview-original');
 
