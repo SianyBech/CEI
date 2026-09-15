@@ -30,5 +30,11 @@
     "xlsx": "^0.18.5",
    "imapflow": "latest",
     "mailparser": "latest"
+  },
+  "allowScripts": {
+    "@google/genai": true,
+    "canvas": true,
+    "protobufjs": true,
+    "tesseract.js": true
   }
 }
