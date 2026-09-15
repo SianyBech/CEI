@@ -37,5 +37,8 @@
     "canvas": true,
     "protobufjs": true,
     "tesseract.js": true
+  },
+  "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.6"
   }
 }
