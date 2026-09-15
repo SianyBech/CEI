@@ -88,6 +88,46 @@ window.CerneApp.EvidenceDetails = {
       </style>
     `;
 
+    // Texto de Arquivo Original e Botões agrupados no rodapé esquerdo
+    let bottomActionsHtml = '';
+    const hasFile = evidence.tipo !== 'link' && evidence.nome && evidence.nome !== evidence.link;
+
+    if (hasFile) {
+      bottomActionsHtml += `
+        <div style="font-size: 0.75rem; color: var(--text-tertiary); margin-bottom: 0.5rem; line-height: 1.3;">
+          ARQUIVO ORIGINAL: <br>
+          <span style="font-weight: 500; color: var(--text-secondary); word-break: break-all; font-size: 0.70rem;">${escapeHtml(evidence.nome)}</span>
+        </div>
+      `;
+    }
+
+    if (evidence.link) {
+      const externalUrl = ensureAbsoluteUrl(evidence.link);
+      bottomActionsHtml += `
+        <div style="font-size: 0.75rem; color: var(--text-tertiary); margin-bottom: 0.5rem; line-height: 1.3;">
+          LINK VINCULADO: <br>
+          <a href="${escapeHtml(externalUrl)}" target="_blank" style="font-weight: 500; color: var(--accent); text-decoration: none; word-break: break-all; font-size: 0.75rem;">${escapeHtml(evidence.link)}</a>
+        </div>
+        <button type="button" class="btn btn-secondary action-btn" id="btn-open-link" data-url="${escapeHtml(externalUrl)}" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
+          <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
+          Abrir link
+        </button>
+      `;
+    }
+
+    if (evidence.downloadUrl && evidence.tipo !== 'link') {
+      bottomActionsHtml += `
+      <button class="btn btn-secondary action-btn" id="btn-preview-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+          <i data-lucide="eye" style="width: 15px; height: 15px;"></i>
+          Visualizar Arquivo
+        </button>
+        <button class="btn btn-secondary action-btn" id="btn-download-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
+          <i data-lucide="download" style="width: 15px; height: 15px;"></i>
+          Baixar Arquivo
+        </button>
+      `;
+    }
+
     // Renderização moderna de Outros Anexos
     let extraAttachmentsHtml = '';
     let outrosAnexos = [];
@@ -131,46 +171,6 @@ window.CerneApp.EvidenceDetails = {
       extraAttachmentsHtml += `
           </div>
         </div>
-      `;
-    }
-
-    // Texto de Arquivo Original e Botões agrupados no rodapé esquerdo
-    let bottomActionsHtml = '';
-    const hasFile = evidence.tipo !== 'link' && evidence.nome && evidence.nome !== evidence.link;
-
-    if (hasFile) {
-      bottomActionsHtml += `
-        <div style="font-size: 0.75rem; color: var(--text-tertiary); margin-bottom: 0.5rem; line-height: 1.3;">
-          ARQUIVO ORIGINAL: <br>
-          <span style="font-weight: 500; color: var(--text-secondary); word-break: break-all; font-size: 0.85rem;">${escapeHtml(evidence.nome)}</span>
-        </div>
-      `;
-    }
-
-    if (evidence.link) {
-      const externalUrl = ensureAbsoluteUrl(evidence.link);
-      bottomActionsHtml += `
-        <div style="font-size: 0.75rem; color: var(--text-tertiary); margin-bottom: 0.5rem; line-height: 1.3;">
-          LINK VINCULADO: <br>
-          <a href="${escapeHtml(externalUrl)}" target="_blank" style="font-weight: 500; color: var(--accent); text-decoration: none; word-break: break-all; font-size: 0.85rem;">${escapeHtml(evidence.link)}</a>
-        </div>
-        <button type="button" class="btn btn-secondary action-btn" id="btn-open-link" data-url="${escapeHtml(externalUrl)}" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
-          <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
-          Abrir link
-        </button>
-      `;
-    }
-
-    if (evidence.downloadUrl && evidence.tipo !== 'link') {
-      bottomActionsHtml += `
-        <button class="btn btn-secondary action-btn" id="btn-download-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
-          <i data-lucide="download" style="width: 15px; height: 15px;"></i>
-          Baixar Arquivo
-        </button>
-        <button class="btn btn-secondary action-btn" id="btn-preview-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
-          <i data-lucide="eye" style="width: 15px; height: 15px;"></i>
-          Visualizar Arquivo Original
-        </button>
       `;
     }
 
