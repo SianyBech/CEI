@@ -57,44 +57,39 @@ window.CerneApp.EvidenceDetails = {
       return dateString;
     }
 
-    // Estilos modernos injetados (Hover animado e selects tracejados)
+    // Estilos modernos injetados
     const customStyles = `
       <style>
         .action-btn { transition: all 0.2s ease; cursor: pointer; }
         .action-btn:hover:not(:disabled) { transform: translateY(-1.5px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); filter: brightness(0.96); }
-        .select-add { background-color: #f8fafc; border: 1px dashed #cbd5e1; color: #64748b; font-weight: 500; transition: all 0.2s ease; cursor: pointer; }
-        .select-add:hover:not(:disabled) { border-color: #94a3b8; background-color: #f1f5f9; color: #475569; }
-        .original-source-box { font-size: 0.9rem; color: var(--text-secondary); word-break: break-all; background-color: var(--bg-tertiary); padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); }
+        
+        /* Select modernizado com aparência de botão de ação */
+        .select-add { 
+          appearance: none;
+          -webkit-appearance: none;
+          background-color: #f1f5f9; 
+          border: 1px dashed #94a3b8; 
+          color: #475569; 
+          font-weight: 500; 
+          transition: all 0.2s ease; 
+          cursor: pointer; 
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 0.75rem center;
+          background-size: 16px;
+          padding-right: 2.5rem;
+          border-radius: 6px;
+        }
+        .select-add:hover:not(:disabled) { 
+          background-color: #e2e8f0; 
+          border-color: #64748b; 
+          color: #1e293b; 
+        }
       </style>
     `;
 
-    // Construção dinâmica e limpa dos botões de ação
-    let actionsHtml = '';
-
-    if (evidence.link) {
-      const externalUrl = ensureAbsoluteUrl(evidence.link);
-      actionsHtml += `
-        <button type="button" class="btn btn-secondary action-btn" id="btn-open-link" data-url="${escapeHtml(externalUrl)}" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
-          <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
-          Abrir link
-        </button>
-      `;
-    }
-
-    if (evidence.downloadUrl && evidence.tipo !== 'link') {
-      actionsHtml += `
-        <button class="btn btn-secondary action-btn" id="btn-download-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
-          <i data-lucide="download" style="width: 15px; height: 15px;"></i>
-          Baixar Arquivo
-        </button>
-        <button class="btn btn-secondary action-btn" id="btn-preview-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
-          <i data-lucide="eye" style="width: 15px; height: 15px;"></i>
-          Visualizar Arquivo Original
-        </button>
-      `;
-    }
-
     // Renderização moderna de Outros Anexos
+    let extraAttachmentsHtml = '';
     let outrosAnexos = [];
     try {
       const rawAnexos = evidence.outrosAnexos || evidence.outros_anexos;
@@ -104,8 +99,8 @@ window.CerneApp.EvidenceDetails = {
     }
 
     if (Array.isArray(outrosAnexos) && outrosAnexos.length > 0) {
-      actionsHtml += `
-        <div style="margin-top: 0.5rem; border-top: 1px dashed var(--border-color); padding-top: 0.75rem;">
+      extraAttachmentsHtml += `
+        <div style="margin-top: 0.5rem; border-top: 1px dashed var(--border-color); padding-top: 0.75rem; margin-bottom: 0.5rem;">
           <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); font-weight: 600; display: block; margin-bottom: 0.5rem;">
             Outros Anexos (${outrosAnexos.length})
           </span>
@@ -116,7 +111,7 @@ window.CerneApp.EvidenceDetails = {
         const fileUrl = `/api/evidences/${encodeURIComponent(evidence.id)}/other-file?path=${encodeURIComponent(anexo.storage_path)}`;
         const safeName = escapeHtml(anexo.nome || `Anexo ${index + 1}`);
 
-        actionsHtml += `
+        extraAttachmentsHtml += `
           <div style="display: flex; align-items: center; justify-content: space-between; background-color: var(--bg-tertiary); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); gap: 0.5rem;">
             <span style="font-size: 0.82rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;" title="${safeName}">
               ${safeName}
@@ -125,41 +120,57 @@ window.CerneApp.EvidenceDetails = {
               <a href="${fileUrl}" target="_blank" title="Visualizar anexo" class="action-btn" style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; background: #ffffff; border: 1px solid var(--border-color); color: var(--text-secondary); text-decoration: none;">
                 <i data-lucide="eye" style="width: 13px; height: 13px;"></i>
               </a>
-              <a href="${fileUrl}" download title="Baixar anexo" class="action-btn" style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; background: #ffffff; border: 1px solid var(--border-color); color: var(--text-secondary); text-decoration: none;">
+              <button type="button" class="action-btn btn-download-extra" data-url="${fileUrl}" data-filename="${safeName}" title="Baixar anexo" style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 4px; background: #ffffff; border: 1px solid var(--border-color); color: var(--text-secondary); cursor: pointer;">
                 <i data-lucide="download" style="width: 13px; height: 13px;"></i>
-              </a>
+              </button>
             </div>
           </div>
         `;
       });
 
-      actionsHtml += `
+      extraAttachmentsHtml += `
           </div>
         </div>
       `;
     }
 
-    // Arquivo Original em formato de Div limpa para leitura completa
-    let originalSourceHtml = '';
+    // Texto de Arquivo Original e Botões agrupados no rodapé esquerdo
+    let bottomActionsHtml = '';
     const hasFile = evidence.tipo !== 'link' && evidence.nome && evidence.nome !== evidence.link;
 
     if (hasFile) {
-      originalSourceHtml += `
-        <div class="detail-item">
-          <label class="detail-label">Arquivo Original</label>
-          <div class="original-source-box">${escapeHtml(evidence.nome)}</div>
+      bottomActionsHtml += `
+        <div style="font-size: 0.75rem; color: var(--text-tertiary); margin-bottom: 0.5rem; line-height: 1.3;">
+          ARQUIVO ORIGINAL: <br>
+          <span style="font-weight: 500; color: var(--text-secondary); word-break: break-all; font-size: 0.85rem;">${escapeHtml(evidence.nome)}</span>
         </div>
       `;
     }
 
     if (evidence.link) {
-      originalSourceHtml += `
-        <div class="detail-item">
-          <label class="detail-label">Link Vinculado</label>
-          <div class="original-source-box">
-            <a href="${escapeHtml(ensureAbsoluteUrl(evidence.link))}" target="_blank" style="color: var(--accent); text-decoration: none;">${escapeHtml(evidence.link)}</a>
-          </div>
+      const externalUrl = ensureAbsoluteUrl(evidence.link);
+      bottomActionsHtml += `
+        <div style="font-size: 0.75rem; color: var(--text-tertiary); margin-bottom: 0.5rem; line-height: 1.3;">
+          LINK VINCULADO: <br>
+          <a href="${escapeHtml(externalUrl)}" target="_blank" style="font-weight: 500; color: var(--accent); text-decoration: none; word-break: break-all; font-size: 0.85rem;">${escapeHtml(evidence.link)}</a>
         </div>
+        <button type="button" class="btn btn-secondary action-btn" id="btn-open-link" data-url="${escapeHtml(externalUrl)}" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
+          <i data-lucide="external-link" style="width: 15px; height: 15px;"></i>
+          Abrir link
+        </button>
+      `;
+    }
+
+    if (evidence.downloadUrl && evidence.tipo !== 'link') {
+      bottomActionsHtml += `
+        <button class="btn btn-secondary action-btn" id="btn-download-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.5rem;">
+          <i data-lucide="download" style="width: 15px; height: 15px;"></i>
+          Baixar Arquivo
+        </button>
+        <button class="btn btn-secondary action-btn" id="btn-preview-original" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+          <i data-lucide="eye" style="width: 15px; height: 15px;"></i>
+          Visualizar Arquivo Original
+        </button>
       `;
     }
 
@@ -194,14 +205,11 @@ window.CerneApp.EvidenceDetails = {
                 <input id="detail-title-input" class="form-input" value="${escapeHtml(titleText)}" />
               </div>
 
-              ${originalSourceHtml}
-
               <div class="detail-item">
                 <label class="detail-label" for="detail-evento-input">Evento de Origem</label>
                 <input id="detail-evento-input" class="form-input" value="${escapeHtml(evidence.evento)}" />
               </div>
 
-              <!-- Reorganizado: Responsável e Data subiram -->
               <div class="detail-item">
                 <label class="detail-label" for="detail-responsavel-input">Responsável pelo Envio</label>
                 <select id="detail-responsavel-input" class="form-select"></select>
@@ -212,7 +220,6 @@ window.CerneApp.EvidenceDetails = {
                 <input type="date" id="detail-data-input" class="form-input" value="${formatDateForInput(evidence.data)}" />
               </div>
 
-              <!-- Categorias e Tags reagrupadas -->
               <div class="detail-item">
                 <label class="detail-label">Categorias CERNE</label>
                 <div class="tags-selector-wrapper">
@@ -228,9 +235,11 @@ window.CerneApp.EvidenceDetails = {
                   <select class="form-select select-add" id="detail-add-tag-select" style="margin-top: 0.5rem;"></select>
                 </div>
               </div>
+              
+              ${extraAttachmentsHtml}
 
-              <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.5rem;">
-                ${actionsHtml}
+              <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; flex-direction: column;">
+                ${bottomActionsHtml}
               </div>
 
             </div>
@@ -347,7 +356,8 @@ window.CerneApp.EvidenceDetails = {
       selectElement.innerHTML = '';
       const defaultOpt = document.createElement('option');
       defaultOpt.value = '';
-      defaultOpt.textContent = 'Adicionar categoria...';
+      // Novo texto no Option Padrão
+      defaultOpt.textContent = '+ Adicionar categoria...';
       defaultOpt.selected = true;
       selectElement.appendChild(defaultOpt);
 
@@ -405,7 +415,8 @@ window.CerneApp.EvidenceDetails = {
       selectElement.innerHTML = '';
       const defaultOpt = document.createElement('option');
       defaultOpt.value = '';
-      defaultOpt.textContent = 'Adicionar tag...';
+      // Novo texto no Option Padrão
+      defaultOpt.textContent = '+ Adicionar tag...';
       defaultOpt.selected = true;
       selectElement.appendChild(defaultOpt);
 
@@ -554,7 +565,7 @@ window.CerneApp.EvidenceDetails = {
       }
     });
 
-    // Rotina de Download forçado (Evita abrir em nova aba)
+    // Rotina de Download forçado para o Arquivo Principal
     const downloadBtn = overlay.querySelector('#btn-download-original');
     if (downloadBtn) {
       downloadBtn.addEventListener('click', async (e) => {
@@ -580,7 +591,7 @@ window.CerneApp.EvidenceDetails = {
           window.URL.revokeObjectURL(url);
           a.remove();
         } catch (err) {
-          console.error('Erro ao baixar arquivo (fallback ativado):', err);
+          console.error('Erro ao baixar arquivo principal:', err);
           window.open(evidence.downloadUrl, '_blank');
         } finally {
           downloadBtn.innerHTML = originalContent;
@@ -589,6 +600,44 @@ window.CerneApp.EvidenceDetails = {
         }
       });
     }
+
+    // NOVA Rotina de Download Forçado para os Anexos Extras
+    const extraDownloadBtns = overlay.querySelectorAll('.btn-download-extra');
+    extraDownloadBtns.forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const fileUrl = btn.getAttribute('data-url');
+        const fileName = btn.getAttribute('data-filename') || 'anexo';
+        if (!fileUrl) return;
+
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="loader" style="width: 13px; height: 13px; animation: spin 1s linear infinite;"></i>';
+        btn.style.pointerEvents = 'none';
+
+        try {
+          const response = await fetch(fileUrl);
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          
+          window.URL.revokeObjectURL(url);
+          a.remove();
+        } catch (err) {
+          console.error('Erro ao baixar anexo extra:', err);
+          window.open(fileUrl, '_blank');
+        } finally {
+          btn.innerHTML = originalContent;
+          btn.style.pointerEvents = 'auto';
+          if (window.lucide) window.lucide.createIcons();
+        }
+      });
+    });
 
     const downloadBtnOriginal = overlay.querySelector('#btn-download-original');
     const previewBtnOriginal = overlay.querySelector('#btn-preview-original');
